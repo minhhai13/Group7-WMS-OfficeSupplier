@@ -65,11 +65,13 @@ CREATE TABLE Bins (
     BinID INT IDENTITY(1,1) PRIMARY KEY,
     WarehouseID INT NOT NULL,
     BinLocation NVARCHAR(50) NOT NULL, 
-    CurrentProductID INT NULL,
-    IsOccupied BIT DEFAULT 0,
+    AssignedProductID INT NULL,  
+    MaxCapacity DECIMAL(18, 2),    
+    CurrentQuantity DECIMAL(18, 2) DEFAULT 0,
     IsActive BIT DEFAULT 1,
     CreatedAt DATETIME2 DEFAULT GETDATE(),
     
+    CONSTRAINT CHK_BinFormat CHECK (BinLocation LIKE '[0-9][0-9]-[A-Z]-[0-9][0-9]-[0-9][0-9]'),
     CONSTRAINT FK_Bins_Warehouses FOREIGN KEY (WarehouseID) REFERENCES Warehouses(WarehouseID),
     CONSTRAINT UQ_Bins UNIQUE (WarehouseID, BinLocation)
 );
@@ -158,6 +160,7 @@ CREATE TABLE PurchaseOrders (
 CREATE TABLE PurchaseOrderDetails (
     PODetailID INT IDENTITY(1,1) PRIMARY KEY,
     POID INT NOT NULL,
+    PRDetailID INT NULL REFERENCES PurchaseRequestDetails(PRDetailID),
     ProductID INT NOT NULL,
     OrderedQty INT NOT NULL,
     ReceivedQty INT DEFAULT 0,
@@ -247,7 +250,7 @@ CREATE TABLE SalesOrders (
     SONumber NVARCHAR(20) NOT NULL UNIQUE,
     WarehouseID INT NOT NULL,
     CustomerID INT NOT NULL,
-    SOStatus NVARCHAR(30) DEFAULT 'Pending' CHECK (SOStatus IN ('Pending', 'Waiting for Stock', 'Approved', 'Incomplete', 'Complete', 'Cancelled')),
+    SOStatus NVARCHAR(30) DEFAULT 'Pending' CHECK (SOStatus IN ('Pending', 'Waiting for stock', 'Waiting for confirm', 'Approved', 'Incomplete', 'Complete', 'Cancelled')),
     OrderDate DATETIME2 DEFAULT GETDATE(),
     CreatedBy INT NOT NULL,
     ApprovedBy INT NULL,
@@ -299,7 +302,7 @@ CREATE TABLE GoodsIssueDetails (
     GIDetailID INT IDENTITY(1,1) PRIMARY KEY,
     GINID INT NOT NULL,
     SODetailID INT NOT NULL,
-    
+
     ProductID INT NOT NULL,
     IssuedQty INT NOT NULL,
     UoM NVARCHAR(10) NOT NULL,  -- Giữ UoM gốc khi xuất
@@ -310,6 +313,7 @@ CREATE TABLE GoodsIssueDetails (
     Notes NVARCHAR(255),
     
     CONSTRAINT FK_GIDetail_GIN FOREIGN KEY (GINID) REFERENCES GoodsIssueNotes(GINID),
+    CONSTRAINT FK_GIDetail_SODetail FOREIGN KEY (SODetailID) REFERENCES SalesOrderDetails(SODetailID),
     CONSTRAINT FK_GIDetail_Products FOREIGN KEY (ProductID) REFERENCES Products(ProductID),
     CONSTRAINT FK_GIDetail_Bins FOREIGN KEY (BinID) REFERENCES Bins(BinID)
 );
