@@ -1,4 +1,4 @@
-package com.group5.wms.config;
+package com.minhhai.wms.config;
 
 import org.springframework.web.servlet.support.AbstractAnnotationConfigDispatcherServletInitializer;
 

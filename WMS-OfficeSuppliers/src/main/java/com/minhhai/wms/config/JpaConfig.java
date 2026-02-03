@@ -1,4 +1,4 @@
-package com.group5.wms.config;
+package com.minhhai.wms.config;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
@@ -17,7 +17,7 @@ import java.util.Properties;
 
 @Configuration
 @EnableTransactionManagement
-@EnableJpaRepositories(basePackages = "com.group5.wms.repository") // Thêm dòng này
+@EnableJpaRepositories(basePackages = "com.minhhai.wms.repository")
 public class JpaConfig {
 
     @Bean

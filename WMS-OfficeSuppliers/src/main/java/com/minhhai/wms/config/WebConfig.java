@@ -1,4 +1,4 @@
-package com.group5.wms.config;
+package com.minhhai.wms.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
@@ -12,7 +12,7 @@ import org.thymeleaf.spring6.view.ThymeleafViewResolver;
 
 @Configuration
 @EnableWebMvc
-@ComponentScan(basePackages = "com.group5.wms")
+@ComponentScan(basePackages = "com.minhhai.wms")
 public class WebConfig implements WebMvcConfigurer {
 
     @Bean
