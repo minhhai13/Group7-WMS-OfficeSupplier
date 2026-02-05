@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="vi">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Danh sách người dùng</title>
+    <link rel="stylesheet" th:href="@{/static/css/style.css}" href="../static/css/style.css"/>
+</head>
+<body>
+<div class="container">
+    <header class="page-header">
+        <h1>Quản lý người dùng</h1>
+        <a th:href="@{/admin/users/new}" class="btn btn-primary">Thêm người dùng</a>
+    </header>
+
+    <div th:if="${success}" class="alert alert-success" th:text="${success}"></div>
+    <div th:if="${error}" class="alert alert-error" th:text="${error}"></div>
+
+    <table class="table">
+        <thead>
+        <tr>
+            <th>Tên đăng nhập</th>
+            <th>Họ tên</th>
+            <th>Vai trò</th>
+            <th>Kho</th>
+            <th>Thao tác</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="u : ${users}">
+            <td th:text="${u.username}"></td>
+            <td th:text="${u.fullName}"></td>
+            <td th:text="${u.role}"></td>
+            <td th:text="${u.warehouse != null} ? ${u.warehouse.warehouseName} : '-'"></td>
+            <td>
+                <a th:href="@{/admin/users/{id}/edit(id=${u.userId})}" class="btn btn-sm">Sửa</a>
+                <form th:action="@{/admin/users/{id}/delete(id=${u.userId})}" method="post" class="inline-form"
+                      onsubmit="return confirm('Bạn có chắc muốn xóa người dùng này?');">
+                    <button type="submit" class="btn btn-sm btn-danger">Xóa</button>
+                </form>
+            </td>
+        </tr>
+        <tr th:if="${#lists.isEmpty(users)}">
+            <td colspan="5">Chưa có người dùng nào.</td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+</body>
+</html>

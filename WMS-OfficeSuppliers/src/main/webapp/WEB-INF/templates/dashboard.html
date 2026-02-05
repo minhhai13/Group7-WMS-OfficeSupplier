@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="vi">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Dashboard - WMS</title>
+    <link rel="stylesheet" th:href="@{/static/css/style.css}" href="../static/css/style.css"/>
+</head>
+<body>
+<div class="container">
+    <header class="page-header">
+        <h1>Dashboard</h1>
+        <form th:action="@{/logout}" method="post" class="inline-form">
+            <button type="submit" class="btn">Đăng xuất</button>
+        </form>
+    </header>
+
+    <section class="dashboard-section">
+        <h2>Thông tin đăng nhập</h2>
+        <p><strong>Người dùng:</strong> <span th:text="${user.fullName}">-</span></p>
+        <p><strong>Tên đăng nhập:</strong> <span th:text="${user.username}">-</span></p>
+        <p><strong>Vai trò:</strong> <span th:text="${user.role}">-</span></p>
+        <p th:if="${user.warehouse != null}">
+            <strong>Kho được gán:</strong> <span th:text="${user.warehouse.warehouseName}">-</span>
+        </p>
+    </section>
+
+    <section class="dashboard-section" th:if="${user.role == 'System Admin'}">
+        <h2>Điều hướng</h2>
+        <ul class="nav-links">
+            <li><a th:href="@{/warehouses}" class="btn">Quản lý kho</a></li>
+            <li><a th:href="@{/admin/users}" class="btn btn-primary">Quản lý người dùng</a></li>
+        </ul>
+    </section>
+</div>
+</body>
+</html>

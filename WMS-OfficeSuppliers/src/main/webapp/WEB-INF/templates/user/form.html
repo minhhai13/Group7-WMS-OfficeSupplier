@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="vi">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title th:text="${user.userId != null} ? 'Sửa người dùng' : 'Thêm người dùng'">Form người dùng</title>
+    <link rel="stylesheet" th:href="@{/static/css/style.css}" href="../static/css/style.css"/>
+</head>
+<body>
+<div class="container">
+    <header class="page-header">
+        <h1 th:text="${user.userId != null} ? 'Sửa người dùng' : 'Thêm người dùng'">Form người dùng</h1>
+        <a th:href="@{/admin/users}" class="btn">Quay lại</a>
+    </header>
+
+    <form th:action="@{/admin/users/save}" th:object="${user}" method="post" class="form">
+        <input type="hidden" th:field="*{userId}"/>
+
+        <div class="form-group">
+            <label for="username">Tên đăng nhập <span class="required">*</span></label>
+            <input type="text" id="username" th:field="*{username}" maxlength="50" required
+                   th:readonly="${user.userId != null}" placeholder="VD: admin"/>
+            <span th:if="${#fields.hasErrors('username')}" th:errors="*{username}" class="error"></span>
+        </div>
+
+        <div class="form-group">
+            <label for="plainPassword">Mật khẩu <span th:if="${user.userId == null}" class="required">*</span></label>
+            <input type="password" id="plainPassword" name="plainPassword" maxlength="100"
+                   placeholder="Để trống nếu không đổi (khi sửa)"/>
+            <span th:if="${#fields.hasErrors('passwordHash')}" th:errors="*{passwordHash}" class="error"></span>
+        </div>
+
+        <div class="form-group">
+            <label for="fullName">Họ tên <span class="required">*</span></label>
+            <input type="text" id="fullName" th:field="*{fullName}" maxlength="100" required/>
+            <span th:if="${#fields.hasErrors('fullName')}" th:errors="*{fullName}" class="error"></span>
+        </div>
+
+        <div class="form-group">
+            <label for="role">Vai trò <span class="required">*</span></label>
+            <select id="role" th:field="*{role}" required>
+                <option value="">-- Chọn vai trò --</option>
+                <option th:each="r : ${roleOptions}" th:value="${r}" th:text="${r}"></option>
+            </select>
+            <span th:if="${#fields.hasErrors('role')}" th:errors="*{role}" class="error"></span>
+        </div>
+
+        <div class="form-group" id="warehouseGroup" th:attr="data-warehouse-roles=${warehouseRequiredRolesStr}">
+            <label for="warehouseId">Kho (áp dụng cho nhân viên kho)</label>
+            <select id="warehouseId" name="warehouseId">
+                <option value="">-- Không gán kho --</option>
+                <option th:each="wh : ${warehouses}" th:value="${wh.warehouseId}" th:text="${wh.warehouseName}"
+                        th:selected="${user.warehouse != null && user.warehouse.warehouseId == wh.warehouseId}"></option>
+            </select>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Lưu</button>
+            <a th:href="@{/admin/users}" class="btn">Hủy</a>
+        </div>
+    </form>
+</div>
+<script>
+    (function () {
+        var roleSelect = document.getElementById('role');
+        var warehouseGroup = document.getElementById('warehouseGroup');
+        var data = warehouseGroup.getAttribute('data-warehouse-roles') || '';
+        var warehouseRequiredRoles = data ? data.split('|') : [];
+        function toggleWarehouse() {
+            var role = roleSelect.value;
+            var show = warehouseRequiredRoles.indexOf(role) !== -1;
+            warehouseGroup.style.display = show ? 'block' : 'none';
+            if (!show) document.getElementById('warehouseId').value = '';
+        }
+        roleSelect.addEventListener('change', toggleWarehouse);
+        toggleWarehouse();
+    })();
+</script>
+</body>
+</html>

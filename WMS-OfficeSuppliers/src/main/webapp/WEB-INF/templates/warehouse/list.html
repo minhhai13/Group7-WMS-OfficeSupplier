@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="vi">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Danh sách kho</title>
+    <link rel="stylesheet" th:href="@{/static/css/style.css}" href="../static/css/style.css"/>
+</head>
+<body>
+<div class="container">
+    <header class="page-header">
+        <h1>Quản lý kho</h1>
+        <a th:href="@{/warehouses/new}" class="btn btn-primary">Thêm kho</a>
+    </header>
+
+    <div th:if="${success}" class="alert alert-success" th:text="${success}"></div>
+    <div th:if="${error}" class="alert alert-error" th:text="${error}"></div>
+
+    <table class="table">
+        <thead>
+        <tr>
+            <th>Mã kho</th>
+            <th>Tên kho</th>
+            <th>Địa chỉ</th>
+            <th>Thao tác</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="wh : ${warehouses}">
+            <td th:text="${wh.warehouseCode}"></td>
+            <td th:text="${wh.warehouseName}"></td>
+            <td th:text="${wh.address != null} ? ${wh.address} : '-'"></td>
+            <td>
+                <a th:href="@{/warehouses/{id}/edit(id=${wh.warehouseId})}" class="btn btn-sm">Sửa</a>
+                <form th:action="@{/warehouses/{id}/delete(id=${wh.warehouseId})}" method="post" class="inline-form"
+                      onsubmit="return confirm('Bạn có chắc muốn xóa kho này?');">
+                    <button type="submit" class="btn btn-sm btn-danger">Xóa</button>
+                </form>
+            </td>
+        </tr>
+        <tr th:if="${#lists.isEmpty(warehouses)}">
+            <td colspan="4">Chưa có kho nào. Nhấn "Thêm kho" để tạo.</td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+</body>
+</html>

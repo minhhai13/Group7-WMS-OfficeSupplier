@@ -1,6 +1,9 @@
 package com.minhhai.wms.config;
 
+import com.minhhai.wms.filter.SecurityFilter;
 import org.springframework.web.servlet.support.AbstractAnnotationConfigDispatcherServletInitializer;
+
+import jakarta.servlet.Filter;
 
 public class WebAppInitializer extends AbstractAnnotationConfigDispatcherServletInitializer {
 
@@ -20,5 +23,10 @@ public class WebAppInitializer extends AbstractAnnotationConfigDispatcherServlet
     protected String[] getServletMappings() {
         // Tương đương với <url-pattern>/</url-pattern> trong web.xml
         return new String[] { "/" };
+    }
+
+    @Override
+    protected Filter[] getServletFilters() {
+        return new Filter[] { new SecurityFilter() };
     }
 }
