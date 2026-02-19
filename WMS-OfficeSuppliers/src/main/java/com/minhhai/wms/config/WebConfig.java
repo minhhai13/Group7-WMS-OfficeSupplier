@@ -12,7 +12,7 @@ import org.thymeleaf.spring6.view.ThymeleafViewResolver;
 
 @Configuration
 @EnableWebMvc
-@ComponentScan(basePackages = "com.minhhai.wms")
+@ComponentScan(basePackages = "com.minhhai.wms.controller")
 public class WebConfig implements WebMvcConfigurer {
 
     @Bean

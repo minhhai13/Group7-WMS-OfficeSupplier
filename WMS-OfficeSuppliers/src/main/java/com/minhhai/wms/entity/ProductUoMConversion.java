@@ -1,6 +1,7 @@
 package com.minhhai.wms.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Positive;
 import lombok.*;
 
 @Entity
@@ -28,6 +29,7 @@ public class ProductUoMConversion {
     @Column(name = "ToUoM", length = 10, nullable = false)
     private String toUoM;
 
+    @Positive(message = "Conversion factor must be greater than 0")
     @Column(
             name = "ConversionFactor",
             nullable = false,

@@ -12,7 +12,6 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 public class SalesOrder {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "SOID")
@@ -29,12 +28,13 @@ public class SalesOrder {
     @JoinColumn(name = "CustomerID", nullable = false)
     private Partner customer;
 
+    @Builder.Default
     @Column(
             name = "SOStatus",
             length = 30,
-            columnDefinition = "nvarchar(30) default 'Pending' CHECK ([SOStatus] IN ('Pending', 'Waiting for stock', 'Waiting for confirm', 'Approved', 'Incomplete', 'Complete', 'Cancelled'))"
+            columnDefinition = "nvarchar(30) default 'Draft' CHECK ([SOStatus] IN ('Draft', 'Pending Approval', 'Waiting for Stock', 'Approved', 'Rejected', 'Completed', 'Incomplete'))"
     )
-    private String soStatus = "Pending"; // Pending, Waiting for stock, Waiting for confirm, Approved, Incomplete, Complete, Cancelled
+    private String soStatus = "Draft"; // Draft, Pending Approval, Waiting for Stock, Approved, Rejected, Completed, Incomplete
 
     @OneToMany(mappedBy = "salesOrder", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<SalesOrderDetail> details;

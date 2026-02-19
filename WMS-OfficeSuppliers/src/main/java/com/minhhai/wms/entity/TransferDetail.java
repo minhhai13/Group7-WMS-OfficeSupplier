@@ -1,6 +1,7 @@
 package com.minhhai.wms.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Positive;
 import lombok.*;
 
 @Entity
@@ -25,6 +26,7 @@ public class TransferDetail {
     @JoinColumn(name = "ProductID", nullable = false)
     private Product product;
 
+    @Positive(message = "Quantity must be greater than 0")
     @Column(name = "Quantity", nullable = false)
     private Integer quantity;
 

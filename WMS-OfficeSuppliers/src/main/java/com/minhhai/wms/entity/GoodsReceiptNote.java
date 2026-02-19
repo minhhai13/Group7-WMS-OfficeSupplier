@@ -29,6 +29,7 @@ public class GoodsReceiptNote {
     @JoinColumn(name = "WarehouseID", nullable = false)
     private Warehouse warehouse;
 
+    @Builder.Default
     @Column(
             name = "GRStatus",
             length = 20,

@@ -1,6 +1,9 @@
 package com.minhhai.wms.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.AssertTrue;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
 import lombok.*;
 import java.util.List;
 
@@ -35,8 +38,11 @@ public class PurchaseOrderDetail {
             nullable = false,
             columnDefinition = "int CHECK (OrderedQty > 0)"
     )
+    @Positive(message = "Ordered quantity must be greater than 0")
     private Integer orderedQty;
 
+    @PositiveOrZero(message = "Received quantity must not be negative")
+    @Builder.Default
     @Column(
             name = "ReceivedQty",
             columnDefinition = "int default 0 CHECK (ReceivedQty >= 0 AND ReceivedQty <= OrderedQty)"
@@ -48,4 +54,10 @@ public class PurchaseOrderDetail {
 
     @OneToMany(mappedBy = "purchaseOrderDetail", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<GoodsReceiptDetail> goodsReceiptDetails;
+
+    @AssertTrue(message = "Received quantity must not exceed ordered quantity")
+    private boolean isReceivedNotExceedingOrdered() {
+        if (receivedQty == null || orderedQty == null) return true;
+        return receivedQty <= orderedQty;
+    }
 }

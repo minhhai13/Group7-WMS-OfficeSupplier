@@ -29,6 +29,7 @@ public class GoodsIssueNote {
     @JoinColumn(name = "WarehouseID", nullable = false)
     private Warehouse warehouse;
 
+    @Builder.Default
     @Column(
             name = "GIStatus",
             length = 20,

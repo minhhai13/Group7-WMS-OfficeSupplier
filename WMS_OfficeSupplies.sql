@@ -3,20 +3,16 @@
 -- SQL Server Database for Student Project
 -- Total Tables: 18
 -- =============================================
-SELECT * from Users
-USE master;
-GO
 
 IF DB_ID('WMS_OfficeSupplies') IS NOT NULL
     DROP DATABASE WMS_OfficeSupplies;
 GO
-
 CREATE DATABASE WMS_OfficeSupplies;
 GO
 
 USE WMS_OfficeSupplies;
 GO
-
+select * from Users
 -- =============================================
 -- 1. USERS TABLE
 -- =============================================
@@ -33,6 +29,7 @@ CREATE TABLE Users (
     )),
     
     WarehouseID INT NULL,
+    IsActive BIT NOT NULL DEFAULT 1,
 );
 
 -- =============================================
@@ -42,6 +39,8 @@ CREATE TABLE Warehouses (
     WarehouseID INT IDENTITY(1,1) PRIMARY KEY,
     WarehouseCode NVARCHAR(20) NOT NULL UNIQUE,
     WarehouseName NVARCHAR(100) NOT NULL,
+    Address NVARCHAR(255),
+    IsActive BIT NOT NULL DEFAULT 1
 );
 
 ALTER TABLE Users
@@ -54,10 +53,10 @@ CREATE TABLE Bins (
     BinID INT IDENTITY(1,1) PRIMARY KEY,
     WarehouseID INT NOT NULL,
     BinLocation NVARCHAR(50) NOT NULL, 
-    AssignedProductID INT NULL,  
-    MaxCapacity INT,    
+    MaxWeight DECIMAL(10, 2) NOT NULL DEFAULT 0,
+    IsActive BIT NOT NULL DEFAULT 1,
     
-    CONSTRAINT CHK_BinFormat CHECK (BinLocation LIKE 'W[0-9][0-9]-Z[0-9][0-9]-S[0-9][0-9]-B[0-9][0-9]',
+    CONSTRAINT CHK_BinFormat CHECK (BinLocation LIKE 'W[0-9][0-9]-Z[0-9][0-9]-S[0-9][0-9]-B[0-9][0-9]'),
     CONSTRAINT FK_Bins_Warehouses FOREIGN KEY (WarehouseID) REFERENCES Warehouses(WarehouseID),
     CONSTRAINT UQ_Bins UNIQUE (WarehouseID, BinLocation)
 );
@@ -73,11 +72,10 @@ CREATE TABLE Products (
     -- Base UoM: Đơn vị nhỏ nhất để lưu stock
     BaseUoM NVARCHAR(10) NOT NULL DEFAULT 'EA',
     
+    UnitWeight DECIMAL(10, 2) NOT NULL DEFAULT 0,
     MinStockLevel INT DEFAULT 0,
+    IsActive BIT NOT NULL DEFAULT 1,
 );
-
-ALTER TABLE Bins
-ADD CONSTRAINT FK_Bins_Products FOREIGN KEY (AssignedProductID) REFERENCES Products(ProductID);
 
 -- =============================================
 -- 5. PRODUCT_UOM_CONVERSIONS TABLE (NEW!)
@@ -109,6 +107,7 @@ CREATE TABLE Partners (
     PartnerType NVARCHAR(20) NOT NULL CHECK (PartnerType IN ('Supplier', 'Customer')),
     ContactPerson NVARCHAR(100),
     PhoneNumber NVARCHAR(20),
+    IsActive BIT NOT NULL DEFAULT 1,
 );
 
 -- =============================================
@@ -118,7 +117,13 @@ CREATE TABLE PurchaseRequests (
     PRID INT IDENTITY(1,1) PRIMARY KEY,
     PRNumber NVARCHAR(20) NOT NULL UNIQUE,
     WarehouseID INT NOT NULL,
-    Status NVARCHAR(20) DEFAULT 'Pending' CHECK (Status IN ('Pending', 'Approved', 'Rejected', 'Converted')),
+    Status NVARCHAR(20) DEFAULT 'Pending' CHECK (Status IN (
+    'Pending',     -- Đang chờ duyệt
+    'Approved',    -- Đã duyệt, chờ tạo PO
+    'Rejected',    -- Bị từ chối
+    'Converted',   -- Đã chuyển thành PO
+    'Completed'    -- Hàng đã về kho
+    )),
     POID INT NULL,
     RelatedSOID INT NULL UNIQUE, -- Link tới SO gây ra việc thiếu hàng
     
@@ -147,8 +152,14 @@ CREATE TABLE PurchaseOrders (
     PONumber NVARCHAR(20) NOT NULL UNIQUE,
     WarehouseID INT NOT NULL,
     SupplierID INT NOT NULL,
-    POStatus NVARCHAR(20) DEFAULT 'Pending' CHECK (POStatus IN ('Pending', 'Approved', 'Rejected', 'Incomplete', 'Complete')),
-
+    POStatus NVARCHAR(20) DEFAULT 'Draft' CHECK (POStatus IN (
+    'Draft', 
+    'Pending Approval',
+    'Approved',         
+    'Rejected',    
+    'Completed',
+    'Incomplete'
+    )),
     CONSTRAINT FK_PO_Warehouses FOREIGN KEY (WarehouseID) REFERENCES Warehouses(WarehouseID),
     CONSTRAINT FK_PO_Suppliers FOREIGN KEY (SupplierID) REFERENCES Partners(PartnerID)
 );
@@ -212,7 +223,15 @@ CREATE TABLE SalesOrders (
     SONumber NVARCHAR(20) NOT NULL UNIQUE,
     WarehouseID INT NOT NULL,
     CustomerID INT NOT NULL,
-    SOStatus NVARCHAR(30) DEFAULT 'Pending' CHECK (SOStatus IN ('Pending', 'Waiting for stock', 'Waiting for confirm', 'Approved', 'Incomplete', 'Complete', 'Cancelled')),
+    SOStatus NVARCHAR(30) DEFAULT 'Draft' CHECK (SOStatus IN (
+    'Draft', 
+    'Pending Approval',  -- Đang đợi Manager duyệt (kèm hoặc không kèm PR)
+    'Waiting for Stock', -- Manager đã duyệt cả SO và PR, đang đợi hàng về
+    'Approved',          -- Đã có hàng và đã duyệt, sẵn sàng xuất
+    'Rejected',    
+    'Completed',
+    'Incomplete'
+    )),
     CONSTRAINT FK_SO_Warehouses FOREIGN KEY (WarehouseID) REFERENCES Warehouses(WarehouseID),
     CONSTRAINT FK_SO_Customers FOREIGN KEY (CustomerID) REFERENCES Partners(PartnerID)
 );
@@ -273,7 +292,8 @@ CREATE TABLE Transfers (
     DestinationWarehouseID INT NOT NULL,
     TransferStatus NVARCHAR(30) DEFAULT 'Pending' CHECK (TransferStatus IN ('Pending', 'Approved', 'In-Transit', 'Completed')),
     CONSTRAINT FK_Transfer_SourceWH FOREIGN KEY (SourceWarehouseID) REFERENCES Warehouses(WarehouseID),
-    CONSTRAINT FK_Transfer_DestWH FOREIGN KEY (DestinationWarehouseID) REFERENCES Warehouses(WarehouseID)
+    CONSTRAINT FK_Transfer_DestWH FOREIGN KEY (DestinationWarehouseID) REFERENCES Warehouses(WarehouseID),
+    CONSTRAINT CHK_Transfer_Diff_WH CHECK (SourceWarehouseID <> DestinationWarehouseID)
 );
 
 CREATE TABLE TransferDetails (
@@ -305,7 +325,10 @@ CREATE TABLE StockBatches (
     ArrivalDateTime DATETIME2 NOT NULL,
     
     -- CRITICAL: Stock LUÔN lưu theo BaseUoM
+
+    -- Số lượng thực tế đang nằm trên kệ kho (Physical Stock)
     QtyAvailable INT NOT NULL DEFAULT 0,
+    -- Số lượng đã giữ cho các đơn SO đã Approved (Reserved Stock)
     QtyReserved INT NOT NULL DEFAULT 0,
     QtyInTransit INT NOT NULL DEFAULT 0,
     
@@ -314,7 +337,9 @@ CREATE TABLE StockBatches (
     CONSTRAINT FK_StockBatch_Warehouses FOREIGN KEY (WarehouseID) REFERENCES Warehouses(WarehouseID),
     CONSTRAINT FK_StockBatch_Products FOREIGN KEY (ProductID) REFERENCES Products(ProductID),
     CONSTRAINT FK_StockBatch_Bins FOREIGN KEY (BinID) REFERENCES Bins(BinID),
-    CONSTRAINT UQ_StockBatch UNIQUE (WarehouseID, ProductID, BinID, BatchNumber)
+    CONSTRAINT UQ_StockBatch UNIQUE (WarehouseID, ProductID, BinID, BatchNumber),
+    CONSTRAINT CHK_Reservation_Limit CHECK (QtyReserved <= QtyAvailable),
+    CONSTRAINT CHK_Qty_Positive CHECK (QtyAvailable >= 0 AND QtyReserved >= 0 AND QtyInTransit >= 0)
 );
 
 -- =============================================
@@ -336,10 +361,9 @@ CREATE TABLE StockMovements (
     MovementType NVARCHAR(30) NOT NULL CHECK (MovementType IN (
         'Receipt',      -- Nhập hàng từ NCC (GRN)
         'Issue',        -- Xuất hàng cho khách (GIN)
+        'Reserve',      -- Giữ hàng khi SO Approved
         'Transfer-Out', -- Xuất đi kho khác (Step 1)
-        'Transfer-In',  -- Nhập vào kho mới (Step 2)
-        'Reserve',      -- Giữ hàng cho SO
-        'Release'       -- Giải phóng hàng giữ (khi SO bị hủy hoặc đã xuất đi)
+        'Transfer-In'
     )),
     MovementDate DATETIME2 DEFAULT GETDATE(),
     -- QUAN TRỌNG: Phân loại loại tồn kho bị ảnh hưởng

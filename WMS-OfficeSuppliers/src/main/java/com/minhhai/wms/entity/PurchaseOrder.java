@@ -12,7 +12,6 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 public class PurchaseOrder {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "POID")
@@ -32,12 +31,13 @@ public class PurchaseOrder {
     @JoinColumn(name = "SupplierID", nullable = false)
     private Partner supplier;
 
+    @Builder.Default
     @Column(
             name = "POStatus",
             length = 20,
-            columnDefinition = "nvarchar(20) default 'Pending' CHECK ([POStatus] IN ('Pending', 'Approved', 'Rejected', 'Incomplete', 'Complete'))"
+            columnDefinition = "nvarchar(20) default 'Draft' CHECK ([POStatus] IN ('Draft', 'Pending Approval', 'Approved', 'Rejected', 'Completed', 'Incomplete'))"
     )
-    private String poStatus = "Pending"; // Pending, Approved, Rejected, Incomplete, Complete
+    private String poStatus = "Draft"; // Draft, Pending Approval, Approved, Rejected, Completed, Incomplete
 
     @OneToMany(mappedBy = "purchaseOrder", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<PurchaseOrderDetail> details;

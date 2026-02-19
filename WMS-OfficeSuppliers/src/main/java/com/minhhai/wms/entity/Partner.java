@@ -1,6 +1,7 @@
 package com.minhhai.wms.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import lombok.*;
 
@@ -20,11 +21,13 @@ public class Partner {
     @Column(name = "PartnerID")
     private Integer partnerId;
 
+    @NotBlank(message = "Partner name is required")
     @Column(name = "PartnerName", length = 200, nullable = false)
     private String partnerName;
 
+    @NotBlank(message = "Partner type is required")
     @Column(name = "PartnerType", length = 20, nullable = false)
-    @Pattern(regexp = "^(Supplier|Customer)$", message = "Partner Type phải là 'Supplier' hoặc 'Customer'")
+    @Pattern(regexp = "^(Supplier|Customer)$", message = "Partner type must be 'Supplier' or 'Customer'")
     private String partnerType; // Supplier, Customer
 
     @Column(name = "ContactPerson", length = 100)
@@ -32,6 +35,10 @@ public class Partner {
 
     @Column(name = "PhoneNumber", length = 20)
     private String phoneNumber;
+
+    @Builder.Default
+    @Column(name = "IsActive", nullable = false, columnDefinition = "bit default 1")
+    private Boolean isActive = true;
 
     @OneToMany(mappedBy = "supplier") // Phía PO gọi partner là supplier
     private List<PurchaseOrder> purchaseOrders;

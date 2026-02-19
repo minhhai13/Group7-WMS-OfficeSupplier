@@ -1,6 +1,7 @@
 package com.minhhai.wms.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.PositiveOrZero;
 import lombok.*;
 
 @Entity
@@ -30,6 +31,7 @@ public class PurchaseRequestDetail {
             nullable = false,
             columnDefinition = "int CHECK (RequestedQty > 0)"
     )
+    @PositiveOrZero
     private Integer requestedQty;
 
     @Column(name = "UoM", length = 10, nullable = false, columnDefinition = "nvarchar(10)")

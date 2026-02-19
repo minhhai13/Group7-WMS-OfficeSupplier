@@ -13,7 +13,6 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 public class StockMovement {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "MovementID")
@@ -38,9 +37,9 @@ public class StockMovement {
             name = "MovementType",
             length = 30,
             nullable = false,
-            columnDefinition = "nvarchar(30) CHECK ([MovementType] IN ('Receipt', 'Issue', 'Transfer-Out', 'Transfer-In', 'Reserve', 'Release'))"
+            columnDefinition = "nvarchar(30) CHECK ([MovementType] IN ('Receipt', 'Issue', 'Reserve', 'Transfer-Out', 'Transfer-In'))"
     )
-    private String movementType; // Receipt, Issue, Transfer-In, Transfer-Out, Reserve, Release
+    private String movementType; // Receipt, Issue, Reserve, Transfer-Out, Transfer-In
 
     @Column(
             name = "StockType",
@@ -48,8 +47,7 @@ public class StockMovement {
             nullable = false,
             columnDefinition = "nvarchar(20) CHECK ([StockType] IN ('Physical', 'Reserved', 'In-Transit'))"
     )
-    // Physical, Reserved, In-Transit
-    private String stockType;
+    private String stockType; // Physical, Reserved, In-Transit
 
     @Column(name = "MovementDate", insertable = false, updatable = false,
             columnDefinition = "datetime2 default getdate()")
@@ -59,7 +57,7 @@ public class StockMovement {
     private Integer quantity;
 
     @Column(name = "UoM", length = 10, nullable = false)
-    private String uom; // Lưu theo BaseUoM
+    private String uom;
 
     @Column(name = "BalanceAfter", nullable = false)
     private Integer balanceAfter;

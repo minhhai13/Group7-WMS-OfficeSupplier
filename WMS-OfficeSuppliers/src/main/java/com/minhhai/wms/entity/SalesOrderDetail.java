@@ -1,6 +1,8 @@
 package com.minhhai.wms.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
 import lombok.*;
 import java.util.List;
 
@@ -26,9 +28,12 @@ public class SalesOrderDetail {
     @JoinColumn(name = "ProductID", nullable = false)
     private Product product;
 
+    @Positive(message = "Ordered quantity must be greater than 0")
     @Column(name = "OrderedQty", nullable = false)
     private Integer orderedQty;
 
+    @PositiveOrZero
+    @Builder.Default
     @Column(name = "IssuedQty", columnDefinition = "int default 0")
     private Integer issuedQty = 0;
 

@@ -1,5 +1,6 @@
 package com.minhhai.wms.service;
 
+import com.minhhai.wms.dto.UserDTO;
 import com.minhhai.wms.entity.User;
 
 import java.util.List;
@@ -11,19 +12,19 @@ public interface UserService {
 
     Optional<User> findById(Integer id);
 
-    Optional<String> findPasswordHashByUsername(String username);
+    Optional<User> findByUsername(String username);
 
-    Optional<User> findByUsernameWithWarehouse(String username);
+    List<User> findByWarehouseId(Integer warehouseId);
 
-    User save(User user, String plainPassword);
+    User save(User user);
 
-    void deleteById(Integer id);
+    void toggleActive(Integer userId);
 
     boolean existsByUsername(String username);
 
-    boolean existsByUsernameExcludingId(String username, Integer excludeUserId);
+    boolean existsByUsernameExcluding(String username, Integer userId);
 
-    List<String> getRoleOptions();
+    User save(UserDTO userDTO);
 
-    List<String> getWarehouseRequiredRoles();
+    Optional<User> authenticate(String username, String plainPassword);
 }

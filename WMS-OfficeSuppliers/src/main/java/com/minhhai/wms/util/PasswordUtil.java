@@ -18,14 +18,4 @@ public class PasswordUtil {
     public static boolean verifyPassword(String plainPassword, String hashedPassword) {
         return passwordEncoder.matches(plainPassword, hashedPassword);
     }
-
-    public static String generateTemporaryPassword() {
-        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%";
-        StringBuilder password = new StringBuilder();
-        for (int i = 0; i < 10; i++) {
-            int index = (int) (Math.random() * chars.length());
-            password.append(chars.charAt(index));
-        }
-        return password.toString();
-    }
 }

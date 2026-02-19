@@ -1,6 +1,7 @@
 package com.minhhai.wms.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.AssertTrue;
 import lombok.*;
 import java.util.List;
 
@@ -29,6 +30,7 @@ public class Transfer {
     @JoinColumn(name = "DestinationWarehouseID", nullable = false)
     private Warehouse destinationWarehouse;
 
+    @Builder.Default
     @Column(
             name = "TransferStatus",
             length = 30,
@@ -38,4 +40,10 @@ public class Transfer {
 
     @OneToMany(mappedBy = "transfer", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<TransferDetail> details;
+
+    @AssertTrue(message = "Source warehouse must be different from destination warehouse")
+    private boolean isDifferentWarehouses() {
+        if (sourceWarehouse == null || destinationWarehouse == null) return true;
+        return !sourceWarehouse.equals(destinationWarehouse);
+    }
 }

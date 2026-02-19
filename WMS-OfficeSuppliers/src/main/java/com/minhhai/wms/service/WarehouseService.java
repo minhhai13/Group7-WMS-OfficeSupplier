@@ -1,5 +1,6 @@
 package com.minhhai.wms.service;
 
+import com.minhhai.wms.dto.WarehouseDTO;
 import com.minhhai.wms.entity.Warehouse;
 
 import java.util.List;
@@ -9,13 +10,17 @@ public interface WarehouseService {
 
     List<Warehouse> findAll();
 
+    List<Warehouse> findAllActive();
+
     Optional<Warehouse> findById(Integer id);
+
+    Warehouse save(WarehouseDTO warehouseDTO);
 
     Warehouse save(Warehouse warehouse);
 
-    void deleteById(Integer id);
+    void toggleActive(Integer warehouseId);
 
-    boolean existsByWarehouseCode(String warehouseCode);
+    boolean existsByWarehouseCode(String code);
 
-    boolean existsByWarehouseCodeExcludingId(String warehouseCode, Integer excludeWarehouseId);
+    boolean existsByWarehouseCodeExcluding(String code, Integer warehouseId);
 }

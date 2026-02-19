@@ -12,30 +12,33 @@ import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 
+import org.springframework.context.annotation.ComponentScan;
+
 import javax.sql.DataSource;
 import java.util.Properties;
 
 @Configuration
 @EnableTransactionManagement
 @EnableJpaRepositories(basePackages = "com.minhhai.wms.repository")
+@ComponentScan(basePackages = "com.minhhai.wms")
 public class JpaConfig {
 
     @Bean
     public DataSource dataSource() {
         HikariConfig config = new HikariConfig();
-        // Cấu hình kết nối cơ bản
+        // Basic connection settings
         config.setDriverClassName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
         config.setJdbcUrl("jdbc:sqlserver://localhost:1433;databaseName=WMS_OfficeSupplies;encrypt=false");
         config.setUsername("sa");
         config.setPassword("Haik19@FPT2026");
 
-        // Cấu hình Pool tối ưu
-        config.setMaximumPoolSize(10); // Số lượng kết nối tối đa trong pool
-        config.setMinimumIdle(5);      // Số lượng kết nối tối thiểu luôn sẵn sàng
-        config.setIdleTimeout(300000); // 5 phút
-        config.setConnectionTimeout(20000); // 20 giây chờ kết nối
+        // Pool tuning
+        config.setMaximumPoolSize(10);
+        config.setMinimumIdle(5);
+        config.setIdleTimeout(300000);
+        config.setConnectionTimeout(20000);
 
-        // Cấu hình đặc thù cho SQL Server
+        // SQL Server specific
         config.addDataSourceProperty("cachePrepStmts", "true");
         config.addDataSourceProperty("prepStmtCacheSize", "250");
         config.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");

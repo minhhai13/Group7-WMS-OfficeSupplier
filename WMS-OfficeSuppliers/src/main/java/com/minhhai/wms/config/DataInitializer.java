@@ -13,7 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class DataInitializer implements ApplicationListener<ContextRefreshedEvent> {
 
-    private static final String DEFAULT_ADMIN_USERNAME = "admin";
+    private static final String DEFAULT_ADMIN_USERNAME = "admin@gmail.com";
     private static final String DEFAULT_ADMIN_PASSWORD = "123";
     private static final String DEFAULT_ADMIN_ROLE = "System Admin";
     private static final String DEFAULT_ADMIN_FULL_NAME = "System Administrator";

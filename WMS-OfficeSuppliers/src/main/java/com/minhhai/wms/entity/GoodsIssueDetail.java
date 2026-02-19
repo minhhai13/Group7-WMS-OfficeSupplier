@@ -1,6 +1,7 @@
 package com.minhhai.wms.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.PositiveOrZero;
 import lombok.*;
 
 @Entity
@@ -29,6 +30,7 @@ public class GoodsIssueDetail {
     @JoinColumn(name = "ProductID", nullable = false)
     private Product product;
 
+    @PositiveOrZero
     @Column(name = "IssuedQty", nullable = false)
     private Integer issuedQty;
 
