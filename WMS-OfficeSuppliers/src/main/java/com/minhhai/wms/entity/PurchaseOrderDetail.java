@@ -29,7 +29,7 @@ public class PurchaseOrderDetail {
     @JoinColumn(name = "PRDetailID")
     private PurchaseRequestDetail purchaseRequestDetail;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "ProductID", nullable = false)
     private Product product;
 

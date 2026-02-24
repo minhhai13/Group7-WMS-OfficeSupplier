@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Receiving Queue - WMS</title>
+    <link rel="stylesheet" th:href="@{/static/css/style.css}">
+</head>
+
+<body>
+    <div th:replace="~{fragments/layout :: sidebar-storekeeper}"></div>
+
+    <div class="main-content">
+        <div th:replace="~{fragments/layout :: topbar('Receiving Queue')}"></div>
+        <div th:replace="~{fragments/layout :: alerts}"></div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2>Pending Goods Receipt Notes (GRNs)</h2>
+            </div>
+
+            <div class="card-body">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>GRN Number</th>
+                            <th>PO Number</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="grn : ${pendingGrns}">
+                            <td th:text="${grn.grnNumber}">GRN-NUM</td>
+                            <td th:text="${grn.purchaseOrder.poNumber}">PO-NUM</td>
+                            <td><span class="badge bg-warning" th:text="${grn.grStatus}">Draft</span></td>
+                            <td>
+                                <a th:href="@{/storekeeper/grn-process/{id}(id=${grn.grnId})}"
+                                    class="btn btn-primary btn-sm">Processing</a>
+                            </td>
+                        </tr>
+                        <tr th:if="${#lists.isEmpty(pendingGrns)}">
+                            <td colspan="4" class="text-center">No pending GRNs to process.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

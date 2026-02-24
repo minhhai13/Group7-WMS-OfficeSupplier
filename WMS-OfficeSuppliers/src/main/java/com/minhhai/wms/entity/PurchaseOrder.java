@@ -27,7 +27,7 @@ public class PurchaseOrder {
     @JoinColumn(name = "WarehouseID", nullable = false)
     private Warehouse warehouse;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "SupplierID", nullable = false)
     private Partner supplier;
 

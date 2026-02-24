@@ -27,9 +27,9 @@ public class SecurityFilter implements Filter {
 
         // Allow public resources
         if (relativePath.startsWith("/static/")
-                || relativePath.equals("/login")
-                || relativePath.equals("/logout")
-                || relativePath.equals("/403")) {
+                || relativePath.startsWith("/login")
+                || relativePath.startsWith("/logout")
+                || relativePath.startsWith("/403")) {
             chain.doFilter(request, response);
             return;
         }
@@ -52,6 +52,16 @@ public class SecurityFilter implements Filter {
             }
         } else if (relativePath.startsWith("/warehouse/")) {
             if (!"Warehouse Admin".equals(role)) {
+                httpResponse.sendRedirect(contextPath + "/403");
+                return;
+            }
+        } else if (relativePath.startsWith("/purchasing/") || relativePath.startsWith("/api/purchasing/")) {
+            if (!"Purchasing Staff".equals(role) && !"Purchasing Manager".equals(role)) {
+                httpResponse.sendRedirect(contextPath + "/403");
+                return;
+            }
+        } else if (relativePath.startsWith("/storekeeper/") || relativePath.startsWith("/api/storekeeper/")) {
+            if (!"Storekeeper".equals(role)) {
                 httpResponse.sendRedirect(contextPath + "/403");
                 return;
             }
