@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Review Purchase Order - WMS</title>
+    <link rel="stylesheet" th:href="@{/static/css/style.css}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="app-layout">
+        <div th:replace="~{fragments/layout :: sidebar-purchasing}"></div>
+        <div class="main-content">
+            <div th:replace="~{fragments/layout :: topbar('Review Purchase Order')}"></div>
+            <div class="content-area">
+                <div th:replace="~{fragments/layout :: alerts}"></div>
+
+                <!-- Reject Reason Alert (if previously rejected) -->
+                <div th:if="${poDTO.poStatus == 'Rejected' && poDTO.rejectReason != null}" class="alert alert-danger"
+                    style="margin-bottom: 1.5rem;">
+                    <strong>Rejection Reason:</strong> <span th:text="${poDTO.rejectReason}"></span>
+                </div>
+
+                <!-- Order Information (Read-Only) -->
+                <div class="card" style="margin-bottom: 1.5rem;">
+                    <div class="card-header">
+                        <h2>Order Information</h2>
+                        <span th:if="${poDTO.poStatus == 'Pending Approval'}" class="badge badge-warning"
+                            th:text="${poDTO.poStatus}"></span>
+                        <span th:if="${poDTO.poStatus == 'Approved'}" class="badge badge-success"
+                            th:text="${poDTO.poStatus}"></span>
+                        <span th:if="${poDTO.poStatus == 'Rejected'}" class="badge badge-danger"
+                            th:text="${poDTO.poStatus}"></span>
+                    </div>
+                    <div class="card-body">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.5rem;">
+                            <div class="form-group">
+                                <label>Supplier</label>
+                                <input type="text" class="form-control" th:value="${poDTO.supplierName}" readonly
+                                    disabled>
+                            </div>
+                            <div class="form-group">
+                                <label>PO Number</label>
+                                <input type="text" class="form-control" th:value="${poDTO.poNumber}" readonly disabled>
+                            </div>
+                            <div class="form-group">
+                                <label>Warehouse</label>
+                                <input type="text" class="form-control" th:value="${poDTO.warehouseName}" readonly
+                                    disabled>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Order Lines (Read-Only) -->
+                <div class="card" style="margin-bottom: 1.5rem;">
+                    <div class="card-header">
+                        <h2>Order Lines</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-wrapper">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th style="width:5%;">#</th>
+                                        <th style="width:40%;">Product</th>
+                                        <th style="width:25%;">UoM</th>
+                                        <th style="width:30%;">Quantity</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr th:each="detail, iter : ${poDTO.details}">
+                                        <td th:text="${iter.count}"></td>
+                                        <td th:text="${detail.productDisplayName}"></td>
+                                        <td th:text="${detail.uom}"></td>
+                                        <td th:text="${detail.orderedQty}"></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="card">
+                    <div class="card-body"
+                        style="display: flex; gap: 1rem; justify-content: flex-end; align-items: flex-start;">
+                        <a th:href="@{/purchasing/approvals}" class="btn btn-outline">Back to List</a>
+
+                        <!-- Approve / Reject buttons only for Pending Approval -->
+                        <th:block th:if="${poDTO.poStatus == 'Pending Approval'}">
+                            <!-- Approve -->
+                            <form th:action="@{/purchasing/approvals/{id}/approve(id=${poDTO.poId})}" method="post"
+                                style="display:inline;"
+                                onsubmit="return confirm('Are you sure you want to APPROVE this Purchase Order? A Goods Receipt Note will be auto-generated.');">
+                                <button type="submit" class="btn btn-primary">✅ Approve</button>
+                            </form>
+
+                            <!-- Reject with reason -->
+                            <div id="rejectSection"
+                                style="display: none; border: 1px solid #ef4444; border-radius: 8px; padding: 1rem; max-width: 400px;">
+                                <form th:action="@{/purchasing/approvals/{id}/reject(id=${poDTO.poId})}" method="post"
+                                    onsubmit="return validateRejectReason();">
+                                    <div class="form-group" style="margin-bottom: 0.75rem;">
+                                        <label for="reason" style="font-weight: 600; color: #ef4444;">Rejection Reason
+                                            <span style="color:red;">*</span></label>
+                                        <textarea id="reason" name="reason" class="form-control" rows="3"
+                                            placeholder="Enter the reason for rejection..." required
+                                            style="resize: vertical;"></textarea>
+                                    </div>
+                                    <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                                        <button type="button" class="btn btn-outline btn-sm"
+                                            onclick="toggleReject()">Cancel</button>
+                                        <button type="submit" class="btn btn-danger btn-sm">Confirm Reject</button>
+                                    </div>
+                                </form>
+                            </div>
+                            <button type="button" class="btn btn-danger" id="rejectToggleBtn" onclick="toggleReject()">❌
+                                Reject</button>
+                        </th:block>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleReject() {
+            var section = document.getElementById('rejectSection');
+            var btn = document.getElementById('rejectToggleBtn');
+            if (section.style.display === 'none') {
+                section.style.display = 'block';
+                btn.style.display = 'none';
+            } else {
+                section.style.display = 'none';
+                btn.style.display = 'inline-block';
+            }
+        }
+
+        function validateRejectReason() {
+            var reason = document.getElementById('reason').value.trim();
+            if (!reason) {
+                alert('Please enter a rejection reason.');
+                return false;
+            }
+            return confirm('Are you sure you want to REJECT this Purchase Order?');
+        }
+    </script>
+</body>
+
+</html>

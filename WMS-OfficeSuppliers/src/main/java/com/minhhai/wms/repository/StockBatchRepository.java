@@ -16,4 +16,7 @@ public interface StockBatchRepository extends JpaRepository<StockBatch, Integer>
     List<StockBatch> findByProductProductId(Integer productId);
 
     List<StockBatch> findByWarehouseWarehouseIdAndProductProductId(Integer warehouseId, Integer productId);
+
+    java.util.Optional<StockBatch> findByWarehouse_WarehouseIdAndProduct_ProductIdAndBin_BinIdAndBatchNumber(
+            Integer warehouseId, Integer productId, Integer binId, String batchNumber);
 }

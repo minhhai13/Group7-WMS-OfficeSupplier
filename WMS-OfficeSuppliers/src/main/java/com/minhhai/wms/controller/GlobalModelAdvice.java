@@ -21,4 +21,13 @@ public class GlobalModelAdvice {
         }
         return null;
     }
+
+    @ModelAttribute("loggedInUserRole")
+    public String loggedInUserRole(HttpSession session) {
+        User user = (User) session.getAttribute("loggedInUser");
+        if (user != null) {
+            return user.getRole();
+        }
+        return null;
+    }
 }

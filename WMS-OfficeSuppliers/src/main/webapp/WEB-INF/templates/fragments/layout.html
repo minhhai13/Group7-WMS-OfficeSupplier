@@ -19,7 +19,7 @@
     </div>
 </div>
 
-<!-- ##### Warehouse Admin Sidebar ##### -->
+<!-- ===== Warehouse Admin Sidebar ===== -->
 <div th:fragment="sidebar-warehouse" class="sidebar">
     <div class="sidebar-brand">
         <span>📦</span> WMS Office Suppliers
@@ -33,7 +33,8 @@
         <li><a th:href="@{/warehouse/products}" th:classappend="${activePage == 'warehouse-products'} ? 'active'">📋
                 Products</a></li>
         <li><a th:href="@{/warehouse/uom-conversions}"
-                th:classappend="${activePage == 'warehouse-uom-conversions'} ? 'active'">🔄 UoM Conversions</a></li>
+                th:classappend="${activePage == 'warehouse-uom-conversions'} ? 'active'">🔄
+                UoM Conversions</a></li>
         <li><a th:href="@{/warehouse/partners}" th:classappend="${activePage == 'warehouse-partners'} ? 'active'">🤝
                 Partners</a></li>
     </ul>
@@ -42,32 +43,18 @@
     </div>
 </div>
 
-<!-- ===== Purchasing Staff Sidebar ===== -->
+<!-- ===== Purchasing Sidebar ===== -->
 <div th:fragment="sidebar-purchasing" class="sidebar">
     <div class="sidebar-brand">
-        <span>🛒</span> WMS Purchasing
+        <span>📦</span> WMS Office Suppliers
     </div>
     <ul class="sidebar-nav">
         <li class="nav-section">Purchasing</li>
-        <li><a th:href="@{/purchasing/po-list}" th:classappend="${activePage == 'po-list'} ? 'active'">📜 Purchase
-                Orders</a></li>
-        <li><a th:href="@{/purchasing/po-form}" th:classappend="${activePage == 'po-form'} ? 'active'">➕ Create PO</a>
-        </li>
-    </ul>
-    <div class="sidebar-footer">
-        <a th:href="@{/logout}">🚪 Logout</a>
-    </div>
-</div>
-
-<!-- ===== Purchasing Manager Sidebar ===== -->
-<div th:fragment="sidebar-purchasing-manager" class="sidebar">
-    <div class="sidebar-brand">
-        <span>🛒</span> WMS MGR
-    </div>
-    <ul class="sidebar-nav">
-        <li class="nav-section">Approvals</li>
-        <li><a th:href="@{/purchasing/approval-dashboard}"
-                th:classappend="${activePage == 'approval-dashboard'} ? 'active'">✔️ PO Approvals</a></li>
+        <li><a th:href="@{/purchasing/orders}" th:classappend="${activePage == 'purchasing-orders'} ? 'active'">📋
+                Purchase Orders</a></li>
+        <li th:if="${loggedInUserRole == 'Purchasing Manager'}"><a th:href="@{/purchasing/approvals}"
+                th:classappend="${activePage == 'purchasing-approvals'} ? 'active'">✅
+                Approvals</a></li>
     </ul>
     <div class="sidebar-footer">
         <a th:href="@{/logout}">🚪 Logout</a>
@@ -77,20 +64,17 @@
 <!-- ===== Storekeeper Sidebar ===== -->
 <div th:fragment="sidebar-storekeeper" class="sidebar">
     <div class="sidebar-brand">
-        <span>🏪</span> WMS Storekeeper
+        <span>📦</span> WMS Office Suppliers
     </div>
     <ul class="sidebar-nav">
-        <li class="nav-section">Receiving</li>
-        <li><a th:href="@{/storekeeper/grn-list}" th:classappend="${activePage == 'grn-list'} ? 'active'">📥 Receiving
-                Queue</a></li>
+        <li class="nav-section">Storekeeper</li>
+        <li><a th:href="@{/storekeeper/grn}" th:classappend="${activePage == 'storekeeper-grn'} ? 'active'">📥
+                Goods Receipt</a></li>
     </ul>
     <div class="sidebar-footer">
         <a th:href="@{/logout}">🚪 Logout</a>
     </div>
 </div>
-
-
-<!-- ===== Topbar ===== -->
 <div th:fragment="topbar(title)" class="topbar">
     <div class="topbar-title" th:text="${title}">Page Title</div>
     <div class="topbar-user" th:text="${loggedInUserName != null} ? ${loggedInUserName} : ''">

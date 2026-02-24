@@ -1,16 +1,13 @@
 package com.minhhai.wms.controller;
 
+import com.minhhai.wms.dto.ProductDTO;
 import com.minhhai.wms.dto.PurchaseOrderDTO;
-import com.minhhai.wms.dto.PurchaseOrderDetailDTO;
 import com.minhhai.wms.entity.Partner;
 import com.minhhai.wms.entity.Product;
-import com.minhhai.wms.entity.PurchaseOrder;
-import com.minhhai.wms.entity.PurchaseOrderDetail;
 import com.minhhai.wms.entity.User;
-import com.minhhai.wms.repository.PartnerRepository;
-import com.minhhai.wms.repository.ProductRepository;
+import com.minhhai.wms.service.PartnerService;
+import com.minhhai.wms.service.ProductService;
 import com.minhhai.wms.service.PurchaseOrderService;
-import com.minhhai.wms.dto.ProductDTO;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -20,179 +17,145 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Controller
-@RequestMapping("/purchasing")
+@RequestMapping("/purchasing/orders")
 @RequiredArgsConstructor
 public class POController {
 
     private final PurchaseOrderService poService;
-    private final PartnerRepository partnerRepository;
-    private final ProductRepository productRepository;
+    private final PartnerService partnerService;
+    private final ProductService productService;
 
-    @GetMapping("/po-list")
-    public String listPOs(@RequestParam(name = "status", required = false) String status,
-                          Model model, HttpSession session) {
-        User user = (User) session.getAttribute("loggedInUser");
-        if (user.getWarehouse() == null) {
-            model.addAttribute("error", "You do not have a warehouse assigned.");
-            return "error/403";
-        }
-        
-        List<PurchaseOrder> pos = poService.getPOsByWarehouse(user.getWarehouse().getWarehouseId(), status);
-        model.addAttribute("pos", pos);
-        model.addAttribute("activePage", "po-list");
-        model.addAttribute("statusFilter", status);
-        return "purchasing/po-list";
-    }
+    // ==================== List ====================
 
-    @GetMapping("/po-form")
-    public String showPOForm(@RequestParam(name = "id", required = false) Integer poId,
-                             Model model, HttpSession session) {
-        User user = (User) session.getAttribute("loggedInUser");
-        
-        PurchaseOrderDTO poDTO = new PurchaseOrderDTO();
-        if (poId != null) {
-            PurchaseOrder po = poService.getPOById(poId);
-            
-            // Check if user belongs to the same warehouse
-            if (!po.getWarehouse().getWarehouseId().equals(user.getWarehouse().getWarehouseId())) {
-                return "redirect:/403";
-            }
-            
-            poDTO.setPoId(po.getPoId());
-            poDTO.setPoNumber(po.getPoNumber());
-            poDTO.setSupplierId(po.getSupplier().getPartnerId());
-            poDTO.setSupplierName(po.getSupplier().getPartnerName());
-            poDTO.setPoStatus(po.getPoStatus());
-            
-            List<PurchaseOrderDetailDTO> details = new ArrayList<>();
-            for (PurchaseOrderDetail detail : po.getDetails()) {
-                PurchaseOrderDetailDTO detailDTO = new PurchaseOrderDetailDTO();
-                detailDTO.setPoDetailId(detail.getPoDetailId());
-                detailDTO.setProductId(detail.getProduct().getProductId());
-                detailDTO.setProductSku(detail.getProduct().getSku());
-                detailDTO.setProductName(detail.getProduct().getProductName());
-                detailDTO.setOrderedQty(detail.getOrderedQty());
-                detailDTO.setReceivedQty(detail.getReceivedQty());
-                detailDTO.setUom(detail.getUom());
-                details.add(detailDTO);
-            }
-            poDTO.setDetails(details);
-        } else {
-            poDTO.setPoStatus("Draft");
-            // Add one empty detail row by default
-            poDTO.getDetails().add(new PurchaseOrderDetailDTO());
-        }
+    @GetMapping
+    public String list(@RequestParam(name = "status", required = false) String status,
+                       @RequestParam(name = "supplierId", required = false) Integer supplierId,
+                       Model model, HttpSession session) {
 
-        List<Partner> suppliers = partnerRepository.findByPartnerTypeAndIsActive("Supplier", true);
-        
-        // Pass ProductDTOs instead of Entities to avoid infinite recursion in JSON serialization
-        List<ProductDTO> products = productRepository.findByIsActive(true).stream()
-            .map(p -> ProductDTO.builder()
-                .productId(p.getProductId())
-                .sku(p.getSku())
-                .productName(p.getProductName())
-                .build())
-            .collect(Collectors.toList());
-        
-        model.addAttribute("poDTO", poDTO);
-        model.addAttribute("suppliers", suppliers);
-        model.addAttribute("products", products);
-        model.addAttribute("activePage", "po-form");
-        return "purchasing/po-form";
-    }
-
-    @PostMapping("/po-save")
-    public String savePO(@Valid @ModelAttribute("poDTO") PurchaseOrderDTO poDTO,
-                         BindingResult bindingResult,
-                         @RequestParam(name = "action") String action,
-                         Model model, HttpSession session,
-                         RedirectAttributes redirectAttributes) {
-                         
         User user = (User) session.getAttribute("loggedInUser");
         Integer warehouseId = user.getWarehouse().getWarehouseId();
 
-        if (bindingResult.hasErrors()) {
-            List<Partner> suppliers = partnerRepository.findByPartnerTypeAndIsActive("Supplier", true);
-            
-            // Re-populate products as DTOs
-            List<ProductDTO> products = productRepository.findByIsActive(true).stream()
-                .map(p -> ProductDTO.builder()
-                    .productId(p.getProductId())
-                    .sku(p.getSku())
-                    .productName(p.getProductName())
-                    .build())
-                .collect(Collectors.toList());
-                    
-            model.addAttribute("suppliers", suppliers);
-            model.addAttribute("products", products);
-            model.addAttribute("activePage", "po-form");
-            // fill missing product details for view rendering
-            for (PurchaseOrderDetailDTO detail : poDTO.getDetails()) {
-                if (detail.getProductId() != null) {
-                    productRepository.findById(detail.getProductId()).ifPresent(p -> {
-                        detail.setProductSku(p.getSku());
-                        detail.setProductName(p.getProductName());
-                    });
-                }
-            }
+        List<PurchaseOrderDTO> orders = poService.getPOsByWarehouse(warehouseId, status, supplierId);
+        List<Partner> suppliers = partnerService.findByType("Supplier");
+
+        model.addAttribute("activePage", "purchasing-orders");
+        model.addAttribute("orders", orders);
+        model.addAttribute("suppliers", suppliers);
+        model.addAttribute("selectedStatus", status);
+        model.addAttribute("selectedSupplierId", supplierId);
+        return "purchasing/po-list";
+    }
+
+    // ==================== Create Form ====================
+
+    @GetMapping("/new")
+    public String createForm(Model model, HttpSession session) {
+        User user = (User) session.getAttribute("loggedInUser");
+
+        PurchaseOrderDTO dto = new PurchaseOrderDTO();
+        dto.setWarehouseId(user.getWarehouse().getWarehouseId());
+        dto.setWarehouseName(user.getWarehouse().getWarehouseName());
+
+        model.addAttribute("activePage", "purchasing-orders");
+        model.addAttribute("poDTO", dto);
+        model.addAttribute("suppliers", getActiveSuppliers());
+        model.addAttribute("products", getActiveProductDTOs());
+
+        return "purchasing/po-form";
+    }
+
+    // ==================== Edit Form ====================
+
+    @GetMapping("/{id}/edit")
+    public String editForm(@PathVariable(name = "id") Integer id,
+                           Model model, HttpSession session, RedirectAttributes redirectAttributes) {
+        try {
+            PurchaseOrderDTO dto = poService.getPOById(id);
+            model.addAttribute("activePage", "purchasing-orders");
+            model.addAttribute("poDTO", dto);
+            model.addAttribute("suppliers", getActiveSuppliers());
+            model.addAttribute("products", getActiveProductDTOs());
+
             return "purchasing/po-form";
+        } catch (IllegalArgumentException e) {
+            redirectAttributes.addFlashAttribute("error", e.getMessage());
+            return "redirect:/purchasing/orders";
         }
-        
-        // Filter out empty rows if any
-        poDTO.getDetails().removeIf(d -> d.getProductId() == null);
-        
-        if (poDTO.getDetails().isEmpty()) {
-            bindingResult.rejectValue("details", "error.poDTO", "At least one product line is required");
-            List<Partner> suppliers = partnerRepository.findByPartnerTypeAndIsActive("Supplier", true);
-            
-            // Re-populate products as DTOs
-            List<ProductDTO> products = productRepository.findByIsActive(true).stream()
-                .map(p -> ProductDTO.builder()
-                    .productId(p.getProductId())
-                    .sku(p.getSku())
-                    .productName(p.getProductName())
-                    .build())
-                .collect(Collectors.toList());
-                    
-            model.addAttribute("suppliers", suppliers);
-            model.addAttribute("products", products);
-            model.addAttribute("activePage", "po-form");
+    }
+
+    // ==================== Save (Draft or Submit) ====================
+
+    @PostMapping("/save")
+    public String save(@Valid @ModelAttribute("poDTO") PurchaseOrderDTO poDTO,
+                       BindingResult bindingResult,
+                       @RequestParam(name = "action") String action,
+                       Model model, HttpSession session,
+                       RedirectAttributes redirectAttributes) {
+
+        User user = (User) session.getAttribute("loggedInUser");
+
+        if (bindingResult.hasErrors()) {
+            if (user.getWarehouse() != null) {
+                poDTO.setWarehouseName(user.getWarehouse().getWarehouseName());
+            }
+            model.addAttribute("activePage", "purchasing-orders");
+            model.addAttribute("suppliers", getActiveSuppliers());
+            model.addAttribute("products", getActiveProductDTOs());
+            model.addAttribute("error", "Please fix the errors below.");
             return "purchasing/po-form";
         }
 
         try {
-            boolean isDraft = action.equals("draft");
-            PurchaseOrder savedPo = poService.savePO(poDTO, warehouseId, isDraft);
-            
-            if (isDraft) {
-                redirectAttributes.addFlashAttribute("successMessage", "Draft saved successfully.");
-                return "redirect:/purchasing/po-form?id=" + savedPo.getPoId();
+            if ("submit".equals(action)) {
+                poService.submitForApproval(poDTO, user);
+                redirectAttributes.addFlashAttribute("success", "Purchase Order submitted for approval successfully.");
             } else {
-                redirectAttributes.addFlashAttribute("successMessage", "Purchase Order submitted for approval.");
-                return "redirect:/purchasing/po-list";
+                poService.saveDraft(poDTO, user);
+                redirectAttributes.addFlashAttribute("success", "Purchase Order saved as draft successfully.");
             }
-        } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
-            return "redirect:/purchasing/po-list";
+        } catch (IllegalArgumentException e) {
+            redirectAttributes.addFlashAttribute("error", e.getMessage());
+            // If it's a new PO (no ID), redirect to new form; otherwise back to edit
+            if (poDTO.getPoId() != null) {
+                return "redirect:/purchasing/orders/" + poDTO.getPoId() + "/edit";
+            }
+            return "redirect:/purchasing/orders/new";
         }
+
+        return "redirect:/purchasing/orders";
     }
-    
-    @PostMapping("/po-delete/{id}")
-    public String deletePO(@PathVariable("id") Integer poId,
-                           HttpSession session,
-                           RedirectAttributes redirectAttributes) {
-        User user = (User) session.getAttribute("loggedInUser");
+
+    // ==================== Delete ====================
+
+    @PostMapping("/{id}/delete")
+    public String delete(@PathVariable(name = "id") Integer id, RedirectAttributes redirectAttributes) {
         try {
-            poService.deletePO(poId, user.getWarehouse().getWarehouseId());
-            redirectAttributes.addFlashAttribute("successMessage", "Purchase Order deleted successfully.");
-        } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+            poService.deletePO(id);
+            redirectAttributes.addFlashAttribute("success", "Purchase Order deleted successfully.");
+        } catch (IllegalArgumentException e) {
+            redirectAttributes.addFlashAttribute("error", e.getMessage());
         }
-        return "redirect:/purchasing/po-list";
+        return "redirect:/purchasing/orders";
+    }
+
+    // ==================== Helpers ====================
+
+    private List<Partner> getActiveSuppliers() {
+        return partnerService.findByType("Supplier").stream()
+                .filter(Partner::getIsActive)
+                .toList();
+    }
+
+    private List<ProductDTO> getActiveProductDTOs() {
+        return productService.findAllActive().stream()
+                .map(p -> ProductDTO.builder()
+                        .productId(p.getProductId())
+                        .sku(p.getSku())
+                        .productName(p.getProductName())
+                        .build())
+                .toList();
     }
 }

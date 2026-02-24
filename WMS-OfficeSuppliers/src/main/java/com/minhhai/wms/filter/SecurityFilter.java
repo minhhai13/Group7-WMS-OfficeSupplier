@@ -27,9 +27,9 @@ public class SecurityFilter implements Filter {
 
         // Allow public resources
         if (relativePath.startsWith("/static/")
-                || relativePath.startsWith("/login")
-                || relativePath.startsWith("/logout")
-                || relativePath.startsWith("/403")) {
+                || relativePath.equals("/login")
+                || relativePath.equals("/logout")
+                || relativePath.equals("/403")) {
             chain.doFilter(request, response);
             return;
         }
@@ -55,15 +55,34 @@ public class SecurityFilter implements Filter {
                 httpResponse.sendRedirect(contextPath + "/403");
                 return;
             }
-        } else if (relativePath.startsWith("/purchasing/") || relativePath.startsWith("/api/purchasing/")) {
-            if (!"Purchasing Staff".equals(role) && !"Purchasing Manager".equals(role)) {
+        } else if (relativePath.startsWith("/purchasing/")) {
+            if (!("Purchasing Staff".equals(role)) && !("Purchasing Manager".equals(role))) {
                 httpResponse.sendRedirect(contextPath + "/403");
                 return;
             }
-        } else if (relativePath.startsWith("/storekeeper/") || relativePath.startsWith("/api/storekeeper/")) {
+            // Sub-check: /purchasing/approvals/ is Manager-only
+            if (relativePath.startsWith("/purchasing/approvals")) {
+                if (!"Purchasing Manager".equals(role)) {
+                    httpResponse.sendRedirect(contextPath + "/403");
+                    return;
+                }
+            }
+        } else if (relativePath.startsWith("/storekeeper/")) {
             if (!"Storekeeper".equals(role)) {
                 httpResponse.sendRedirect(contextPath + "/403");
                 return;
+            }
+        } else if (relativePath.startsWith("/api/")) {
+            if (relativePath.startsWith("/api/purchasing/")) {
+                if (!"Purchasing Staff".equals(role) && !"Purchasing Manager".equals(role)) {
+                    httpResponse.sendRedirect(contextPath + "/403");
+                    return;
+                }
+            } else if (relativePath.startsWith("/api/storekeeper/")) {
+                if (!"Storekeeper".equals(role)) {
+                    httpResponse.sendRedirect(contextPath + "/403");
+                    return;
+                }
             }
         }
 

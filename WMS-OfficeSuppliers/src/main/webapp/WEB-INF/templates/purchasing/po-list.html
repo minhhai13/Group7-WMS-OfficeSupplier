@@ -5,91 +5,111 @@
     <meta charset="UTF-8">
     <title>Purchase Orders - WMS</title>
     <link rel="stylesheet" th:href="@{/static/css/style.css}">
-    <style>
-        .filter-bar {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 20px;
-            align-items: center;
-        }
-    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 
 <body>
+<div class="app-layout">
     <div th:replace="~{fragments/layout :: sidebar-purchasing}"></div>
-
     <div class="main-content">
         <div th:replace="~{fragments/layout :: topbar('Purchase Orders')}"></div>
-        <div th:replace="~{fragments/layout :: alerts}"></div>
+        <div class="content-area">
+            <div th:replace="~{fragments/layout :: alerts}"></div>
 
-        <div class="card">
-            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-                <h2>PO List</h2>
-                <a th:href="@{/purchasing/po-form}" class="btn btn-primary">➕ Create New PO</a>
-            </div>
-
-            <div class="card-body">
-                <form class="filter-bar" th:action="@{/purchasing/po-list}" method="get">
-                    <div>
-                        <label for="status">Filter by Status:</label>
-                        <select name="status" id="status" class="form-control"
-                            style="width: 200px; display: inline-block;">
-                            <option value="">All</option>
-                            <option value="Draft" th:selected="${statusFilter == 'Draft'}">Draft</option>
-                            <option value="Pending Approval" th:selected="${statusFilter == 'Pending Approval'}">Pending
-                                Approval</option>
-                            <option value="Approved" th:selected="${statusFilter == 'Approved'}">Approved</option>
-                            <option value="Rejected" th:selected="${statusFilter == 'Rejected'}">Rejected</option>
-                            <option value="Incomplete" th:selected="${statusFilter == 'Incomplete'}">Incomplete</option>
-                            <option value="Completed" th:selected="${statusFilter == 'Completed'}">Completed</option>
+            <div class="card">
+                <div class="card-header">
+                    <h2>Purchase Orders</h2>
+                    <a th:href="@{/purchasing/orders/new}" class="btn btn-primary btn-sm">+ New PO</a>
+                </div>
+                <div class="card-body">
+                    <!-- Filter Bar -->
+                    <form th:action="@{/purchasing/orders}" method="get" class="search-bar">
+                        <select name="status" class="form-control" style="max-width: 200px;">
+                            <option value="">All Statuses</option>
+                            <option value="Draft" th:selected="${selectedStatus == 'Draft'}">Draft</option>
+                            <option value="Pending Approval" th:selected="${selectedStatus == 'Pending Approval'}">
+                                Pending Approval
+                            </option>
+                            <option value="Approved" th:selected="${selectedStatus == 'Approved'}">Approved</option>
+                            <option value="Incomplete" th:selected="${selectedStatus == 'Incomplete'}">Incomplete
+                            </option>
+                            <option value="Completed" th:selected="${selectedStatus == 'Completed'}">Completed
+                            </option>
+                            <option value="Rejected" th:selected="${selectedStatus == 'Rejected'}">Rejected</option>
                         </select>
-                    </div>
-                    <button type="submit" class="btn btn-primary">Filter</button>
-                    <a th:href="@{/purchasing/po-list}" class="btn btn-secondary">Clear</a>
-                </form>
+                        <select name="supplierId" class="form-control" style="max-width: 220px;">
+                            <option value="">All Suppliers</option>
+                            <option th:each="s : ${suppliers}" th:value="${s.partnerId}" th:text="${s.partnerName}"
+                                    th:selected="${selectedSupplierId != null && selectedSupplierId == s.partnerId}">
+                            </option>
+                        </select>
+                        <button type="submit" class="btn btn-outline">Filter</button>
+                        <a th:href="@{/purchasing/orders}" class="btn btn-outline"
+                           th:if="${selectedStatus != null || selectedSupplierId != null}">Clear</a>
+                    </form>
 
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>PO ID</th>
-                            <th>PO Number</th>
-                            <th>Supplier</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr th:each="po : ${pos}">
-                            <td th:text="${po.poId}"></td>
-                            <td th:text="${po.poNumber}"></td>
-                            <td th:text="${po.supplier.partnerName}"></td>
-                            <td>
-                                <span th:class="'badge ' + (${po.poStatus == 'Draft'} ? 'bg-secondary' : 
-                                               (${po.poStatus == 'Pending Approval'} ? 'bg-warning' : 
-                                               (${po.poStatus == 'Approved'} ? 'bg-primary' : 
-                                               (${po.poStatus == 'Completed'} ? 'bg-success' : 'bg-danger'))))"
-                                    th:text="${po.poStatus}">
-                                </span>
-                            </td>
-                            <td>
-                                <a th:href="@{/purchasing/po-form(id=${po.poId})}"
-                                    class="btn btn-sm btn-primary">View/Edit</a>
-                                <form th:if="${po.poStatus == 'Draft' or po.poStatus == 'Rejected'}"
-                                    th:action="@{/purchasing/po-delete/{id}(id=${po.poId})}" method="post"
-                                    style="display:inline;">
-                                    <button type="submit" class="btn btn-sm btn-danger"
-                                        onclick="return confirm('Are you sure you want to delete this PO?');">Delete</button>
-                                </form>
-                            </td>
-                        </tr>
-                        <tr th:if="${#lists.isEmpty(pos)}">
-                            <td colspan="5" class="text-center">No Purchase Orders found.</td>
-                        </tr>
-                    </tbody>
-                </table>
+                    <div th:if="${#lists.isEmpty(orders)}" class="empty-state">
+                        <p>No purchase orders found.</p>
+                    </div>
+                    <div th:unless="${#lists.isEmpty(orders)}" class="table-wrapper">
+                        <table>
+                            <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>PO Number</th>
+                                <th>Supplier</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:each="po, iter : ${orders}">
+                                <td th:text="${iter.count}"></td>
+                                <td><strong th:text="${po.poNumber}"></strong></td>
+                                <td th:text="${po.supplierName} ?: '—'"></td>
+                                <td>
+                                            <span th:if="${po.poStatus == 'Draft'}" class="badge badge-secondary"
+                                                  th:text="${po.poStatus}"></span>
+                                    <span th:if="${po.poStatus == 'Pending Approval'}"
+                                          class="badge badge-warning" th:text="${po.poStatus}"></span>
+                                    <span th:if="${po.poStatus == 'Approved'}" class="badge badge-info"
+                                          th:text="${po.poStatus}"></span>
+                                    <span th:if="${po.poStatus == 'Completed'}" class="badge badge-success"
+                                          th:text="${po.poStatus}"></span>
+                                    <span th:if="${po.poStatus == 'Incomplete'}" class="badge badge-warning"
+                                          th:text="${po.poStatus}"></span>
+                                    <span th:if="${po.poStatus == 'Rejected'}"
+                                          class="badge badge-danger"
+                                          th:text="${po.poStatus}"
+                                          style="cursor: help;"
+                                          th:title="${po.rejectReason != null ? 'Lý do: ' + po.rejectReason : 'Không có lý do cụ thể'}"></span>
+
+                                    <div th:if="${po.poStatus == 'Rejected' && po.rejectReason != null}"
+                                         style="font-size: 0.75rem; color: #dc3545; margin-top: 4px;">
+                                        <i th:text="'💬 ' + ${po.rejectReason}"></i>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="btn-group">
+                                        <a th:href="@{/purchasing/orders/{id}/edit(id=${po.poId})}"
+                                           class="btn btn-outline btn-sm">View / Edit</a>
+                                        <form th:if="${po.poStatus == 'Draft' || po.poStatus == 'Rejected'}"
+                                              th:action="@{/purchasing/orders/{id}/delete(id=${po.poId})}"
+                                              method="post" style="display:inline;"
+                                              onsubmit="return confirm('Are you sure you want to delete this PO?');">
+                                            <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
+</div>
 </body>
 
 </html>

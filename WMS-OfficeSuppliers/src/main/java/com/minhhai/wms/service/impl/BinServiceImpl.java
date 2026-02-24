@@ -32,7 +32,7 @@ public class BinServiceImpl implements BinService {
     @Override
     @Transactional(readOnly = true)
     public List<Bin> findActiveByWarehouseId(Integer warehouseId) {
-        return binRepository.findByWarehouseWarehouseIdAndIsActiveTrue(warehouseId);
+        return binRepository.findByWarehouseWarehouseIdAndIsActive(warehouseId, true);
     }
 
     @Override

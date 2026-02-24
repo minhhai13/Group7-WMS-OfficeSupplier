@@ -39,8 +39,11 @@ public class PurchaseOrder {
     )
     private String poStatus = "Draft"; // Draft, Pending Approval, Approved, Rejected, Completed, Incomplete
 
-    @OneToMany(mappedBy = "purchaseOrder", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "purchaseOrder", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
     private List<PurchaseOrderDetail> details;
+
+    @Column(name = "RejectReason", length = 500)
+    private String rejectReason;
 
     @OneToMany(mappedBy = "purchaseOrder", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<GoodsReceiptNote> goodsReceiptNotes;

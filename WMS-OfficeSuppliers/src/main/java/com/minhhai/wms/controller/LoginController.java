@@ -80,9 +80,8 @@ public class LoginController {
         return switch (role) {
             case "System Admin" -> "redirect:/admin/dashboard";
             case "Warehouse Admin" -> "redirect:/warehouse/dashboard";
-            case "Purchasing Staff" -> "redirect:/purchasing/po-list";
-            case "Purchasing Manager" -> "redirect:/purchasing/approval-dashboard";
-            case "Storekeeper" -> "redirect:/storekeeper/grn-list";
+            case "Purchasing Staff", "Purchasing Manager" -> "redirect:/purchasing/orders";
+            case "Storekeeper" -> "redirect:/storekeeper/grn";
             default -> "redirect:/login";
         };
     }

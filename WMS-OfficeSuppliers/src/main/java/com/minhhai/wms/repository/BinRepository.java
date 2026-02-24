@@ -11,7 +11,7 @@ public interface BinRepository extends JpaRepository<Bin, Integer> {
 
     List<Bin> findByWarehouseWarehouseId(Integer warehouseId);
 
-    List<Bin> findByWarehouseWarehouseIdAndIsActiveTrue(Integer warehouseId);
+    List<Bin> findByWarehouseWarehouseIdAndIsActive(Integer warehouseId, Boolean isActive);
 
     boolean existsByWarehouseWarehouseIdAndBinLocation(Integer warehouseId, String binLocation);
 
