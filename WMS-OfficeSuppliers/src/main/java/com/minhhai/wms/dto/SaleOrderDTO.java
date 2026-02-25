@@ -13,30 +13,32 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class PurchaseOrderDTO {
+public class SaleOrderDTO {
 
-    private Integer poId;
+    private Integer soId;
 
-    private String poNumber;
+    private String soNumber;
 
-    @NotNull(message = "Vui lòng chọn nhà cung cấp")
-    private Integer supplierId;
+    @NotNull(message = "Vui lòng chọn khách hàng")
+    private Integer customerId;
 
-    private String supplierName;
+    private String customerName;
 
     private Integer warehouseId;
 
     private String warehouseName;
 
-    private String poStatus;
+    private String soStatus;
 
     private String rejectReason;
 
-    // PR source info: comma-separated PR numbers that generated this PO
-    private String sourcePRNumbers;
+    // PR integration fields
+    private boolean hasPR;
+    private String prNumber;
+    private String prStatus;
 
     @Valid
     @NotEmpty(message = "Đơn hàng phải có ít nhất một dòng sản phẩm")
     @Builder.Default
-    private List<PurchaseOrderDetailDTO> details = new ArrayList<>();
+    private List<SaleOrderDetailDTO> details = new ArrayList<>();
 }

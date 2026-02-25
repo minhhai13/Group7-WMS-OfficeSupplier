@@ -67,6 +67,18 @@ public class SecurityFilter implements Filter {
                     return;
                 }
             }
+        } else if (relativePath.startsWith("/sales/")) {
+            if (!("Sales Staff".equals(role)) && !("Sales Manager".equals(role))) {
+                httpResponse.sendRedirect(contextPath + "/403");
+                return;
+            }
+            // Sub-check: /sales/approvals/ is Manager-only
+            if (relativePath.startsWith("/sales/approvals")) {
+                if (!"Sales Manager".equals(role)) {
+                    httpResponse.sendRedirect(contextPath + "/403");
+                    return;
+                }
+            }
         } else if (relativePath.startsWith("/storekeeper/")) {
             if (!"Storekeeper".equals(role)) {
                 httpResponse.sendRedirect(contextPath + "/403");
@@ -75,6 +87,11 @@ public class SecurityFilter implements Filter {
         } else if (relativePath.startsWith("/api/")) {
             if (relativePath.startsWith("/api/purchasing/")) {
                 if (!"Purchasing Staff".equals(role) && !"Purchasing Manager".equals(role)) {
+                    httpResponse.sendRedirect(contextPath + "/403");
+                    return;
+                }
+            } else if (relativePath.startsWith("/api/sales/")) {
+                if (!"Sales Staff".equals(role) && !"Sales Manager".equals(role)) {
                     httpResponse.sendRedirect(contextPath + "/403");
                     return;
                 }

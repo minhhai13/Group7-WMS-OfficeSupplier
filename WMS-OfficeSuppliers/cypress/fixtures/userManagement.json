@@ -1,0 +1,201 @@
+{
+  "config": {
+    "adminUser": "admin@gmail.com",
+    "adminPass": "123",
+    "baseUrl": "http://localhost:8080"
+  },
+
+  "testCases": {
+    "TD01": {
+      "description": "Tạo user không gắn kho",
+      "username": "admin.hcm",
+      "fullName": "Nguyen Van Admin",
+      "password": "P@ss123",
+      "role": "System Admin",
+      "warehouse": "-- None --",
+      "expectedSelector": ".alert-success",
+      "expectedText": "User saved successfully"
+    },
+
+    "TD02": {
+      "description": "Tạo user có gắn kho cụ thể",
+      "username": "keeper01",
+      "fullName": "Tran Thi Kho",
+      "password": "123456",
+      "role": "Storekeeper",
+      "warehouse": "1",
+      "expectedSelector": ".alert-success",
+      "expectedText": "User saved successfully"
+    },
+
+    "TD03": {
+      "description": "Thất bại khi trống Username",
+      "username": "",
+      "fullName": "Nguyen Van A",
+      "password": "123456",
+      "role": "Storekeeper",
+      "warehouse": "1",
+      "expectedSelector": "#username",
+      "expectedClass": "is-invalid"
+    },
+
+    "TD04": {
+      "description": "Thất bại khi trống Full Name",
+      "username": "user01",
+      "fullName": "",
+      "password": "123456",
+      "role": "Storekeeper",
+      "warehouse": "Ha Noi Warehouse 1",
+      "expectedSelector": "#fullName",
+      "expectedClass": "is-invalid"
+    },
+
+    "TD05": {
+      "description": "Thất bại khi trống Role",
+      "username": "user01",
+      "fullName": "Nguyen Van A",
+      "password": "123456",
+      "role": "",
+      "warehouse": "Ha Noi Warehouse 1",
+      "expectedSelector": "#role",
+      "expectedClass": "is-invalid"
+    },
+
+    "TD06": {
+      "description": "Password là bắt buộc khi tạo mới",
+      "username": "user01",
+      "fullName": "Nguyen Van A",
+      "password": "",
+      "role": "Storekeeper",
+      "warehouse": "Ha Noi Warehouse 1",
+      "expectedSelector": "#password",
+      "expectedClass": "is-invalid"
+    },
+
+    "TD07": {
+      "description": "Username đã tồn tại (Duplicate)",
+      "username": "admin.hcm",
+      "fullName": "Trung Ten",
+      "password": "123456",
+      "role": "Warehouse Admin",
+      "warehouse": "Ha Noi Warehouse 1",
+      "expectedSelector": ".invalid-feedback",
+      "expectedText": "Username already exists"
+    },
+
+    "TD08_09": {
+      "description": "Kiểm tra biên dưới (1 ký tự)",
+      "username": "a",
+      "fullName": "X",
+      "password": "123456",
+      "role": "Storekeeper",
+      "warehouse": "Ha Noi Warehouse 1",
+      "expectedSelector": ".alert-success"
+    },
+
+    "TD10_11": {
+      "description": "Kiểm tra biên tối đa (Username 50, Full Name 100)",
+      "usernameRepeat": { "char": "a", "times": 50 },
+      "fullNameRepeat": { "char": "b", "times": 100 },
+      "password": "123456",
+      "role": "Storekeeper",
+      "warehouse": "Ha Noi Warehouse 1",
+      "expectedSelector": ".alert-success"
+    },
+
+    "TD12": {
+      "description": "Vượt quá 50 ký tự Username",
+      "usernameRepeat": { "char": "a", "times": 51 },
+      "fullName": "Nguyen Van B",
+      "password": "123456",
+      "role": "Storekeeper",
+      "warehouse": "Ha Noi Warehouse 1",
+      "expectedSelector": ".invalid-feedback",
+      "expectedText": "Username must be less than 50 characters"
+    },
+
+    "TD13": {
+      "description": "Vượt quá 100 ký tự Full Name",
+      "username": "user02",
+      "fullNameRepeat": { "char": "b", "times": 101 },
+      "password": "123456",
+      "role": "Storekeeper",
+      "warehouse": "Ha Noi Warehouse 1",
+      "expectedSelector": ".invalid-feedback",
+      "expectedText": "Full name must be less than 100 characters"
+    },
+
+    "TD14": {
+      "description": "Cập nhật thông tin, giữ nguyên mật khẩu cũ",
+      "targetUsername": "admin.hcm",
+      "updatedFullName": "Nguyen Admin Update",
+      "newPassword": "",
+      "expectedSelector": ".alert-success",
+      "expectedText": "User saved successfully"
+    },
+
+    "TD15": {
+      "description": "Cập nhật mật khẩu mới",
+      "targetUsername": "admin.hcm",
+      "newPassword": "NewPass123",
+      "expectedSelector": ".alert-success",
+      "expectedText": "User saved successfully"
+    },
+
+    "TD16": {
+      "description": "Giữ nguyên Username của chính mình khi cập nhật",
+      "targetUsername": "admin.hcm",
+      "expectedSelector": ".alert-success",
+      "expectedText": "User saved successfully"
+    },
+
+    "TD17": {
+      "description": "Đổi Username trùng với người khác",
+      "targetUsername": "keeper01",
+      "changeUsernameTo": "admin.hcm",
+      "expectedSelector": ".invalid-feedback",
+      "expectedText": "Username already exists"
+    },
+
+    "TD18": {
+      "description": "Đảo trạng thái isActive (Toggle)",
+      "targetUsername": "admin.hcm",
+      "toggleButtonText": "Deactivate",
+      "expectedSelector": ".alert-success",
+      "expectedText": "User status updated",
+      "expectedBadgeSelector": ".badge-danger",
+      "expectedBadgeText": "Inactive"
+    },
+
+    "TD19": {
+      "description": "Đăng nhập thất bại khi tài khoản bị Deactivate",
+      "loginUsername": "admin.hcm",
+      "loginPassword": "NewPass123",
+      "expectedUrlFragment": "/login",
+      "expectedSelector": ".alert-danger",
+      "expectedText": "Invalid username or password"
+    },
+
+    "TD20": {
+      "description": "Role không hợp lệ khi bypass UI",
+      "username": "user.bypass01",
+      "fullName": "Bypass Role Test",
+      "password": "123456",
+      "invalidRole": "SUPER_HACKER",
+      "warehouse": "Ha Noi Warehouse 1",
+      "expectedSelector": ".invalid-feedback",
+      "expectedText": "Invalid role value"
+    },
+
+    "TD21": {
+      "description": "Warehouse không hợp lệ khi bypass UI",
+      "username": "user.bypass02",
+      "fullName": "Bypass Warehouse Test",
+      "password": "123456",
+      "role": "Storekeeper",
+      "invalidWarehouseId": "99999",
+      "expectedSelector": ".invalid-feedback",
+      "expectedText": "Invalid warehouse value"
+    }
+  }
+}

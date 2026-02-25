@@ -336,6 +336,14 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
                 .rejectReason(po.getRejectReason())
                 .build();
 
+        // Populate PR source info (which PRs generated this PO)
+        if (po.getPurchaseRequests() != null && !po.getPurchaseRequests().isEmpty()) {
+            String prNumbers = po.getPurchaseRequests().stream()
+                    .map(PurchaseRequest::getPrNumber)
+                    .collect(Collectors.joining(", "));
+            dto.setSourcePRNumbers(prNumbers);
+        }
+
         if (po.getDetails() != null) {
             List<PurchaseOrderDetailDTO> detailDTOs = po.getDetails().stream()
                     .map(this::mapDetailToDTO)

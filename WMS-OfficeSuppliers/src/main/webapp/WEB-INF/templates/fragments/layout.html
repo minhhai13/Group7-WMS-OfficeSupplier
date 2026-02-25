@@ -52,8 +52,28 @@
         <li class="nav-section">Purchasing</li>
         <li><a th:href="@{/purchasing/orders}" th:classappend="${activePage == 'purchasing-orders'} ? 'active'">📋
                 Purchase Orders</a></li>
+        <li><a th:href="@{/purchasing/requests}" th:classappend="${activePage == 'purchasing-requests'} ? 'active'">📝
+                Purchase Requests</a></li>
         <li th:if="${loggedInUserRole == 'Purchasing Manager'}"><a th:href="@{/purchasing/approvals}"
                 th:classappend="${activePage == 'purchasing-approvals'} ? 'active'">✅
+                Approvals</a></li>
+    </ul>
+    <div class="sidebar-footer">
+        <a th:href="@{/logout}">🚪 Logout</a>
+    </div>
+</div>
+
+<!-- ===== Sales Sidebar ===== -->
+<div th:fragment="sidebar-sales" class="sidebar">
+    <div class="sidebar-brand">
+        <span>📦</span> WMS Office Suppliers
+    </div>
+    <ul class="sidebar-nav">
+        <li class="nav-section">Sales</li>
+        <li><a th:href="@{/sales/orders}" th:classappend="${activePage == 'sales-orders'} ? 'active'">📋
+                Sales Orders</a></li>
+        <li th:if="${loggedInUserRole == 'Sales Manager'}"><a th:href="@{/sales/approvals}"
+                th:classappend="${activePage == 'sales-approvals'} ? 'active'">✅
                 Approvals</a></li>
     </ul>
     <div class="sidebar-footer">
@@ -70,6 +90,8 @@
         <li class="nav-section">Storekeeper</li>
         <li><a th:href="@{/storekeeper/grn}" th:classappend="${activePage == 'storekeeper-grn'} ? 'active'">📥
                 Goods Receipt</a></li>
+        <li><a th:href="@{/storekeeper/gin}" th:classappend="${activePage == 'storekeeper-gin'} ? 'active'">📤
+                Goods Issue</a></li>
     </ul>
     <div class="sidebar-footer">
         <a th:href="@{/logout}">🚪 Logout</a>

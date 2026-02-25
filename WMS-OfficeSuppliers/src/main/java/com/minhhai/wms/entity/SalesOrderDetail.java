@@ -42,4 +42,8 @@ public class SalesOrderDetail {
 
     @OneToMany(mappedBy = "salesOrderDetail", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<GoodsIssueDetail> goodsIssueDetails;
+
+    // Thêm vào trong class SalesOrderDetail
+    @OneToOne(mappedBy = "salesOrderDetail")
+    private PurchaseRequestDetail purchaseRequestDetail;
 }

@@ -25,9 +25,8 @@ public class PurchaseOrderDetail {
     @JoinColumn(name = "POID", nullable = false)
     private PurchaseOrder purchaseOrder;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "PRDetailID")
-    private PurchaseRequestDetail purchaseRequestDetail;
+    @OneToMany(mappedBy = "purchaseOrderDetail")
+    private List<PurchaseRequestDetail> purchaseRequestDetails;
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "ProductID", nullable = false)

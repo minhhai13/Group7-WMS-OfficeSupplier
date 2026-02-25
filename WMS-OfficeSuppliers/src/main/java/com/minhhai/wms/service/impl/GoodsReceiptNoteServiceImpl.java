@@ -5,7 +5,8 @@ import com.minhhai.wms.dto.GoodsReceiptNoteDTO;
 import com.minhhai.wms.entity.*;
 import com.minhhai.wms.repository.*;
 import com.minhhai.wms.service.GoodsReceiptNoteService;
-import lombok.RequiredArgsConstructor;
+import com.minhhai.wms.service.SalesOrderService;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,7 +18,6 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
 @Transactional
 public class GoodsReceiptNoteServiceImpl implements GoodsReceiptNoteService {
 
@@ -28,6 +28,30 @@ public class GoodsReceiptNoteServiceImpl implements GoodsReceiptNoteService {
     private final StockMovementRepository stockMovementRepository;
     private final ProductUoMConversionRepository uomConversionRepository;
     private final BinRepository binRepository;
+    private final PurchaseRequestRepository prRepository;
+    private final SalesOrderService soService;
+
+    // Manual constructor to apply @Lazy on SalesOrderService (breaks circular dependency)
+    public GoodsReceiptNoteServiceImpl(
+            GoodsReceiptNoteRepository grnRepository,
+            GoodsReceiptDetailRepository grnDetailRepository,
+            PurchaseOrderRepository poRepository,
+            StockBatchRepository stockBatchRepository,
+            StockMovementRepository stockMovementRepository,
+            ProductUoMConversionRepository uomConversionRepository,
+            BinRepository binRepository,
+            PurchaseRequestRepository prRepository,
+            @Lazy SalesOrderService soService) {
+        this.grnRepository = grnRepository;
+        this.grnDetailRepository = grnDetailRepository;
+        this.poRepository = poRepository;
+        this.stockBatchRepository = stockBatchRepository;
+        this.stockMovementRepository = stockMovementRepository;
+        this.uomConversionRepository = uomConversionRepository;
+        this.binRepository = binRepository;
+        this.prRepository = prRepository;
+        this.soService = soService;
+    }
 
     // ==================== Query ====================
 
@@ -172,7 +196,9 @@ public class GoodsReceiptNoteServiceImpl implements GoodsReceiptNoteService {
         if (allComplete) {
             po.setPoStatus("Completed");
             poRepository.save(po);
-            resultMessage = "Phiếu GRN " + grn.getGrnNumber() + " đã ghi sổ thành công. Đơn hàng " + po.getPoNumber() + " đã hoàn thành.";
+
+            // === LOOPBACK: PO Completed → PR Completed → SO auto-Approved ===
+            resultMessage = handlePOCompletionLoopback(po, grn);
         } else {
             po.setPoStatus("Incomplete");
             poRepository.save(po);
@@ -184,6 +210,53 @@ public class GoodsReceiptNoteServiceImpl implements GoodsReceiptNoteService {
         }
 
         return resultMessage;
+    }
+
+    // ==================== LOOPBACK: PO Completed → PR Completed → SO auto-Approved ====================
+
+    private String handlePOCompletionLoopback(PurchaseOrder po, GoodsReceiptNote grn) {
+        StringBuilder message = new StringBuilder();
+        message.append("Phiếu GRN ").append(grn.getGrnNumber())
+                .append(" đã ghi sổ. Đơn hàng ").append(po.getPoNumber()).append(" đã hoàn thành.");
+
+        // Find all PRs linked to this PO
+        List<PurchaseRequest> linkedPRs = prRepository.findByPurchaseOrder_PoId(po.getPoId());
+
+        // === PASS 1: Update ALL PRs to Completed, collect unique affected SOs ===
+        Set<SalesOrder> affectedSOs = new HashSet<>();
+        for (PurchaseRequest pr : linkedPRs) {
+            if (!"Completed".equals(pr.getStatus())) {
+                pr.setStatus("Completed");
+                prRepository.save(pr);
+            }
+            if (pr.getRelatedSalesOrder() != null) {
+                affectedSOs.add(pr.getRelatedSalesOrder());
+            }
+        }
+
+        // === PASS 2: For each unique SO, check if ALL its PRs are Completed ===
+        for (SalesOrder so : affectedSOs) {
+            if (!"Waiting for Stock".equals(so.getSoStatus())) continue;
+
+            List<PurchaseRequest> allSOPRs = prRepository
+                    .findByRelatedSalesOrder_SoIdAndStatusIn(so.getSoId(),
+                            List.of("Pending", "Approved", "Converted", "Completed"));
+            boolean allPRsCompleted = allSOPRs.stream()
+                    .allMatch(p -> "Completed".equals(p.getStatus()));
+
+            if (allPRsCompleted) {
+                try {
+                    String ginNumber = soService.approveSO(so.getSoId(), null);
+                    message.append(" | SO ").append(so.getSoNumber())
+                            .append(" đã tự động duyệt + giữ hàng. GIN ").append(ginNumber).append(" đã tạo.");
+                } catch (IllegalArgumentException e) {
+                    message.append(" | SO ").append(so.getSoNumber())
+                            .append(" không thể tự động duyệt: ").append(e.getMessage());
+                }
+            }
+        }
+
+        return message.toString();
     }
 
     // ==================== Back-order Logic ====================

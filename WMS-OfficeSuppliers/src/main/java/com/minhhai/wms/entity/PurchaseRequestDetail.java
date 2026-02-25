@@ -37,6 +37,12 @@ public class PurchaseRequestDetail {
     @Column(name = "UoM", length = 10, nullable = false, columnDefinition = "nvarchar(10)")
     private String uom;
 
-    @OneToMany(mappedBy = "purchaseRequestDetail", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private java.util.List<PurchaseOrderDetail> purchaseOrderDetails;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "PODetailID") // Cần thêm cột này vào SQL
+    private PurchaseOrderDetail purchaseOrderDetail;
+
+    // Thêm vào trong class PurchaseRequestDetail
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "SODetailID", unique = true)
+    private SalesOrderDetail salesOrderDetail;
 }

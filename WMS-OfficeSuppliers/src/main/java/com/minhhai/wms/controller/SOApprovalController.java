@@ -1,10 +1,10 @@
 package com.minhhai.wms.controller;
 
-import com.minhhai.wms.dto.PurchaseOrderDTO;
+import com.minhhai.wms.dto.SaleOrderDTO;
 import com.minhhai.wms.entity.Partner;
 import com.minhhai.wms.entity.User;
 import com.minhhai.wms.service.PartnerService;
-import com.minhhai.wms.service.PurchaseOrderService;
+import com.minhhai.wms.service.SalesOrderService;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
@@ -15,34 +15,33 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import java.util.List;
 
 @Controller
-@RequestMapping("/purchasing/approvals")
+@RequestMapping("/sales/approvals")
 @RequiredArgsConstructor
-public class ApprovalController {
+public class SOApprovalController {
 
-    private final PurchaseOrderService poService;
+    private final SalesOrderService soService;
     private final PartnerService partnerService;
 
     // ==================== List ====================
 
     @GetMapping
     public String list(@RequestParam(name = "status", required = false, defaultValue = "Pending Approval") String status,
-                       @RequestParam(name = "supplierId", required = false) Integer supplierId,
+                       @RequestParam(name = "customerId", required = false) Integer customerId,
                        Model model, HttpSession session) {
 
         User user = (User) session.getAttribute("loggedInUser");
         Integer warehouseId = user.getWarehouse().getWarehouseId();
 
-        // Pass empty string to get all statuses when explicitly selected "All"
         String filterStatus = "All".equals(status) ? null : status;
-        List<PurchaseOrderDTO> orders = poService.getPOsByWarehouse(warehouseId, filterStatus, supplierId);
-        List<Partner> suppliers = partnerService.findByType("Supplier");
+        List<SaleOrderDTO> orders = soService.getSOsByWarehouse(warehouseId, filterStatus, customerId);
+        List<Partner> customers = partnerService.findByType("Customer");
 
-        model.addAttribute("activePage", "purchasing-approvals");
+        model.addAttribute("activePage", "sales-approvals");
         model.addAttribute("orders", orders);
-        model.addAttribute("suppliers", suppliers);
+        model.addAttribute("customers", customers);
         model.addAttribute("selectedStatus", status);
-        model.addAttribute("selectedSupplierId", supplierId);
-        return "purchasing/approval-list";
+        model.addAttribute("selectedCustomerId", customerId);
+        return "sales/approval-list";
     }
 
     // ==================== Review ====================
@@ -51,13 +50,13 @@ public class ApprovalController {
     public String review(@PathVariable(name = "id") Integer id,
                          Model model, RedirectAttributes redirectAttributes) {
         try {
-            PurchaseOrderDTO dto = poService.getPOById(id);
-            model.addAttribute("activePage", "purchasing-approvals");
-            model.addAttribute("poDTO", dto);
-            return "purchasing/approval-review";
+            SaleOrderDTO dto = soService.getSOById(id);
+            model.addAttribute("activePage", "sales-approvals");
+            model.addAttribute("soDTO", dto);
+            return "sales/approval-review";
         } catch (IllegalArgumentException e) {
             redirectAttributes.addFlashAttribute("error", e.getMessage());
-            return "redirect:/purchasing/approvals";
+            return "redirect:/sales/approvals";
         }
     }
 
@@ -68,13 +67,21 @@ public class ApprovalController {
                           HttpSession session, RedirectAttributes redirectAttributes) {
         User user = (User) session.getAttribute("loggedInUser");
         try {
-            String grnNumber = poService.approvePO(id, user);
-            redirectAttributes.addFlashAttribute("success",
-                    "PO has been approved and GRN " + grnNumber + " has been generated.");
+            String result = soService.approveSO(id, user);
+            if (result == null) {
+                redirectAttributes.addFlashAttribute("success", "SO đã được xử lý.");
+            } else if (result.contains("Waiting") || result.contains("chờ hàng")) {
+                // Branch A: SO → Waiting for Stock (PR not yet completed)
+                redirectAttributes.addFlashAttribute("success", result);
+            } else {
+                // Branch B: GIN created
+                redirectAttributes.addFlashAttribute("success",
+                        "SO đã được duyệt. Phiếu xuất kho " + result + " đã được tạo tự động.");
+            }
         } catch (IllegalArgumentException e) {
             redirectAttributes.addFlashAttribute("error", e.getMessage());
         }
-        return "redirect:/purchasing/approvals";
+        return "redirect:/sales/approvals";
     }
 
     // ==================== Reject ====================
@@ -84,11 +91,11 @@ public class ApprovalController {
                          @RequestParam(name = "reason") String reason,
                          RedirectAttributes redirectAttributes) {
         try {
-            poService.rejectPO(id, reason);
-            redirectAttributes.addFlashAttribute("success", "PO has been rejected.");
+            soService.rejectSO(id, reason);
+            redirectAttributes.addFlashAttribute("success", "SO has been rejected.");
         } catch (IllegalArgumentException e) {
             redirectAttributes.addFlashAttribute("error", e.getMessage());
         }
-        return "redirect:/purchasing/approvals";
+        return "redirect:/sales/approvals";
     }
 }

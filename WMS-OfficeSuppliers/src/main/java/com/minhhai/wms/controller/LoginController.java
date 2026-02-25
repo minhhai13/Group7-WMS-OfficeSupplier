@@ -81,6 +81,7 @@ public class LoginController {
             case "System Admin" -> "redirect:/admin/dashboard";
             case "Warehouse Admin" -> "redirect:/warehouse/dashboard";
             case "Purchasing Staff", "Purchasing Manager" -> "redirect:/purchasing/orders";
+            case "Sales Staff", "Sales Manager" -> "redirect:/sales/orders";
             case "Storekeeper" -> "redirect:/storekeeper/grn";
             default -> "redirect:/login";
         };
