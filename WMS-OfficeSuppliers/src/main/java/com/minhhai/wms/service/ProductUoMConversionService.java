@@ -18,7 +18,4 @@ public interface ProductUoMConversionService {
 
     void delete(Integer conversionId);
 
-    boolean existsDuplicate(Integer productId, String fromUoM, String toUoM);
-
-    boolean existsDuplicateExcluding(Integer productId, String fromUoM, String toUoM, Integer conversionId);
 }

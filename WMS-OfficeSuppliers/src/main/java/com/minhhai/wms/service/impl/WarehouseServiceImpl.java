@@ -36,6 +36,15 @@ public class WarehouseServiceImpl implements WarehouseService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public List<Warehouse> search(String keyword) {
+        if (keyword == null || keyword.isBlank()) {
+            return findAll();
+        }
+        return warehouseRepository.searchByKeyword(keyword.trim());
+    }
+
+    @Override
     public Warehouse save(Warehouse warehouse) {
         return warehouseRepository.save(warehouse);
     }
@@ -80,17 +89,5 @@ public class WarehouseServiceImpl implements WarehouseService {
                 .orElseThrow(() -> new RuntimeException("Warehouse not found: " + warehouseId));
         warehouse.setIsActive(!warehouse.getIsActive());
         warehouseRepository.save(warehouse);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public boolean existsByWarehouseCode(String code) {
-        return warehouseRepository.existsByWarehouseCode(code);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public boolean existsByWarehouseCodeExcluding(String code, Integer warehouseId) {
-        return warehouseRepository.existsByWarehouseCodeAndWarehouseIdNot(code, warehouseId);
     }
 }

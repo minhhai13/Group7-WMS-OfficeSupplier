@@ -22,7 +22,4 @@ public interface ProductService {
 
     void toggleActive(Integer productId);
 
-    boolean existsBySku(String sku);
-
-    boolean existsBySkuExcluding(String sku, Integer productId);
 }

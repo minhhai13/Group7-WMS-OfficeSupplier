@@ -22,6 +22,14 @@
                         <a th:href="@{/warehouse/bins/new}" class="btn btn-primary btn-sm">+ New Bin</a>
                     </div>
                     <div class="card-body">
+                        <div>
+                            <form th:action="@{/warehouse/bins}" method="get" class="search-bar">
+                                <input type="text" name="keyword" class="form-control"
+                                       placeholder="Search by code(e.g. W01...)" th:value="${keyword}">
+                                <button type="submit" class="btn btn-outline">Search</button>
+                                <a th:if="${keyword != null}" th:href="@{/warehouse/bins}" class="btn btn-outline">Clear</a>
+                            </form>
+                        </div>
                         <div th:if="${#lists.isEmpty(bins)}" class="empty-state">
                             <p>No bins found. Create your first bin.</p>
                         </div>

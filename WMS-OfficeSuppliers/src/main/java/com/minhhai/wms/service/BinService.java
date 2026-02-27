@@ -11,9 +11,9 @@ public interface BinService {
 
     List<Bin> findByWarehouseId(Integer warehouseId);
 
-    List<Bin> findActiveByWarehouseId(Integer warehouseId);
-
     Optional<Bin> findById(Integer id);
+
+    List<Bin> search(Integer warehouseId, String keyword);
 
     Bin save(BinDTO binDTO);
 
@@ -21,13 +21,13 @@ public interface BinService {
 
     void toggleActive(Integer binId);
 
-    boolean existsByWarehouseAndLocation(Integer warehouseId, String binLocation);
-
-    boolean existsByWarehouseAndLocationExcluding(Integer warehouseId, String binLocation, Integer binId);
-
-    /** Computes current weight in a bin: SUM(stockBatch.qtyAvailable * product.unitWeight) */
+    /**
+     * Computes current weight in a bin: SUM(stockBatch.qtyAvailable * product.unitWeight)
+     */
     BigDecimal getCurrentWeight(Integer binId);
 
-    /** Returns bin.maxWeight - getCurrentWeight */
+    /**
+     * Returns bin.maxWeight - getCurrentWeight
+     */
     BigDecimal getAvailableCapacity(Integer binId);
 }

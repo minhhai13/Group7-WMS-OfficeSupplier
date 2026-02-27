@@ -2,6 +2,8 @@ package com.minhhai.wms.repository;
 
 import com.minhhai.wms.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -18,5 +20,10 @@ public interface UserRepository extends JpaRepository<User, Integer> {
 
     List<User> findByWarehouseWarehouseId(Integer warehouseId);
 
-    List<User> findByRole(String role);
+    @Query("SELECT u FROM User u WHERE LOWER(u.fullName) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+            "OR LOWER(u.username) LIKE LOWER(CONCAT('%', :keyword, '%'))")
+    List<User> searchByKeyword(@Param("keyword") String keyword);
+
+    long countByRoleAndIsActiveTrue(String role);
 }
+

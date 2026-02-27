@@ -34,18 +34,6 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    @Transactional(readOnly = true)
-    public Optional<User> findByUsername(String username) {
-        return userRepository.findByUsername(username);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<User> findByWarehouseId(Integer warehouseId) {
-        return userRepository.findByWarehouseWarehouseId(warehouseId);
-    }
-
-    @Override
     public User save(User user) {
         return userRepository.save(user);
     }
@@ -73,7 +61,7 @@ public class UserServiceImpl implements UserService {
             // Update
             user = userRepository.findById(userDTO.getUserId())
                     .orElseThrow(() -> new IllegalArgumentException("User not found: " + userDTO.getUserId()));
-            
+
             user.setUsername(userDTO.getUsername());
             user.setFullName(userDTO.getFullName());
             user.setRole(userDTO.getRole());
@@ -104,20 +92,17 @@ public class UserServiceImpl implements UserService {
     public void toggleActive(Integer userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found: " + userId));
+        if (user.getIsActive()) {
+            if ("System Admin".equals(user.getRole())) {
+                long activeAdminCount = userRepository.countByRoleAndIsActiveTrue("System Admin");
+
+                if (activeAdminCount <= 1) {
+                    throw new IllegalArgumentException("Can not deactive the last admin in the system!");
+                }
+            }
+        }
         user.setIsActive(!user.getIsActive());
         userRepository.save(user);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public boolean existsByUsername(String username) {
-        return userRepository.existsByUsername(username);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public boolean existsByUsernameExcluding(String username, Integer userId) {
-        return userRepository.existsByUsernameAndUserIdNot(username, userId);
     }
 
     @Override
@@ -132,5 +117,14 @@ public class UserServiceImpl implements UserService {
             }
         }
         return Optional.empty();
+    }// main/java/com/minhhai/wms/service/impl/UserServiceImpl.java
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<User> search(String keyword) {
+        if (keyword == null || keyword.isBlank()) {
+            return findAll();
+        }
+        return userRepository.searchByKeyword(keyword.trim());
     }
 }

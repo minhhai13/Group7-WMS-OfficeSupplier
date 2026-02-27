@@ -48,11 +48,11 @@ public class ProductUoMConversionServiceImpl implements ProductUoMConversionServ
             throw new IllegalArgumentException("From UoM cannot be the same as the product's Base UoM (" + baseUoM + ").");
         }
         if (dto.getConversionId() == null) {
-            if (existsDuplicate(dto.getProductId(), dto.getFromUoM(), dto.getToUoM())) {
+            if (conversionRepository.existsByProductProductIdAndFromUoMAndToUoM(dto.getProductId(), dto.getFromUoM(), dto.getToUoM())) {
                 throw new IllegalArgumentException("This conversion already exists for the product.");
             }
         } else {
-            if (existsDuplicateExcluding(dto.getProductId(), dto.getFromUoM(), dto.getToUoM(), dto.getConversionId())) {
+            if (conversionRepository.existsByProductProductIdAndFromUoMAndToUoMAndConversionIdNot(dto.getProductId(), dto.getFromUoM(), dto.getToUoM(), dto.getConversionId())) {
                 throw new IllegalArgumentException("This conversion already exists for the product.");
             }
         }
@@ -81,18 +81,5 @@ public class ProductUoMConversionServiceImpl implements ProductUoMConversionServ
     @Override
     public void delete(Integer conversionId) {
         conversionRepository.deleteById(conversionId);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public boolean existsDuplicate(Integer productId, String fromUoM, String toUoM) {
-        return conversionRepository.existsByProductProductIdAndFromUoMAndToUoM(productId, fromUoM, toUoM);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public boolean existsDuplicateExcluding(Integer productId, String fromUoM, String toUoM, Integer conversionId) {
-        return conversionRepository.existsByProductProductIdAndFromUoMAndToUoMAndConversionIdNot(
-                productId, fromUoM, toUoM, conversionId);
     }
 }

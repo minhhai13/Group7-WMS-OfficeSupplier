@@ -31,14 +31,17 @@ public class BinServiceImpl implements BinService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<Bin> findActiveByWarehouseId(Integer warehouseId) {
-        return binRepository.findByWarehouseWarehouseIdAndIsActive(warehouseId, true);
+    public Optional<Bin> findById(Integer id) {
+        return binRepository.findById(id);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Optional<Bin> findById(Integer id) {
-        return binRepository.findById(id);
+    public List<Bin> search(Integer warehouseId, String keyword) {
+        if (keyword == null || keyword.isBlank()) {
+            return findByWarehouseId(warehouseId);
+        }
+        return binRepository.searchInWarehouse(warehouseId, keyword.trim());
     }
 
     @Override
@@ -90,18 +93,6 @@ public class BinServiceImpl implements BinService {
                 .orElseThrow(() -> new RuntimeException("Bin not found: " + binId));
         bin.setIsActive(!bin.getIsActive());
         binRepository.save(bin);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public boolean existsByWarehouseAndLocation(Integer warehouseId, String binLocation) {
-        return binRepository.existsByWarehouseWarehouseIdAndBinLocation(warehouseId, binLocation);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public boolean existsByWarehouseAndLocationExcluding(Integer warehouseId, String binLocation, Integer binId) {
-        return binRepository.existsByWarehouseWarehouseIdAndBinLocationAndBinIdNot(warehouseId, binLocation, binId);
     }
 
     @Override

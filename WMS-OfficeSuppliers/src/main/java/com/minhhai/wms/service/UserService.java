@@ -12,19 +12,13 @@ public interface UserService {
 
     Optional<User> findById(Integer id);
 
-    Optional<User> findByUsername(String username);
-
-    List<User> findByWarehouseId(Integer warehouseId);
-
     User save(User user);
 
     void toggleActive(Integer userId);
 
-    boolean existsByUsername(String username);
-
-    boolean existsByUsernameExcluding(String username, Integer userId);
-
     User save(UserDTO userDTO);
 
     Optional<User> authenticate(String username, String plainPassword);
+
+    List<User> search(String keyword);
 }

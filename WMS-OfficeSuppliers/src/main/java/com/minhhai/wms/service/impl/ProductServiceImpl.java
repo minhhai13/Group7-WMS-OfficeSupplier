@@ -94,16 +94,4 @@ public class ProductServiceImpl implements ProductService {
         product.setIsActive(!product.getIsActive());
         productRepository.save(product);
     }
-
-    @Override
-    @Transactional(readOnly = true)
-    public boolean existsBySku(String sku) {
-        return productRepository.existsBySku(sku);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public boolean existsBySkuExcluding(String sku, Integer productId) {
-        return productRepository.existsBySkuAndProductIdNot(sku, productId);
-    }
 }

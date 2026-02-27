@@ -14,13 +14,11 @@ public interface WarehouseService {
 
     Optional<Warehouse> findById(Integer id);
 
+    List<Warehouse> search(String keyword);
+
     Warehouse save(WarehouseDTO warehouseDTO);
 
     Warehouse save(Warehouse warehouse);
 
     void toggleActive(Integer warehouseId);
-
-    boolean existsByWarehouseCode(String code);
-
-    boolean existsByWarehouseCodeExcluding(String code, Integer warehouseId);
 }

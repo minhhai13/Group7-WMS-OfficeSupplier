@@ -41,7 +41,18 @@ public class SecurityFilter implements Filter {
             httpResponse.sendRedirect(contextPath + "/login");
             return;
         }
+        if (!"System Admin".equals(loggedInUser.getRole()) && loggedInUser.getWarehouse() == null) {
+            // Chỉ chặn các URL nghiệp vụ kho
+            if (relativePath.startsWith("/purchasing/") ||
+                    relativePath.startsWith("/sales/") ||
+                    relativePath.startsWith("/storekeeper/")) {
 
+                // Chuyển hướng về một trang thông báo hoặc trang lỗi 403 kèm lý do
+                session.setAttribute("error", "Bạn cần được gán kho để sử dụng chức năng này.");
+                httpResponse.sendRedirect(contextPath + "/403");
+                return;
+            }
+        }
         String role = loggedInUser.getRole();
 
         // Role-based URL access control

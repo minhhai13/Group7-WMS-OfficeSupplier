@@ -44,7 +44,7 @@ public class PurchaseOrderDetail {
     @Builder.Default
     @Column(
             name = "ReceivedQty",
-            columnDefinition = "int default 0 CHECK (ReceivedQty >= 0 AND ReceivedQty <= OrderedQty)"
+            columnDefinition = "int default 0 CHECK (ReceivedQty >= 0)"
     )
     private Integer receivedQty = 0;
 
