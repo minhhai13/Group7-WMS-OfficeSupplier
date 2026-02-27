@@ -97,6 +97,7 @@
         <a th:href="@{/logout}">🚪 Logout</a>
     </div>
 </div>
+<!-- ===== Top bar =====-->
 <div th:fragment="topbar(title)" class="topbar">
     <div class="topbar-title" th:text="${title}">Page Title</div>
     <div class="topbar-user" th:text="${loggedInUserName != null} ? ${loggedInUserName} : ''">

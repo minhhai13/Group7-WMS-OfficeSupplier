@@ -67,9 +67,17 @@ public class SOApprovalController {
                           HttpSession session, RedirectAttributes redirectAttributes) {
         User user = (User) session.getAttribute("loggedInUser");
         try {
-            String ginNumber = soService.approveSO(id, user);
-            redirectAttributes.addFlashAttribute("success",
-                    "SO has been approved and GIN " + ginNumber + " has been generated.");
+            String result = soService.approveSO(id, user);
+            if (result == null) {
+                redirectAttributes.addFlashAttribute("success", "SO đã được xử lý.");
+            } else if (result.contains("Waiting") || result.contains("chờ hàng")) {
+                // Branch A: SO → Waiting for Stock (PR not yet completed)
+                redirectAttributes.addFlashAttribute("success", result);
+            } else {
+                // Branch B: GIN created
+                redirectAttributes.addFlashAttribute("success",
+                        "SO đã được duyệt. Phiếu xuất kho " + result + " đã được tạo tự động.");
+            }
         } catch (IllegalArgumentException e) {
             redirectAttributes.addFlashAttribute("error", e.getMessage());
         }

@@ -242,7 +242,7 @@
             if (!productId) return;
 
             // AJAX call to get UoMs
-            fetch(contextPath + '/api/purchasing/products/' + productId + '/uoms')
+            fetch(contextPath + '/api/products/' + productId + '/uoms')
                 .then(function (response) {
                     if (!response.ok) throw new Error('Failed to load UoMs');
                     return response.json();
@@ -251,7 +251,7 @@
                     for (var i = 0; i < uoms.length; i++) {
                         var option = document.createElement('option');
                         option.value = uoms[i].uom;
-                        option.textContent = uoms[i].label;
+                        option.textContent = uoms[i].display;
                         uomSelect.appendChild(option);
                     }
                 })
@@ -269,14 +269,14 @@
                     var uomSelect = document.getElementById('uom-' + idx);
                     var currentUom = uomSelect.value; // preserve current selection
 
-                    fetch(contextPath + '/api/purchasing/products/' + sel.value + '/uoms')
+                    fetch(contextPath + '/api/products/' + sel.value + '/uoms')
                         .then(function (response) { return response.json(); })
                         .then(function (uoms) {
                             uomSelect.innerHTML = '<option value="">-- Select UoM --</option>';
                             for (var i = 0; i < uoms.length; i++) {
                                 var option = document.createElement('option');
                                 option.value = uoms[i].uom;
-                                option.textContent = uoms[i].label;
+                                option.textContent = uoms[i].display;
                                 if (uoms[i].uom === currentUom) {
                                     option.selected = true;
                                 }

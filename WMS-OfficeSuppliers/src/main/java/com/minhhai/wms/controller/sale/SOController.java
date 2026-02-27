@@ -2,6 +2,7 @@ package com.minhhai.wms.controller.sale;
 
 import com.minhhai.wms.dto.ProductDTO;
 import com.minhhai.wms.dto.SaleOrderDTO;
+import com.minhhai.wms.dto.StockCheckResult;
 import com.minhhai.wms.entity.Partner;
 import com.minhhai.wms.entity.User;
 import com.minhhai.wms.service.PartnerService;
@@ -53,16 +54,13 @@ public class SOController {
     @GetMapping("/new")
     public String createForm(Model model, HttpSession session) {
         User user = (User) session.getAttribute("loggedInUser");
-
         SaleOrderDTO dto = new SaleOrderDTO();
         dto.setWarehouseId(user.getWarehouse().getWarehouseId());
         dto.setWarehouseName(user.getWarehouse().getWarehouseName());
-
         model.addAttribute("activePage", "sales-orders");
         model.addAttribute("soDTO", dto);
         model.addAttribute("customers", getActiveCustomers());
         model.addAttribute("products", getActiveProductDTOs());
-
         return "sales/so-form";
     }
 
@@ -77,7 +75,6 @@ public class SOController {
             model.addAttribute("soDTO", dto);
             model.addAttribute("customers", getActiveCustomers());
             model.addAttribute("products", getActiveProductDTOs());
-
             return "sales/so-form";
         } catch (IllegalArgumentException e) {
             redirectAttributes.addFlashAttribute("error", e.getMessage());
@@ -85,7 +82,7 @@ public class SOController {
         }
     }
 
-    // ==================== Save (Draft or Submit) ====================
+    // ==================== Save (Draft / Submit / SubmitWithPR) ====================
 
     @PostMapping("/save")
     public String save(@Valid @ModelAttribute("soDTO") SaleOrderDTO soDTO,
@@ -108,12 +105,43 @@ public class SOController {
         }
 
         try {
-            if ("submit".equals(action)) {
-                soService.submitForApproval(soDTO, user);
-                redirectAttributes.addFlashAttribute("success", "Sales Order submitted for approval successfully.");
-            } else {
+            if ("draft".equals(action)) {
+                // Save as Draft
                 soService.saveDraft(soDTO, user);
                 redirectAttributes.addFlashAttribute("success", "Sales Order saved as draft successfully.");
+                return "redirect:/sales/orders";
+
+            } else if ("submit".equals(action)) {
+                // Step 1: Check ATP, do NOT create PR yet
+                StockCheckResult result = soService.checkAndSubmit(soDTO, user, false);
+                if (result.isHasShortage()) {
+                    // Show shortage warning on the form — redirect back with shortage info
+                    redirectAttributes.addFlashAttribute("shortages", result.getShortages());
+                    redirectAttributes.addFlashAttribute("soIdForPR", result.getSoId());
+                    redirectAttributes.addFlashAttribute("warning",
+                            "Kho không đủ hàng cho một số sản phẩm. Bạn có muốn tạo Purchase Request (PR) kèm theo không?");
+                    return "redirect:/sales/orders/" + result.getSoId() + "/edit";
+                }
+                // No shortage, submitted successfully
+                redirectAttributes.addFlashAttribute("success", "Sales Order submitted for approval.");
+                return "redirect:/sales/orders";
+
+            } else if ("submitWithPR".equals(action)) {
+                // Step 2: Submit WITH PR creation
+                StockCheckResult result = soService.checkAndSubmit(soDTO, user, true);
+                if (result.getPrNumber() != null) {
+                    redirectAttributes.addFlashAttribute("success",
+                            "SO đã gửi duyệt. Purchase Request " + result.getPrNumber() + " đã được tạo tự động cho lượng thiếu.");
+                } else {
+                    redirectAttributes.addFlashAttribute("success", "Sales Order submitted for approval.");
+                }
+                return "redirect:/sales/orders";
+
+            } else {
+                // Unknown action → save as draft
+                soService.saveDraft(soDTO, user);
+                redirectAttributes.addFlashAttribute("success", "Sales Order saved as draft.");
+                return "redirect:/sales/orders";
             }
         } catch (IllegalArgumentException e) {
             redirectAttributes.addFlashAttribute("error", e.getMessage());
@@ -122,8 +150,6 @@ public class SOController {
             }
             return "redirect:/sales/orders/new";
         }
-
-        return "redirect:/sales/orders";
     }
 
     // ==================== Delete ====================

@@ -117,7 +117,7 @@ public class UserServiceImpl implements UserService {
             }
         }
         return Optional.empty();
-    }// main/java/com/minhhai/wms/service/impl/UserServiceImpl.java
+    }
 
     @Override
     @Transactional(readOnly = true)

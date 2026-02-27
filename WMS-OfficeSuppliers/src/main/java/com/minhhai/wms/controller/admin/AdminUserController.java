@@ -12,6 +12,8 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.util.List;
+
 @Controller
 @RequestMapping("/admin/users")
 @RequiredArgsConstructor
@@ -27,9 +29,17 @@ public class AdminUserController {
     };
 
     @GetMapping
-    public String list(Model model) {
+    public String list(@RequestParam(name = "keyword", required = false) String keyword,
+                       Model model) {
+        List<User> users;
+        if (keyword != null && !keyword.isBlank()) {
+            users = userService.search(keyword);
+            model.addAttribute("keyword", keyword);
+        } else {
+            users = userService.findAll();
+        }
         model.addAttribute("activePage", "admin-users");
-        model.addAttribute("users", userService.findAll());
+        model.addAttribute("users", users);
         return "admin/user-list";
     }
 
@@ -99,8 +109,14 @@ public class AdminUserController {
 
     @PostMapping("/{id}/toggle")
     public String toggleActive(@PathVariable(name = "id") Integer id, RedirectAttributes redirectAttributes) {
-        userService.toggleActive(id);
-        redirectAttributes.addFlashAttribute("success", "User status updated.");
+        try {
+            userService.toggleActive(id);
+            redirectAttributes.addFlashAttribute("success", "Trạng thái người dùng đã được cập nhật.");
+        } catch (IllegalArgumentException e) {
+            redirectAttributes.addFlashAttribute("error", e.getMessage());
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", "Có lỗi xảy ra: " + e.getMessage());
+        }
         return "redirect:/admin/users";
     }
 

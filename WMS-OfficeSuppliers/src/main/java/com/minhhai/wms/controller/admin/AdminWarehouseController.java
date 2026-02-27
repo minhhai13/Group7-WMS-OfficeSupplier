@@ -11,6 +11,8 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.util.List;
+
 @Controller
 @RequestMapping("/admin/warehouses")
 @RequiredArgsConstructor
@@ -19,9 +21,16 @@ public class AdminWarehouseController {
     private final WarehouseService warehouseService;
 
     @GetMapping
-    public String list(Model model) {
+    public String list(@RequestParam(name = "keyword", required = false) String keyword, Model model) {
+        List<Warehouse> warehouses;
+        if (keyword != null && !keyword.isBlank()) {
+            warehouses = warehouseService.search(keyword);
+            model.addAttribute("keyword", keyword);
+        } else {
+            warehouses = warehouseService.findAll();
+        }
         model.addAttribute("activePage", "admin-warehouses");
-        model.addAttribute("warehouses", warehouseService.findAll());
+        model.addAttribute("warehouses", warehouses);
         return "admin/warehouse-list";
     }
 
@@ -79,8 +88,14 @@ public class AdminWarehouseController {
 
     @PostMapping("/{id}/toggle")
     public String toggleActive(@PathVariable(name = "id") Integer id, RedirectAttributes redirectAttributes) {
-        warehouseService.toggleActive(id);
-        redirectAttributes.addFlashAttribute("success", "Warehouse status updated.");
+        try {
+            warehouseService.toggleActive(id);
+            redirectAttributes.addFlashAttribute("success", "Warehouse status updated.");
+        } catch (IllegalArgumentException e) {
+            redirectAttributes.addFlashAttribute("error", e.getMessage());
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", "Error: " + e.getMessage());
+        }
         return "redirect:/admin/warehouses";
     }
 

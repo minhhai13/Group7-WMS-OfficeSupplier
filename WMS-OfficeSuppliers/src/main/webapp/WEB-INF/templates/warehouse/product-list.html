@@ -12,13 +12,13 @@
     <div class="app-layout">
         <div th:replace="~{fragments/layout :: sidebar-warehouse}"></div>
         <div class="main-content">
-            <div th:replace="~{fragments/layout :: topbar('Product Management')}"></div>
+            <div th:replace="~{fragments/layout :: topbar('Product Management(Global change)')}"></div>
             <div class="content-area">
                 <div th:replace="~{fragments/layout :: alerts}"></div>
 
                 <div class="card">
                     <div class="card-header">
-                        <h2>Products</h2>
+                        <h2>Products <span class="badge badge-info" style="font-size: 0.7rem; vertical-align: middle;">GLOBAL</span></h2>
                         <a th:href="@{/warehouse/products/new}" class="btn btn-primary btn-sm">+ New Product</a>
                     </div>
                     <div class="card-body">

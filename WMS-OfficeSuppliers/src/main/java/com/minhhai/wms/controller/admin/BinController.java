@@ -28,7 +28,8 @@ public class BinController {
     private final BinService binService;
 
     @GetMapping
-    public String list(Model model, HttpSession session) {
+    public String list(@RequestParam(name = "keyword", required = false) String keyword,
+                       Model model, HttpSession session) {
         User loggedInUser = (User) session.getAttribute("loggedInUser");
         if (loggedInUser.getWarehouse() == null) {
             model.addAttribute("bins", new ArrayList<Bin>());
@@ -37,7 +38,13 @@ public class BinController {
         }
         Integer warehouseId = loggedInUser.getWarehouse().getWarehouseId();
 
-        List<Bin> bins = binService.findByWarehouseId(warehouseId);
+        List<Bin> bins;
+        if (keyword != null && !keyword.isBlank()) {
+            bins = binService.search(warehouseId, keyword);
+            model.addAttribute("keyword", keyword);
+        } else {
+            bins = binService.findByWarehouseId(warehouseId);
+        }
         model.addAttribute("activePage", "warehouse-bins");
         model.addAttribute("bins", bins);
 
@@ -115,6 +122,8 @@ public class BinController {
             String msg = e.getMessage().toLowerCase();
             if (msg.contains("location") || msg.contains("exists")) {
                 bindingResult.rejectValue("binLocation", "error.bin", e.getMessage());
+            } else if (msg.contains("smaller")) {
+                bindingResult.rejectValue("maxWeight", "error.weight", e.getMessage());
             } else {
                 model.addAttribute("error", e.getMessage());
             }
@@ -134,8 +143,14 @@ public class BinController {
 
     @PostMapping("/{id}/toggle")
     public String toggleActive(@PathVariable(name = "id") Integer id, RedirectAttributes redirectAttributes) {
-        binService.toggleActive(id);
-        redirectAttributes.addFlashAttribute("success", "Bin status updated.");
+        try {
+            binService.toggleActive(id);
+            redirectAttributes.addFlashAttribute("success", "Bin status updated.");
+        } catch (IllegalArgumentException e) {
+            redirectAttributes.addFlashAttribute("error", "Error: " +e.getMessage());
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", "Error: " + e.getMessage());
+        }
         return "redirect:/warehouse/bins";
     }
 
