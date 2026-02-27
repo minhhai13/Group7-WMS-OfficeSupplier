@@ -21,5 +21,6 @@ public interface ProductService {
     Product save(Product product);
 
     void toggleActive(Integer productId);
+    List<ProductDTO> getAllProducts();
 
 }

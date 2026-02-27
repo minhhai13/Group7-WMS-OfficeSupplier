@@ -12,13 +12,13 @@
     <div class="app-layout">
         <div th:replace="~{fragments/layout :: sidebar-warehouse}"></div>
         <div class="main-content">
-            <div th:replace="~{fragments/layout :: topbar('Bin Management - ' + ${currentWarehouseName})}"></div>
+            <div th:replace="~{fragments/layout :: topbar('Bin Management')}"></div>
             <div class="content-area">
                 <div th:replace="~{fragments/layout :: alerts}"></div>
 
                 <div class="card">
                     <div class="card-header">
-                        <h2>Bins - <span style="color: var(--primary);" th:text="${currentWarehouseName}"></span></h2>
+                        <h2>Bins</h2>
                         <a th:href="@{/warehouse/bins/new}" class="btn btn-primary btn-sm">+ New Bin</a>
                     </div>
                     <div class="card-body">

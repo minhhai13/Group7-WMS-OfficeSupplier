@@ -359,6 +359,30 @@ public class SalesOrderServiceImpl implements SalesOrderService {
         }
     }
 
+    // ==================== UoM Lookup ====================
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Map<String, String>> getAvailableUoMs(Integer productId) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new IllegalArgumentException("Product not found: " + productId));
+        List<Map<String, String>> uomList = new ArrayList<>();
+        Map<String, String> baseEntry = new LinkedHashMap<>();
+        baseEntry.put("uom", product.getBaseUoM());
+        baseEntry.put("label", product.getBaseUoM() + " (Base)");
+        uomList.add(baseEntry);
+        List<ProductUoMConversion> conversions = uomConversionRepository.findByProduct_ProductId(productId);
+        for (ProductUoMConversion conv : conversions) {
+            if (!conv.getFromUoM().equals(product.getBaseUoM())) {
+                Map<String, String> entry = new LinkedHashMap<>();
+                entry.put("uom", conv.getFromUoM());
+                entry.put("label", conv.getFromUoM() + " (1 " + conv.getFromUoM() + " = " + conv.getConversionFactor() + " " + conv.getToUoM() + ")");
+                uomList.add(entry);
+            }
+        }
+        return uomList;
+    }
+
     // ==================== Number Generation ====================
 
     private String generateSONumber() {

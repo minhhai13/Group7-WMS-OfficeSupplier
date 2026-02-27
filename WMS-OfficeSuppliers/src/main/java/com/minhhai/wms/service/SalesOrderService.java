@@ -37,4 +37,6 @@ public interface SalesOrderService {
      * Reject a SO + cascade-reject linked PRs.
      */
     void rejectSO(Integer soId, String reason);
+
+    List<Map<String, String>> getAvailableUoMs(Integer productId);
 }

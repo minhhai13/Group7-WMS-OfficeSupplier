@@ -1,10 +1,6 @@
 package com.minhhai.wms.service.impl;
 
-import com.minhhai.wms.entity.Bin;
-import com.minhhai.wms.entity.StockBatch;
 import com.minhhai.wms.entity.Warehouse;
-import com.minhhai.wms.repository.BinRepository;
-import com.minhhai.wms.repository.StockBatchRepository;
 import com.minhhai.wms.repository.WarehouseRepository;
 import com.minhhai.wms.service.WarehouseService;
 import lombok.RequiredArgsConstructor;
@@ -20,8 +16,6 @@ import java.util.Optional;
 public class WarehouseServiceImpl implements WarehouseService {
 
     private final WarehouseRepository warehouseRepository;
-    private  final BinRepository binRepository;
-    private final StockBatchRepository stockBatchRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -93,13 +87,6 @@ public class WarehouseServiceImpl implements WarehouseService {
     public void toggleActive(Integer warehouseId) {
         Warehouse warehouse = warehouseRepository.findById(warehouseId)
                 .orElseThrow(() -> new RuntimeException("Warehouse not found: " + warehouseId));
-        if (warehouse.getIsActive()) {
-            Integer totalStock = stockBatchRepository.getTotalQtyByWarehouseId(warehouseId);
-
-            if (totalStock != null && totalStock > 0) {
-                throw new IllegalArgumentException("Can not deactive because this warehouse contains " + totalStock + " products.");
-            }
-        }
         warehouse.setIsActive(!warehouse.getIsActive());
         warehouseRepository.save(warehouse);
     }

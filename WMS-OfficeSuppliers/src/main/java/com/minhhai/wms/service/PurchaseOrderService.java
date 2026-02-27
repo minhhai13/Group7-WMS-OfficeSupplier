@@ -33,4 +33,5 @@ public interface PurchaseOrderService {
     /**
      * Returns available UoMs for a product: BaseUoM + all FromUoMs from conversions.
      */
+    List<Map<String, String>> getAvailableUoMs(Integer productId);
 }

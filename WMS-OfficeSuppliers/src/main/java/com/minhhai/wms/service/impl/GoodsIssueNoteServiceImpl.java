@@ -85,7 +85,7 @@ public class GoodsIssueNoteServiceImpl implements GoodsIssueNoteService {
             if (inputIssuedQty > remainingQty) {
                 throw new IllegalArgumentException(
                         "Số lượng thực xuất không được lớn hơn số lượng còn thiếu ("
-                        + remainingQty + ") cho sản phẩm '" + ginDetail.getProduct().getProductName() + "'.");
+                                + remainingQty + ") cho sản phẩm '" + ginDetail.getProduct().getProductName() + "'.");
             }
             totalIssuedInput += inputIssuedQty;
 
@@ -109,11 +109,27 @@ public class GoodsIssueNoteServiceImpl implements GoodsIssueNoteService {
                                 ginDetail.getBatchNumber())
                         .orElseThrow(() -> new IllegalArgumentException(
                                 "Không tìm thấy lô hàng cho sản phẩm '" + product.getProductName()
-                                + "' tại bin " + ginDetail.getBin().getBinLocation() + "."));
+                                        + "' tại bin " + ginDetail.getBin().getBinLocation() + "."));
 
-                // Issue: decrease BOTH availableQty and reservedQty
+                // =================================================================
+                // BẢO VỆ TỒN KHO: Kiểm tra và ngăn chặn gán số âm
+                // =================================================================
+
+                // 1. Kiểm tra tồn kho vật lý có đủ để xuất không
+                if (baseQty > stockBatch.getQtyAvailable()) {
+                    throw new IllegalArgumentException(
+                            "Lỗi: Số lượng xuất (" + baseQty + ") vượt quá tồn kho thực tế ("
+                                    + stockBatch.getQtyAvailable() + ") của lô '" + ginDetail.getBatchNumber()
+                                    + "' tại vị trí " + ginDetail.getBin().getBinLocation() + ".");
+                }
+
+                // 2. Trừ tồn kho khả dụng
                 stockBatch.setQtyAvailable(stockBatch.getQtyAvailable() - baseQty);
-                stockBatch.setQtyReserved(stockBatch.getQtyReserved() - baseQty);
+
+                // 3. Trừ tồn kho giữ chỗ (Dùng Math.max để không bao giờ bị âm)
+                int newReserved = stockBatch.getQtyReserved() - baseQty;
+                stockBatch.setQtyReserved(Math.max(0, newReserved));
+
                 stockBatchRepository.save(stockBatch);
 
                 // Log StockMovement: Issue / Physical

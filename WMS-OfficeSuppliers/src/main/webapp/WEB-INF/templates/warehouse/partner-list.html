@@ -12,13 +12,13 @@
     <div class="app-layout">
         <div th:replace="~{fragments/layout :: sidebar-warehouse}"></div>
         <div class="main-content">
-            <div th:replace="~{fragments/layout :: topbar('Partner Management(Global change)')}"></div>
+            <div th:replace="~{fragments/layout :: topbar('Partner Management')}"></div>
             <div class="content-area">
                 <div th:replace="~{fragments/layout :: alerts}"></div>
 
                 <div class="card">
                     <div class="card-header">
-                        <h2>Partners <span class="badge badge-info" style="font-size: 0.7rem; vertical-align: middle;">GLOBAL</span></h2>
+                        <h2>Partners</h2>
                         <a th:href="@{/warehouse/partners/new}" class="btn btn-primary btn-sm">+ New Partner</a>
                     </div>
                     <div class="card-body">

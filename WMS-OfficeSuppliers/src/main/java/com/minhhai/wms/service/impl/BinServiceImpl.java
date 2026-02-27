@@ -71,11 +71,6 @@ public class BinServiceImpl implements BinService {
             bin = binRepository.findById(binDTO.getBinId())
                     .orElseThrow(() -> new IllegalArgumentException("Bin not found: " + binDTO.getBinId()));
             bin.setBinLocation(binDTO.getBinLocation());
-            BigDecimal currentWeight = getCurrentWeight(binDTO.getBinId());
-            if (binDTO.getMaxWeight().compareTo(currentWeight) < 0) {
-                throw new IllegalArgumentException("New max weight (" + binDTO.getMaxWeight() +
-                        " kg) can not be smaller than current weight (" + currentWeight + " kg).");
-            }
             bin.setMaxWeight(binDTO.getMaxWeight());
             // Warehouse usually doesn't change for a bin, but if it does:
             bin.setWarehouse(warehouse);
@@ -96,15 +91,6 @@ public class BinServiceImpl implements BinService {
     public void toggleActive(Integer binId) {
         Bin bin = binRepository.findById(binId)
                 .orElseThrow(() -> new RuntimeException("Bin not found: " + binId));
-        if (bin.getIsActive()) {
-            List<StockBatch> batches = stockBatchRepository.findByBinBinId(binId);
-            int totalQty = batches.stream()
-                    .mapToInt(b -> b.getQtyAvailable() != null ? b.getQtyAvailable() : 0)
-                    .sum();
-            if (totalQty > 0) {
-                throw new IllegalArgumentException("Can not deactive this bin because it has " + totalQty + " product inside.");
-            }
-        }
         bin.setIsActive(!bin.getIsActive());
         binRepository.save(bin);
     }
@@ -112,10 +98,17 @@ public class BinServiceImpl implements BinService {
     @Override
     @Transactional(readOnly = true)
     public BigDecimal getCurrentWeight(Integer binId) {
-        BigDecimal totalWeight = stockBatchRepository.getTotalWeightByBinId(binId);
-
-        // Nếu Bin trống (DB trả về null), thì trọng lượng là 0
-        return totalWeight != null ? totalWeight : BigDecimal.ZERO;
+        List<StockBatch> batches = stockBatchRepository.findByBinBinId(binId);
+        BigDecimal totalWeight = BigDecimal.ZERO;
+        for (StockBatch batch : batches) {
+            if (batch.getQtyAvailable() != null && batch.getProduct() != null
+                    && batch.getProduct().getUnitWeight() != null) {
+                BigDecimal qty = BigDecimal.valueOf(batch.getQtyAvailable());
+                BigDecimal unitWeight = batch.getProduct().getUnitWeight();
+                totalWeight = totalWeight.add(qty.multiply(unitWeight));
+            }
+        }
+        return totalWeight;
     }
 
     @Override

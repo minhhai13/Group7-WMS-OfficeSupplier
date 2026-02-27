@@ -187,6 +187,37 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
         poRepository.save(po);
     }
 
+    // ==================== UoM Lookup ====================
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Map<String, String>> getAvailableUoMs(Integer productId) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new IllegalArgumentException("Product not found: " + productId));
+
+        List<Map<String, String>> uomList = new ArrayList<>();
+
+        // 1. Base UoM
+        Map<String, String> baseEntry = new LinkedHashMap<>();
+        baseEntry.put("uom", product.getBaseUoM());
+        baseEntry.put("label", product.getBaseUoM() + " (Base)");
+        uomList.add(baseEntry);
+
+        // 2. All FromUoMs from conversions
+        List<ProductUoMConversion> conversions = uomConversionRepository.findByProduct_ProductId(productId);
+        for (ProductUoMConversion conv : conversions) {
+            // Avoid duplicating base UoM
+            if (!conv.getFromUoM().equals(product.getBaseUoM())) {
+                Map<String, String> entry = new LinkedHashMap<>();
+                entry.put("uom", conv.getFromUoM());
+                entry.put("label", conv.getFromUoM() + " (1 " + conv.getFromUoM() + " = " + conv.getConversionFactor() + " " + conv.getToUoM() + ")");
+                uomList.add(entry);
+            }
+        }
+
+        return uomList;
+    }
+
     // ==================== PO Number Generation ====================
 
     private String generatePONumber() {

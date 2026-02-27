@@ -184,9 +184,11 @@ public class GoodsReceiptNoteServiceImpl implements GoodsReceiptNoteService {
 
         // Check PO completion — compare all PO details
         boolean allComplete = true;
+        boolean anyShortage = false;
         for (PurchaseOrderDetail poDetail : po.getDetails()) {
             if (poDetail.getReceivedQty() < poDetail.getOrderedQty()) {
                 allComplete = false;
+                anyShortage = true;
             }
         }
 

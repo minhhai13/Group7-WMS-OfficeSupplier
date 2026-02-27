@@ -8,7 +8,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.*;
+import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -80,29 +81,5 @@ public class ProductUoMConversionServiceImpl implements ProductUoMConversionServ
     @Override
     public void delete(Integer conversionId) {
         conversionRepository.deleteById(conversionId);
-    }
-
-    @Override
-    public List<Map<String, String>> getAvailableUoMs(Integer productId) {
-        Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new IllegalArgumentException("Product not found"));
-
-        List<Map<String, String>> uoms = new ArrayList<>();
-
-        // 1. Thêm đơn vị cơ bản
-        Map<String, String> base = new HashMap<>();
-        base.put("uom", product.getBaseUoM());
-        base.put("display", product.getBaseUoM() + " (Base)");
-        uoms.add(base);
-
-        // 2. Thêm các đơn vị chuyển đổi
-        List<ProductUoMConversion> conversions = conversionRepository.findByProduct_ProductId(productId);
-        for (ProductUoMConversion conv : conversions) {
-            Map<String, String> m = new HashMap<>();
-            m.put("uom", conv.getFromUoM());
-            m.put("display", conv.getFromUoM() + " (x" + conv.getConversionFactor() + ")");
-            uoms.add(m);
-        }
-        return uoms;
     }
 }

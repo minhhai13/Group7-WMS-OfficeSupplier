@@ -12,14 +12,6 @@ import org.springframework.web.bind.annotation.ModelAttribute;
  */
 @ControllerAdvice
 public class GlobalModelAdvice {
-    @ModelAttribute("currentWarehouseName")
-    public String currentWarehouseName(HttpSession session) {
-        User user = (User) session.getAttribute("loggedInUser");
-        if (user != null && user.getWarehouse() != null) {
-            return user.getWarehouse().getWarehouseName();
-        }
-        return "N/A";
-    }
 
     @ModelAttribute("loggedInUserName")
     public String loggedInUserName(HttpSession session) {

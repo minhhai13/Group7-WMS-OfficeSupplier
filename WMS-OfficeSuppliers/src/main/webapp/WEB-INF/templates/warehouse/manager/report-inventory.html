@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{fragments/layout :: layout(~{::title}, ~{::section})}">
+<head><title>Physical Inventory</title></head>
+<body>
+<section class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Physical Inventory View</h2>
+        <button class="btn btn-outline-primary" onclick="window.print()"><i class="bi bi-printer"></i> Print</button>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <table class="table table-striped table-bordered">
+                <thead class="table-dark">
+                <tr>
+                    <th>SKU CODE</th>
+                    <th>PRODUCT NAME</th>
+                    <th>BIN LOCATION</th>
+                    <th>BATCH NUMBER</th>
+                    <th class="text-end">ON-HAND QTY</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="item : ${inventoryPage.content}">
+                    <td th:text="${item.skuCode}"></td>
+                    <td th:text="${item.productName}"></td>
+                    <td class="text-primary fw-bold" th:text="${item.binLocation}"></td>
+                    <td th:text="${item.batchNumber}"></td>
+                    <td class="text-end fw-bold text-success" th:text="${item.onHandQty}"></td>
+                </tr>
+                </tbody>
+            </table>
+
+            <div class="d-flex justify-content-between align-items-center mt-3" th:if="${inventoryPage.totalPages > 0}">
+                <div class="text-muted">
+                    Showing <span th:text="${inventoryPage.number * inventoryPage.size + 1}">1</span>
+                    to <span th:text="${Math.min((inventoryPage.number + 1) * inventoryPage.size, inventoryPage.totalElements)}">10</span>
+                    of <span th:text="${inventoryPage.totalElements}">100</span> entries
+                </div>
+                <nav th:if="${inventoryPage.totalPages > 1}">
+                    <ul class="pagination mb-0">
+                        <li class="page-item" th:classappend="${currentPage == 0} ? 'disabled'">
+                            <a class="page-link" th:href="@{/wm/reports/inventory(page=${currentPage - 1})}">Previous</a>
+                        </li>
+                        <li class="page-item" th:each="i : ${#numbers.sequence(0, inventoryPage.totalPages - 1)}"
+                            th:classappend="${currentPage == i} ? 'active'">
+                            <a class="page-link" th:href="@{/wm/reports/inventory(page=${i})}" th:text="${i + 1}"></a>
+                        </li>
+                        <li class="page-item" th:classappend="${currentPage == inventoryPage.totalPages - 1} ? 'disabled'">
+                            <a class="page-link" th:href="@{/wm/reports/inventory(page=${currentPage + 1})}">Next</a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+</section>
+</body>
+</html>
