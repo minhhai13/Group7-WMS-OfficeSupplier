@@ -15,10 +15,6 @@ public class SalesApiController {
 
     private final SalesOrderService soService;
 
-    /**
-     * Returns available UoMs for a product (BaseUoM + conversion FromUoMs).
-     * Called via AJAX from the SO form when a product is selected.
-     */
     @GetMapping("/products/{id}/uoms")
     public ResponseEntity<List<Map<String, String>>> getProductUoMs(@PathVariable(name = "id") Integer productId) {
         try {

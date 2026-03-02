@@ -8,13 +8,17 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
 @Transactional
 public class ProductUoMConversionServiceImpl implements ProductUoMConversionService {
+
+
 
     private final ProductUoMConversionRepository conversionRepository;
     private final com.minhhai.wms.repository.ProductRepository productRepository;
@@ -81,5 +85,31 @@ public class ProductUoMConversionServiceImpl implements ProductUoMConversionServ
     @Override
     public void delete(Integer conversionId) {
         conversionRepository.deleteById(conversionId);
+    }
+    @Override
+    public List<Map<String, String>> getAvailableUoMs(Integer productId) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new IllegalArgumentException("Product not found: " + productId));
+
+        List<Map<String, String>> uomList = new ArrayList<>();
+
+        // Thêm Base UoM
+        Map<String, String> baseEntry = new java.util.LinkedHashMap<>();
+        baseEntry.put("uom", product.getBaseUoM());
+        baseEntry.put("label", product.getBaseUoM() + " (Base)");
+        uomList.add(baseEntry);
+
+        // Thêm các UoM quy đổi
+        List<ProductUoMConversion> conversions = conversionRepository.findByProduct_ProductId(productId);
+        for (ProductUoMConversion conv : conversions) {
+            if (!conv.getFromUoM().equals(product.getBaseUoM())) {
+                Map<String, String> entry = new java.util.LinkedHashMap<>();
+                entry.put("uom", conv.getFromUoM());
+                entry.put("label", conv.getFromUoM() + " (1 " + conv.getFromUoM() + " = " + conv.getConversionFactor() + " " + conv.getToUoM() + ")");
+                uomList.add(entry);
+            }
+        }
+
+        return uomList;
     }
 }

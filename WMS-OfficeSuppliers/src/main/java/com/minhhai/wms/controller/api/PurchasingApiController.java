@@ -15,10 +15,6 @@ public class PurchasingApiController {
 
     private final PurchaseOrderService poService;
 
-    /**
-     * Returns available UoMs for a product (BaseUoM + conversion FromUoMs).
-     * Called via AJAX from the PO form when a product is selected.
-     */
     @GetMapping("/products/{id}/uoms")
     public ResponseEntity<List<Map<String, String>>> getProductUoMs(@PathVariable(name = "id") Integer productId) {
         try {

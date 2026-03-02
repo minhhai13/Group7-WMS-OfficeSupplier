@@ -4,6 +4,7 @@ import com.minhhai.wms.dto.ProductUoMConversionDTO;
 import com.minhhai.wms.entity.ProductUoMConversion;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 public interface ProductUoMConversionService {
@@ -18,4 +19,6 @@ public interface ProductUoMConversionService {
 
     void delete(Integer conversionId);
 
+
+    List<Map<String, String>> getAvailableUoMs(Integer productId);
 }
