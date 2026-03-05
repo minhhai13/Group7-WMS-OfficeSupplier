@@ -106,11 +106,23 @@
     <ul class="sidebar-nav">
         <li class="nav-section">Reports</li>
         <li><a th:href="@{/reports/inbound}" th:classappend="${activePage == 'report-inbound'} ? 'active'">📥
-                Inbound History</a></li>
+            Inbound History</a></li>
         <li><a th:href="@{/reports/outbound}" th:classappend="${activePage == 'report-outbound'} ? 'active'">📤
-                Outbound History</a></li>
+            Outbound History</a></li>
         <li><a th:href="@{/reports/inventory-balance}" th:classappend="${activePage == 'report-inventory'} ? 'active'">📊
-                Inventory Balance</a></li>
+            Inventory Balance</a></li>
+
+        <li class="nav-section">Stock Transfer</li>
+        <li>
+            <a th:href="@{/transfer/requests}" th:classappend="${activePage == 'transfer-requests'} ? 'active'">
+                📤 Transfer Requests
+            </a>
+        </li>
+        <li>
+            <a th:href="@{/transfer/approvals}" th:classappend="${activePage == 'transfer-approvals'} ? 'active'">
+                ✅ TR Approvals
+            </a>
+        </li>
     </ul>
     <div class="sidebar-footer">
         <a th:href="@{/logout}">🚪 Logout</a>

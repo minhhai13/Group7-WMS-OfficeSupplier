@@ -45,7 +45,8 @@ public class SecurityFilter implements Filter {
             // Chỉ chặn các URL nghiệp vụ kho
             if (relativePath.startsWith("/purchasing/") ||
                     relativePath.startsWith("/sales/") ||
-                    relativePath.startsWith("/storekeeper/")) {
+                    relativePath.startsWith("/storekeeper/") ||
+                    relativePath.startsWith("/transfer/")){
 
                 // Chuyển hướng về một trang thông báo hoặc trang lỗi 403 kèm lý do
                 session.setAttribute("error", "Bạn cần được gán kho để sử dụng chức năng này.");
@@ -111,8 +112,12 @@ public class SecurityFilter implements Filter {
                 httpResponse.sendRedirect(contextPath + "/403");
                 return;
             }
+        } else if (relativePath.startsWith("/transfer/")) {
+            if (!"Warehouse Manager".equals(role)) {
+                httpResponse.sendRedirect(contextPath + "/403");
+                return;
+            }
         }
-
         chain.doFilter(request, response);
     }
 }

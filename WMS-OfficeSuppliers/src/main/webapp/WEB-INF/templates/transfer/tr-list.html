@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Transfer Requests - WMS</title>
+    <link rel="stylesheet" th:href="@{/static/css/style.css}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+<div class="app-layout">
+
+    <div th:replace="~{fragments/layout :: sidebar-report}"></div>
+
+    <div class="main-content">
+
+        <div th:replace="~{fragments/layout :: topbar('Transfer Requests')}"></div>
+
+        <div class="content-area">
+
+            <div th:replace="~{fragments/layout :: alerts}"></div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2>Transfer Requests</h2>
+                    <a th:href="@{/transfer/requests/new}" class="btn btn-primary btn-sm">
+                        + New Request
+                    </a>
+                </div>
+
+                <div class="card-body">
+
+                    <!-- ================= FILTER ================= -->
+                    <form th:action="@{/transfer/requests}" method="get" class="search-bar">
+
+                        <select name="status" class="form-control" style="max-width: 200px;">
+                            <option value="">All Statuses</option>
+                            <option value="Draft" th:selected="${selectedStatus == 'Draft'}">Draft</option>
+                            <option value="Pending" th:selected="${selectedStatus == 'Pending'}">Pending</option>
+                            <option value="Approved" th:selected="${selectedStatus == 'Approved'}">Approved</option>
+                            <option value="In-Transit" th:selected="${selectedStatus == 'In-Transit'}">In Transit</option>
+                            <option value="Completed" th:selected="${selectedStatus == 'Completed'}">Completed</option>
+                            <option value="Rejected" th:selected="${selectedStatus == 'Rejected'}">Rejected</option>
+                        </select>
+
+                        <select name="sourceWarehouseId"
+                                class="form-control"
+                                style="max-width: 220px;">
+                            <option value="">All Source Warehouses</option>
+                            <option th:each="w : ${sourceWarehouse}"
+                                    th:value="${w.warehouseId}"
+                                    th:text="${w.warehouseName}"
+                                    th:selected="${selectedSourceId != null && selectedSourceId == w.warehouseId}">
+                            </option>
+                        </select>
+
+                        <button type="submit" class="btn btn-outline">Filter</button>
+
+                        <a th:href="@{/transfer/requests}"
+                           class="btn btn-outline"
+                           th:if="${selectedStatus != null || selectedSourceId != null}">
+                            Clear
+                        </a>
+                    </form>
+
+                    <!-- ================= EMPTY ================= -->
+                    <div th:if="${#lists.isEmpty(transfers)}" class="empty-state">
+                        <p>No transfer requests found.</p>
+                    </div>
+
+                    <!-- ================= TABLE ================= -->
+                    <div th:unless="${#lists.isEmpty(transfers)}" class="table-wrapper">
+
+                        <table>
+                            <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>TR Number</th>
+                                <th>Source Warehouse</th>
+                                <th>Destination Warehouse</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                            </thead>
+
+                            <tbody>
+
+                            <tr th:each="tr, iter : ${transfers}">
+                                <td th:text="${iter.count}"></td>
+
+                                <td>
+                                    <strong th:text="${tr.transferNumber}"></strong>
+                                </td>
+
+                                <td th:text="${tr.sourceWarehouseName}"></td>
+                                <td th:text="${tr.destinationWarehouseName}"></td>
+
+                                <!-- STATUS BADGE -->
+                                <td>
+
+                                    <span th:if="${tr.trStatus == 'Draft'}"
+                                          class="badge badge-secondary"
+                                          th:text="${tr.trStatus}"></span>
+
+                                    <span th:if="${tr.trStatus == 'Pending'}"
+                                          class="badge badge-warning"
+                                          th:text="${tr.trStatus}"></span>
+
+                                    <span th:if="${tr.trStatus == 'Approved'}"
+                                          class="badge badge-info"
+                                          th:text="${tr.trStatus}"></span>
+
+                                    <span th:if="${tr.trStatus == 'In-Transit'}"
+                                          class="badge badge-warning"
+                                          th:text="${tr.trStatus}"></span>
+
+                                    <span th:if="${tr.trStatus == 'Completed'}"
+                                          class="badge badge-success"
+                                          th:text="${tr.trStatus}"></span>
+
+                                    <span th:if="${tr.trStatus == 'Rejected'}"
+                                          class="badge badge-danger"
+                                          th:text="${tr.trStatus}"
+                                          style="cursor: help;"
+                                          th:title="${tr.rejectReason != null ? 'Reason: ' + tr.rejectReason : 'No specific reason'}">
+                                    </span>
+
+                                    <!-- Show reject reason below -->
+                                    <div th:if="${tr.trStatus == 'Rejected' && tr.rejectReason != null}"
+                                         style="font-size: 0.75rem; color: #dc3545; margin-top: 4px;">
+                                        <i th:text="'💬 ' + ${tr.rejectReason}"></i>
+                                    </div>
+
+                                </td>
+
+                                <!-- ACTIONS -->
+                                <td>
+                                    <div class="btn-group">
+
+                                        <a th:href="@{/transfer/requests/{id}/edit(id=${tr.trId})}"
+                                           class="btn btn-outline btn-sm">
+                                            View / Edit
+                                        </a>
+
+                                        <!-- Allow delete when Draft OR Rejected -->
+                                        <form th:if="${tr.trStatus == 'Draft' || tr.trStatus == 'Rejected'}"
+                                              th:action="@{/transfer/requests/{id}/delete(id=${tr.trId})}"
+                                              method="post"
+                                              style="display:inline;"
+                                              onsubmit="return confirm('Are you sure you want to delete this Request?');">
+
+                                            <button type="submit"
+                                                    class="btn btn-danger btn-sm">
+                                                Delete
+                                            </button>
+                                        </form>
+
+                                    </div>
+                                </td>
+
+                            </tr>
+
+                            </tbody>
+                        </table>
+
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+</body>
+</html>

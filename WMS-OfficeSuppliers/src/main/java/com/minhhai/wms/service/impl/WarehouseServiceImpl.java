@@ -103,4 +103,10 @@ public class WarehouseServiceImpl implements WarehouseService {
         warehouse.setIsActive(!warehouse.getIsActive());
         warehouseRepository.save(warehouse);
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Warehouse> findAllActiveExcluding(Integer warehouseId) {
+        return warehouseRepository.findByIsActiveTrueAndWarehouseIdNot(warehouseId);
+    }
 }
