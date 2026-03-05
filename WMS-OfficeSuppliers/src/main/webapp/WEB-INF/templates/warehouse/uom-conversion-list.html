@@ -9,103 +9,103 @@
 </head>
 
 <body>
-<div class="app-layout">
-    <div th:replace="~{fragments/layout :: sidebar-warehouse}"></div>
-    <div class="main-content">
-        <div th:replace="~{fragments/layout :: topbar('UoM Conversions')}"></div>
-        <div class="content-area">
-            <div th:replace="~{fragments/layout :: alerts}"></div>
+    <div class="app-layout">
+        <div th:replace="~{fragments/layout :: sidebar-warehouse}"></div>
+        <div class="main-content">
+            <div th:replace="~{fragments/layout :: topbar('UoM Conversions(Global change)')}"></div>
+            <div class="content-area">
+                <div th:replace="~{fragments/layout :: alerts}"></div>
 
-            <div class="card">
-                <div class="card-header">
-                    <h2>Unit of Measure Conversions</h2>
-                </div>
-                <div class="card-body">
-                    <!-- Product Selector -->
-                    <form th:action="@{/warehouse/uom-conversions}" method="get" class="search-bar">
-                        <select name="productId" class="form-control" onchange="this.form.submit()">
-                            <option value="">-- Select Product --</option>
-                            <option th:each="p : ${products}" th:value="${p.productId}"
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Unit of Measure Conversions</h2>
+                    </div>
+                    <div class="card-body">
+                        <!-- Product Selector -->
+                        <form th:action="@{/warehouse/uom-conversions}" method="get" class="search-bar">
+                            <select name="productId" class="form-control" onchange="this.form.submit()">
+                                <option value="">-- Select Product --</option>
+                                <option th:each="p : ${products}" th:value="${p.productId}"
                                     th:text="${p.sku} + ' - ' + ${p.productName}"
                                     th:selected="${selectedProductId != null and selectedProductId == p.productId}">
-                            </option>
-                        </select>
-                    </form>
-
-                    <!-- Add New Conversion Form -->
-                    <div th:if="${selectedProductId != null}">
-                        <h3 style="margin:1rem 0 .75rem;font-size:.95rem;">
-                            Add Conversion for: <strong
-                                th:text="${selectedProduct != null} ? ${selectedProduct.productName} : ''"></strong>
-                        </h3>
-                        <form th:action="@{/warehouse/uom-conversions/save}" method="post" class="inline-form">
-                            <input type="hidden" name="productId" th:value="${selectedProductId}">
-                            <div class="form-group">
-                                <label>From UoM</label>
-                                <input type="text" name="fromUoM" class="form-control" required
-                                       placeholder="e.g. Box" maxlength="20">
-                            </div>
-                            <div class="form-group">
-                                <label>To UoM</label>
-                                <input type="text" class="form-control" th:value="${baseUoM}" readonly />
-                                <input type="hidden" name="toUoM" th:value="${baseUoM}" />
-                            </div>
-                            <div class="form-group">
-                                <label>Factor</label>
-                                <input type="number" name="conversionFactor" class="form-control" required min="1"
-                                       placeholder="e.g. 12">
-                            </div>
-                            <div class="form-group">
-                                <button type="submit" class="btn btn-primary">Add</button>
-                            </div>
+                                </option>
+                            </select>
                         </form>
 
-                        <!-- Conversion Table -->
-                        <div th:if="${conversions != null and !#lists.isEmpty(conversions)}" class="table-wrapper"
-                             style="margin-top:1rem;">
-                            <table>
-                                <thead>
-                                <tr>
-                                    <th>#</th>
-                                    <th>From UoM</th>
-                                    <th>To UoM</th>
-                                    <th>Factor</th>
-                                    <th>Actions</th>
-                                </tr>
-                                </thead>
-                                <tbody>
-                                <tr th:each="c, iter : ${conversions}">
-                                    <td th:text="${iter.count}"></td>
-                                    <td><span class="badge badge-secondary" th:text="${c.fromUoM}"></span></td>
-                                    <td><span class="badge badge-info" th:text="${c.toUoM}"></span></td>
-                                    <td><strong th:text="${c.conversionFactor}"></strong></td>
-                                    <td>
-                                        <form
-                                                th:action="@{/warehouse/uom-conversions/{id}/delete(id=${c.conversionId})}"
-                                                method="post" style="display:inline;">
-                                            <input type="hidden" name="productId"
-                                                   th:value="${selectedProductId}">
-                                            <button type="submit" class="btn btn-danger btn-sm"
-                                                    onclick="return confirm('Delete this conversion?')">Delete</button>
-                                        </form>
-                                    </td>
-                                </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                        <div th:if="${conversions == null or #lists.isEmpty(conversions)}" class="empty-state">
-                            <p>No conversions defined for this product.</p>
-                        </div>
-                    </div>
+                        <!-- Add New Conversion Form -->
+                        <div th:if="${selectedProductId != null}">
+                            <h3 style="margin:1rem 0 .75rem;font-size:.95rem;">
+                                Add Conversion for: <strong
+                                    th:text="${selectedProduct != null} ? ${selectedProduct.productName} : ''"></strong>
+                            </h3>
+                            <form th:action="@{/warehouse/uom-conversions/save}" method="post" class="inline-form">
+                                <input type="hidden" name="productId" th:value="${selectedProductId}">
+                                <div class="form-group">
+                                    <label>From UoM</label>
+                                    <input type="text" name="fromUoM" class="form-control" required
+                                        placeholder="e.g. Box" maxlength="20">
+                                </div>
+                                <div class="form-group">
+                                    <label>To UoM</label>
+                                    <input type="text" class="form-control" th:value="${baseUoM}" readonly />
+                                    <input type="hidden" name="toUoM" th:value="${baseUoM}" />
+                                </div>
+                                <div class="form-group">
+                                    <label>Factor</label>
+                                    <input type="number" name="conversionFactor" class="form-control" required min="1"
+                                        placeholder="e.g. 12">
+                                </div>
+                                <div class="form-group">
+                                    <button type="submit" class="btn btn-primary">Add</button>
+                                </div>
+                            </form>
 
-                    <div th:if="${selectedProductId == null}" class="empty-state">
-                        <p>Select a product to manage its unit conversions.</p>
+                            <!-- Conversion Table -->
+                            <div th:if="${conversions != null and !#lists.isEmpty(conversions)}" class="table-wrapper"
+                                style="margin-top:1rem;">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>#</th>
+                                            <th>From UoM</th>
+                                            <th>To UoM</th>
+                                            <th>Factor</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr th:each="c, iter : ${conversions}">
+                                            <td th:text="${iter.count}"></td>
+                                            <td><span class="badge badge-secondary" th:text="${c.fromUoM}"></span></td>
+                                            <td><span class="badge badge-info" th:text="${c.toUoM}"></span></td>
+                                            <td><strong th:text="${c.conversionFactor}"></strong></td>
+                                            <td>
+                                                <form
+                                                    th:action="@{/warehouse/uom-conversions/{id}/delete(id=${c.conversionId})}"
+                                                    method="post" style="display:inline;">
+                                                    <input type="hidden" name="productId"
+                                                        th:value="${selectedProductId}">
+                                                    <button type="submit" class="btn btn-danger btn-sm"
+                                                        onclick="return confirm('Delete this conversion?')">Delete</button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div th:if="${conversions == null or #lists.isEmpty(conversions)}" class="empty-state">
+                                <p>No conversions defined for this product.</p>
+                            </div>
+                        </div>
+
+                        <div th:if="${selectedProductId == null}" class="empty-state">
+                            <p>Select a product to manage its unit conversions.</p>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 </body>
 
 </html>

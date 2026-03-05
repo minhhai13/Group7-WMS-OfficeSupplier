@@ -1,20 +1,44 @@
 package com.minhhai.wms.service;
 
-import com.minhhai.wms.dto.InOutBalanceReportDTO;
 import com.minhhai.wms.dto.InboundReportDTO;
+import com.minhhai.wms.dto.InventoryBalanceDTO;
 import com.minhhai.wms.dto.OutboundReportDTO;
-import com.minhhai.wms.dto.PhysicalInventoryDTO;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 
+import java.time.LocalDate;
 import java.util.List;
 
 public interface ReportService {
-    // Các báo cáo hỗ trợ phân trang
-    Page<PhysicalInventoryDTO> getPhysicalInventory(Integer warehouseId, Pageable pageable);
-    Page<InboundReportDTO> getInboundReport(Integer warehouseId, Pageable pageable);
-    Page<OutboundReportDTO> getOutboundReport(Integer warehouseId, Pageable pageable);
 
-    // Thẻ kho giữ nguyên List để tính toán lũy kế
-    List<InOutBalanceReportDTO> getInOutBalanceReport(Integer warehouseId, Integer productId);
+    /**
+     * Returns paginated inbound history (Receipt / Physical movements only).
+     */
+    Page<InboundReportDTO> getInboundReport(
+            LocalDate startDate,
+            LocalDate endDate,
+            Integer warehouseId,
+            Integer productId,
+            int page,
+            int size);
+
+    /**
+     * Returns paginated outbound history (Issue / Physical movements only).
+     */
+    Page<OutboundReportDTO> getOutboundReport(
+            LocalDate startDate,
+            LocalDate endDate,
+            Integer warehouseId,
+            Integer productId,
+            int page,
+            int size);
+
+    /**
+     * Returns inventory balance per product+warehouse for a given period.
+     * Opening = Sum(Receipt-Issue) before startDate
+     * Closing = Opening + Inbound - Outbound
+     */
+    List<InventoryBalanceDTO> getInventoryReport(
+            LocalDate startDate,
+            LocalDate endDate,
+            Integer warehouseId);
 }

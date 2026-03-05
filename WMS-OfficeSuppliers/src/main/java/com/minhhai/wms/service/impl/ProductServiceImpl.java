@@ -1,6 +1,5 @@
 package com.minhhai.wms.service.impl;
 
-import com.minhhai.wms.dto.ProductDTO;
 import com.minhhai.wms.entity.Product;
 import com.minhhai.wms.repository.ProductRepository;
 import com.minhhai.wms.service.ProductService;
@@ -10,7 +9,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -95,20 +93,5 @@ public class ProductServiceImpl implements ProductService {
                 .orElseThrow(() -> new RuntimeException("Product not found: " + productId));
         product.setIsActive(!product.getIsActive());
         productRepository.save(product);
-    }
-    @Override
-    public List<ProductDTO> getAllProducts() {
-        // Lấy tất cả Product từ DB và map sang DTO
-        return productRepository.findAll().stream().map(product -> {
-            ProductDTO dto = new ProductDTO();
-            dto.setProductId(product.getProductId());
-            dto.setSku(product.getSku());
-            dto.setProductName(product.getProductName());
-
-            // Bạn có thể set thêm các field khác nếu file ProductDTO của bạn yêu cầu (như baseUom, weight...)
-            // Tuy nhiên với dropdown Báo cáo thì thường chỉ cần ID, SKU và Name là đủ.
-
-            return dto;
-        }).collect(Collectors.toList());
     }
 }

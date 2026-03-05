@@ -1,20 +1,20 @@
 package com.minhhai.wms.service.impl;
 
-import com.minhhai.wms.dto.InOutBalanceReportDTO;
 import com.minhhai.wms.dto.InboundReportDTO;
+import com.minhhai.wms.dto.InventoryBalanceDTO;
 import com.minhhai.wms.dto.OutboundReportDTO;
-import com.minhhai.wms.dto.PhysicalInventoryDTO;
 import com.minhhai.wms.entity.StockMovement;
-import com.minhhai.wms.repository.*;
+import com.minhhai.wms.repository.StockMovementRepository;
 import com.minhhai.wms.service.ReportService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -22,76 +22,153 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class ReportServiceImpl implements ReportService {
 
-    private final StockBatchRepository stockBatchRepository;
-    private final GoodsReceiptDetailRepository grnDetailRepository;
-    private final GoodsIssueDetailRepository ginDetailRepository;
-    private final StockMovementRepository stockMovementRepository;
+    private final StockMovementRepository movementRepository;
+
+    // ==================== Inbound ====================
 
     @Override
-    public Page<PhysicalInventoryDTO> getPhysicalInventory(Integer warehouseId, Pageable pageable) {
-        // Truyền pageable vào repository để DB xử lý LIMIT/OFFSET
-        return stockBatchRepository.getPhysicalInventoryByWarehouse(warehouseId, pageable);
+    public Page<InboundReportDTO> getInboundReport(
+            LocalDate startDate, LocalDate endDate,
+            Integer warehouseId, Integer productId,
+            int page, int size) {
+
+        LocalDateTime startDt = (startDate != null) ? startDate.atStartOfDay() : null;
+        LocalDateTime endDt   = (endDate   != null) ? endDate.atTime(LocalTime.MAX) : null;
+
+        Page<StockMovement> movements = movementRepository.findInboundHistory(
+                startDt, endDt, warehouseId, productId, PageRequest.of(page, size));
+
+        return movements.map(this::mapToInboundDTO);
     }
 
+    // ==================== Outbound ====================
+
     @Override
-    public Page<InboundReportDTO> getInboundReport(Integer warehouseId, Pageable pageable) {
-        return grnDetailRepository.getInboundReportByWarehouse(warehouseId, pageable);
+    public Page<OutboundReportDTO> getOutboundReport(
+            LocalDate startDate, LocalDate endDate,
+            Integer warehouseId, Integer productId,
+            int page, int size) {
+
+        LocalDateTime startDt = (startDate != null) ? startDate.atStartOfDay() : null;
+        LocalDateTime endDt   = (endDate   != null) ? endDate.atTime(LocalTime.MAX) : null;
+
+        Page<StockMovement> movements = movementRepository.findOutboundHistory(
+                startDt, endDt, warehouseId, productId, PageRequest.of(page, size));
+
+        return movements.map(this::mapToOutboundDTO);
     }
 
-    @Override
-    public Page<OutboundReportDTO> getOutboundReport(Integer warehouseId, Pageable pageable) {
-        return ginDetailRepository.getOutboundReportByWarehouse(warehouseId, pageable);
-    }
-
-    // =========================================================================
-    // UC30: IN-OUT-BALANCE REPORT (Thẻ kho)
-    // =========================================================================
+    // ==================== Inventory Balance ====================
 
     @Override
-    public List<InOutBalanceReportDTO> getInOutBalanceReport(Integer warehouseId, Integer productId) {
-        List<StockMovement> movements = stockMovementRepository.getMovementsByProductAndWarehouse(productId, warehouseId);
+    public List<InventoryBalanceDTO> getInventoryReport(
+            LocalDate startDate, LocalDate endDate, Integer warehouseId) {
 
-        // Sử dụng Stream API để map dữ liệu, code gọn gàng và dễ đọc hơn rất nhiều
-        return movements.stream()
-                .map(this::buildBalanceDTO)
+        // Default: from beginning of current month to today
+        LocalDate resolvedStart = (startDate != null) ? startDate : LocalDate.now().withDayOfMonth(1);
+        LocalDate resolvedEnd   = (endDate   != null) ? endDate   : LocalDate.now();
+
+        LocalDateTime beforeDt = resolvedStart.atStartOfDay();
+        LocalDateTime startDt  = resolvedStart.atStartOfDay();
+        LocalDateTime endDt    = resolvedEnd.atTime(LocalTime.MAX);
+
+        // Query 1: Opening stock (Receipt - Issue) before startDate
+        List<Object[]> openingRows = movementRepository.findOpeningStock(beforeDt, warehouseId);
+
+        // Query 2: Period summary (inbound + outbound) in [startDate, endDate]
+        List<Object[]> periodRows = movementRepository.findPeriodSummary(startDt, endDt, warehouseId);
+
+        // Build result map keyed by "productId-warehouseId"
+        Map<String, InventoryBalanceDTO> resultMap = new LinkedHashMap<>();
+
+        // Populate from opening stock
+        for (Object[] row : openingRows) {
+            Integer productId  = (Integer) row[0];
+            String  sku        = (String)  row[1];
+            String  productName= (String)  row[2];
+            Integer warehId    = (Integer) row[3];
+            String  warehName  = (String)  row[4];
+            String  uom        = (String)  row[5];
+            int     opening    = ((Number) row[6]).intValue();
+
+            String key = productId + "-" + warehId;
+            resultMap.put(key, InventoryBalanceDTO.builder()
+                    .productId(productId)
+                    .sku(sku)
+                    .productName(productName)
+                    .warehouseId(warehId)
+                    .warehouseName(warehName)
+                    .uom(uom)
+                    .openingStock(opening)
+                    .inboundQty(0)
+                    .outboundQty(0)
+                    .closingStock(opening) // will be updated below
+                    .build());
+        }
+
+        // Merge period summary (inbound + outbound) — 8 columns now
+        for (Object[] row : periodRows) {
+            Integer productId  = (Integer) row[0];
+            String  sku        = (String)  row[1];
+            String  pName      = (String)  row[2];
+            Integer warehId    = (Integer) row[3];
+            String  wName      = (String)  row[4];
+            String  uom        = (String)  row[5];
+            int     inbound    = ((Number) row[6]).intValue();
+            int     outbound   = ((Number) row[7]).intValue();
+
+            String key = productId + "-" + warehId;
+            InventoryBalanceDTO dto = resultMap.get(key);
+            if (dto == null) {
+                // New product: only has activity in this period, opening = 0
+                dto = InventoryBalanceDTO.builder()
+                        .productId(productId).sku(sku).productName(pName)
+                        .warehouseId(warehId).warehouseName(wName).uom(uom)
+                        .openingStock(0).inboundQty(0).outboundQty(0)
+                        .build();
+                resultMap.put(key, dto);
+            }
+            dto.setInboundQty(inbound);
+            dto.setOutboundQty(outbound);
+            dto.setClosingStock(dto.getOpeningStock() + inbound - outbound);
+        }
+
+        // Sort: by warehouseName then productName
+        return resultMap.values().stream()
+                .sorted(Comparator.comparing(d -> (d.getWarehouseName() != null ? d.getWarehouseName() : "") +
+                                                   (d.getProductName()  != null ? d.getProductName()  : "")))
                 .collect(Collectors.toList());
     }
 
-    // --- HELPER METHODS CHO BÁO CÁO THẺ KHO ---
+    // ==================== Mapping helpers ====================
 
-    private InOutBalanceReportDTO buildBalanceDTO(StockMovement sm) {
-        int qty = sm.getQuantity() != null ? sm.getQuantity() : 0;
-        int closingBalance = sm.getBalanceAfter() != null ? sm.getBalanceAfter() : 0;
-        String type = sm.getMovementType();
-
-        // Tách bạch logic tính toán ra các hàm chuyên trách
-        int inboundQty = calculateInboundQty(type, qty);
-        int outboundQty = calculateOutboundQty(type, qty);
-        int openingBalance = calculateOpeningBalance(closingBalance, inboundQty, outboundQty);
-        String binLoc = (sm.getBin() != null) ? sm.getBin().getBinLocation() : "N/A";
-
-        return new InOutBalanceReportDTO(
-                sm.getMovementDate(), type, inboundQty, outboundQty,
-                openingBalance, closingBalance, binLoc, sm.getBatchNumber()
-        );
+    private InboundReportDTO mapToInboundDTO(StockMovement m) {
+        return InboundReportDTO.builder()
+                .movementDate(m.getMovementDate())
+                .warehouseName(m.getWarehouse() != null ? m.getWarehouse().getWarehouseName() : null)
+                .productName(m.getProduct()   != null ? m.getProduct().getProductName() : null)
+                .sku(m.getProduct()           != null ? m.getProduct().getSku() : null)
+                .batchNumber(m.getBatchNumber())
+                .binLocation(m.getBin()       != null ? m.getBin().getBinLocation() : null)
+                .quantity(m.getQuantity())
+                .uom(m.getUom())
+                .balanceAfter(m.getBalanceAfter())
+                .build();
     }
 
-    private int calculateInboundQty(String type, int qty) {
-        return ("Receipt".equalsIgnoreCase(type) || "Transfer-In".equalsIgnoreCase(type)) ? qty : 0;
-    }
-
-    private int calculateOutboundQty(String type, int qty) {
-        return ("Issue".equalsIgnoreCase(type) || "Transfer-Out".equalsIgnoreCase(type)) ? qty : 0;
-    }
-
-    private int calculateOpeningBalance(int closingBalance, int inboundQty, int outboundQty) {
-        // Logic tính lùi: Tồn đầu = Tồn cuối - Nhập + Xuất
-        if (inboundQty > 0) {
-            return closingBalance - inboundQty;
-        }
-        if (outboundQty > 0) {
-            return closingBalance + outboundQty;
-        }
-        return closingBalance; // Không biến động vật lý (VD: Giữ chỗ - Reserve)
+    private OutboundReportDTO mapToOutboundDTO(StockMovement m) {
+        return OutboundReportDTO.builder()
+                .movementDate(m.getMovementDate())
+                .warehouseName(m.getWarehouse() != null ? m.getWarehouse().getWarehouseName() : null)
+                .productName(m.getProduct()   != null ? m.getProduct().getProductName() : null)
+                .sku(m.getProduct()           != null ? m.getProduct().getSku() : null)
+                .batchNumber(m.getBatchNumber())
+                .binLocation(m.getBin()       != null ? m.getBin().getBinLocation() : null)
+                .quantity(m.getQuantity())
+                .uom(m.getUom())
+                .balanceAfter(m.getBalanceAfter())
+                .build();
     }
 }
+
+

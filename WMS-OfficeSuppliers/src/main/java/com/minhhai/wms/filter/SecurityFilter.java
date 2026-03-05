@@ -62,8 +62,7 @@ public class SecurityFilter implements Filter {
                 return;
             }
         } else if (relativePath.startsWith("/warehouse/")) {
-            // Cho phép cả Warehouse Admin và Warehouse Manager
-            if (!"Warehouse Admin".equals(role) && !"Warehouse Manager".equals(role)) {
+            if (!"Warehouse Admin".equals(role)) {
                 httpResponse.sendRedirect(contextPath + "/403");
                 return;
             }
@@ -96,27 +95,21 @@ public class SecurityFilter implements Filter {
                 httpResponse.sendRedirect(contextPath + "/403");
                 return;
             }
+        } else if (relativePath.startsWith("/reports/")) {
+            if (!"Warehouse Manager".equals(role)) {
+                httpResponse.sendRedirect(contextPath + "/403");
+                return;
+            }
         } else if (relativePath.startsWith("/api/")) {
-            if (relativePath.startsWith("/api/purchasing/")) {
-                if (!"Purchasing Staff".equals(role) && !"Purchasing Manager".equals(role)) {
-                    httpResponse.sendRedirect(contextPath + "/403");
-                    return;
-                }
-            } else if (relativePath.startsWith("/api/sales/")) {
-                if (!"Sales Staff".equals(role) && !"Sales Manager".equals(role)) {
-                    httpResponse.sendRedirect(contextPath + "/403");
-                    return;
-                }
-            } else if (relativePath.startsWith("/api/storekeeper/")) {
-                if (!"Storekeeper".equals(role)) {
-                    httpResponse.sendRedirect(contextPath + "/403");
-                    return;
-                }
-            } else if (relativePath.startsWith("/api/transfer/")) {
-                if (!"Storekeeper".equals(role) && !"Warehouse Manager".equals(role)) {
-                    httpResponse.sendRedirect(contextPath + "/403");
-                    return;
-                }
+            // Gộp tất cả các Role được quyền dùng API chung
+            if (!"Purchasing Staff".equals(role) &&
+                    !"Purchasing Manager".equals(role) &&
+                    !"Sales Staff".equals(role) &&
+                    !"Sales Manager".equals(role) &&
+                    !"Storekeeper".equals(role)) {
+
+                httpResponse.sendRedirect(contextPath + "/403");
+                return;
             }
         }
 

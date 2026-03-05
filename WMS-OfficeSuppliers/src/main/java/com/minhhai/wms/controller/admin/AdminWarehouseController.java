@@ -61,7 +61,7 @@ public class AdminWarehouseController {
                        BindingResult bindingResult,
                        Model model,
                        RedirectAttributes redirectAttributes) {
-
+        
         if (bindingResult.hasErrors()) {
             model.addAttribute("activePage", "admin-warehouses");
             return "admin/warehouse-form";
@@ -88,8 +88,14 @@ public class AdminWarehouseController {
 
     @PostMapping("/{id}/toggle")
     public String toggleActive(@PathVariable(name = "id") Integer id, RedirectAttributes redirectAttributes) {
-        warehouseService.toggleActive(id);
-        redirectAttributes.addFlashAttribute("success", "Warehouse status updated.");
+        try {
+            warehouseService.toggleActive(id);
+            redirectAttributes.addFlashAttribute("success", "Warehouse status updated.");
+        } catch (IllegalArgumentException e) {
+            redirectAttributes.addFlashAttribute("error", e.getMessage());
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", "Error: " + e.getMessage());
+        }
         return "redirect:/admin/warehouses";
     }
 

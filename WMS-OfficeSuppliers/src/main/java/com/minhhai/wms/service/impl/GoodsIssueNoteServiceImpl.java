@@ -111,25 +111,9 @@ public class GoodsIssueNoteServiceImpl implements GoodsIssueNoteService {
                                 "Không tìm thấy lô hàng cho sản phẩm '" + product.getProductName()
                                         + "' tại bin " + ginDetail.getBin().getBinLocation() + "."));
 
-                // =================================================================
-                // BẢO VỆ TỒN KHO: Kiểm tra và ngăn chặn gán số âm
-                // =================================================================
-
-                // 1. Kiểm tra tồn kho vật lý có đủ để xuất không
-                if (baseQty > stockBatch.getQtyAvailable()) {
-                    throw new IllegalArgumentException(
-                            "Lỗi: Số lượng xuất (" + baseQty + ") vượt quá tồn kho thực tế ("
-                                    + stockBatch.getQtyAvailable() + ") của lô '" + ginDetail.getBatchNumber()
-                                    + "' tại vị trí " + ginDetail.getBin().getBinLocation() + ".");
-                }
-
-                // 2. Trừ tồn kho khả dụng
+                // Issue: decrease BOTH availableQty and reservedQty
                 stockBatch.setQtyAvailable(stockBatch.getQtyAvailable() - baseQty);
-
-                // 3. Trừ tồn kho giữ chỗ (Dùng Math.max để không bao giờ bị âm)
-                int newReserved = stockBatch.getQtyReserved() - baseQty;
-                stockBatch.setQtyReserved(Math.max(0, newReserved));
-
+                stockBatch.setQtyReserved(stockBatch.getQtyReserved() - baseQty);
                 stockBatchRepository.save(stockBatch);
 
                 // Log StockMovement: Issue / Physical
@@ -145,7 +129,18 @@ public class GoodsIssueNoteServiceImpl implements GoodsIssueNoteService {
                         .balanceAfter(stockBatch.getQtyAvailable())
                         .build();
                 stockMovementRepository.save(movement);
-
+                StockMovement reservedMovement = StockMovement.builder()
+                        .warehouse(warehouse)
+                        .product(product)
+                        .bin(ginDetail.getBin())
+                        .batchNumber(ginDetail.getBatchNumber())
+                        .movementType("Issue") // Vẫn dùng type Issue vì hành động là xuất hàng
+                        .stockType("Reserved")
+                        .quantity(baseQty)
+                        .uom(product.getBaseUoM())
+                        .balanceAfter(stockBatch.getQtyReserved()) // Số dư sau khi đã trừ ở dòng 114
+                        .build();
+                stockMovementRepository.save(reservedMovement);
                 // Update SO detail issuedQty (cumulative across all GINs)
                 soDetail.setIssuedQty(soDetail.getIssuedQty() + inputIssuedQty);
             }

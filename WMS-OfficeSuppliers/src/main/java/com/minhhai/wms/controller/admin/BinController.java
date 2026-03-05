@@ -99,10 +99,10 @@ public class BinController {
                        HttpSession session,
                        Model model,
                        RedirectAttributes redirectAttributes) {
-
+        
         User loggedInUser = (User) session.getAttribute("loggedInUser");
         Warehouse warehouse = loggedInUser.getWarehouse();
-
+        
         // Pass warehouse info to DTO
         binDTO.setWarehouseId(warehouse.getWarehouseId());
 
@@ -122,6 +122,8 @@ public class BinController {
             String msg = e.getMessage().toLowerCase();
             if (msg.contains("location") || msg.contains("exists")) {
                 bindingResult.rejectValue("binLocation", "error.bin", e.getMessage());
+            } else if (msg.contains("smaller")) {
+                bindingResult.rejectValue("maxWeight", "error.weight", e.getMessage());
             } else {
                 model.addAttribute("error", e.getMessage());
             }
@@ -141,8 +143,14 @@ public class BinController {
 
     @PostMapping("/{id}/toggle")
     public String toggleActive(@PathVariable(name = "id") Integer id, RedirectAttributes redirectAttributes) {
-        binService.toggleActive(id);
-        redirectAttributes.addFlashAttribute("success", "Bin status updated.");
+        try {
+            binService.toggleActive(id);
+            redirectAttributes.addFlashAttribute("success", "Bin status updated.");
+        } catch (IllegalArgumentException e) {
+            redirectAttributes.addFlashAttribute("error", "Error: " +e.getMessage());
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", "Error: " + e.getMessage());
+        }
         return "redirect:/warehouse/bins";
     }
 

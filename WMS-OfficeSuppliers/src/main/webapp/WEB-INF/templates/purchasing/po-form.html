@@ -10,287 +10,287 @@
 </head>
 
 <body>
-<div class="app-layout">
-    <div th:replace="~{fragments/layout :: sidebar-purchasing}"></div>
-    <div class="main-content">
-        <div
+    <div class="app-layout">
+        <div th:replace="~{fragments/layout :: sidebar-purchasing}"></div>
+        <div class="main-content">
+            <div
                 th:replace="~{fragments/layout :: topbar(${poDTO.poId != null} ? 'Edit Purchase Order' : 'New Purchase Order')}">
-        </div>
-        <div class="content-area">
-            <div th:replace="~{fragments/layout :: alerts}"></div>
+            </div>
+            <div class="content-area">
+                <div th:replace="~{fragments/layout :: alerts}"></div>
 
-            <form th:action="@{/purchasing/orders/save}" method="post" th:object="${poDTO}" id="poForm">
-                <!-- Hidden fields -->
-                <input type="hidden" th:field="*{poId}">
-                <input type="hidden" th:field="*{warehouseId}">
+                <form th:action="@{/purchasing/orders/save}" method="post" th:object="${poDTO}" id="poForm">
+                    <!-- Hidden fields -->
+                    <input type="hidden" th:field="*{poId}">
+                    <input type="hidden" th:field="*{warehouseId}">
 
-                <!-- Reject Reason Alert -->
-                <div th:if="${poDTO.poStatus == 'Rejected' && poDTO.rejectReason != null}"
-                     class="alert alert-danger" style="margin-bottom: 1.5rem;">
-                    <strong>⚠️ This PO was rejected.</strong><br>
-                    <strong>Reason:</strong> <span th:text="${poDTO.rejectReason}"></span>
-                </div>
-
-                <div class="card" style="margin-bottom: 1.5rem;">
-                    <div class="card-header">
-                        <h2>Order Information</h2>
+                    <!-- Reject Reason Alert -->
+                    <div th:if="${poDTO.poStatus == 'Rejected' && poDTO.rejectReason != null}"
+                        class="alert alert-danger" style="margin-bottom: 1.5rem;">
+                        <strong>⚠️ This PO was rejected.</strong><br>
+                        <strong>Reason:</strong> <span th:text="${poDTO.rejectReason}"></span>
                     </div>
-                    <div class="card-body">
-                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.5rem;">
-                            <!-- Supplier -->
-                            <div class="form-group">
-                                <label for="supplierId">Supplier <span style="color:red;">*</span></label>
-                                <select id="supplierId" th:field="*{supplierId}" class="form-control"
+
+                    <div class="card" style="margin-bottom: 1.5rem;">
+                        <div class="card-header">
+                            <h2>Order Information</h2>
+                        </div>
+                        <div class="card-body">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.5rem;">
+                                <!-- Supplier -->
+                                <div class="form-group">
+                                    <label for="supplierId">Supplier <span style="color:red;">*</span></label>
+                                    <select id="supplierId" th:field="*{supplierId}" class="form-control"
                                         th:disabled="${poDTO.poStatus != null && poDTO.poStatus != 'Draft' && poDTO.poStatus != 'Rejected'}">
-                                    <option value="">-- Select Supplier --</option>
-                                    <option th:each="s : ${suppliers}" th:value="${s.partnerId}"
+                                        <option value="">-- Select Supplier --</option>
+                                        <option th:each="s : ${suppliers}" th:value="${s.partnerId}"
                                             th:text="${s.partnerName}"></option>
-                                </select>
-                                <div class="text-danger" th:if="${#fields.hasErrors('supplierId')}"
-                                     th:errors="*{supplierId}"></div>
-                            </div>
-                            <!-- PO Number -->
-                            <div class="form-group">
-                                <label>PO Number</label>
-                                <input type="text" class="form-control"
-                                       th:value="${poDTO.poNumber != null} ? ${poDTO.poNumber} : 'Auto-generated'"
-                                       readonly disabled>
-                            </div>
-                            <!-- Warehouse -->
-                            <div class="form-group">
-                                <label>Warehouse</label>
-                                <input type="text" class="form-control" th:value="${poDTO.warehouseName}" readonly
-                                       disabled>
+                                    </select>
+                                    <div class="text-danger" th:if="${#fields.hasErrors('supplierId')}"
+                                        th:errors="*{supplierId}"></div>
+                                </div>
+                                <!-- PO Number -->
+                                <div class="form-group">
+                                    <label>PO Number</label>
+                                    <input type="text" class="form-control"
+                                        th:value="${poDTO.poNumber != null} ? ${poDTO.poNumber} : 'Auto-generated'"
+                                        readonly disabled>
+                                </div>
+                                <!-- Warehouse -->
+                                <div class="form-group">
+                                    <label>Warehouse</label>
+                                    <input type="text" class="form-control" th:value="${poDTO.warehouseName}" readonly
+                                        disabled>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
 
-                <!-- Order Lines -->
-                <div class="card" style="margin-bottom: 1.5rem;">
-                    <div class="card-header">
-                        <h2>Order Lines</h2>
-                        <div class="text-danger" th:if="${#fields.hasErrors('details')}" th:errors="*{details}"
-                             style="font-size: 0.9rem; font-weight: bold;"></div>
-                        <button type="button" class="btn btn-primary btn-sm" onclick="addLine()"
+                    <!-- Order Lines -->
+                    <div class="card" style="margin-bottom: 1.5rem;">
+                        <div class="card-header">
+                            <h2>Order Lines</h2>
+                            <div class="text-danger" th:if="${#fields.hasErrors('details')}" th:errors="*{details}"
+                                style="font-size: 0.9rem; font-weight: bold;"></div>
+                            <button type="button" class="btn btn-primary btn-sm" onclick="addLine()"
                                 th:if="${poDTO.poStatus == null || poDTO.poStatus == 'Draft' || poDTO.poStatus == 'Rejected'}"
                                 id="addLineBtn">+ Add Product Line</button>
-                    </div>
-                    <div class="card-body">
-                        <div class="table-wrapper">
-                            <table id="linesTable">
-                                <thead>
-                                <tr>
-                                    <th style="width:5%;">#</th>
-                                    <th style="width:35%;">Product</th>
-                                    <th style="width:25%;">UoM</th>
-                                    <th style="width:20%;">Quantity</th>
-                                    <th style="width:15%;">Actions</th>
-                                </tr>
-                                </thead>
-                                <tbody id="linesBody">
-                                <!-- Existing lines (for edit) -->
-                                <tr th:each="detail, iter : ${poDTO.details}" th:with="idx=${iter.index}">
-                                    <td class="line-number" th:text="${iter.count}"></td>
-                                    <td>
-                                        <select th:name="'details[' + ${idx} + '].productId'"
-                                                class="form-control product-select" th:attr="data-index=${idx}"
-                                                onchange="onProductChange(this)"
-                                                th:disabled="${poDTO.poStatus != null && poDTO.poStatus != 'Draft' && poDTO.poStatus != 'Rejected'}">
-                                            <option value="">-- Select Product --</option>
-                                            <option th:each="p : ${products}" th:value="${p.productId}"
-                                                    th:text="${p.sku + ' - ' + p.productName}"
-                                                    th:selected="${detail.productId != null && detail.productId == p.productId}">
-                                            </option>
-                                        </select>
-                                        <div class="text-danger"
-                                             th:if="${#fields.hasErrors('details[' + idx + '].productId')}"
-                                             th:errors="*{details[__${idx}__].productId}"
-                                             style="font-size: 0.75rem;"></div>
-                                        <input type="hidden" th:name="'details[' + ${idx} + '].poDetailId'"
-                                               th:value="${detail.poDetailId}">
-                                    </td>
-                                    <td>
-                                        <select th:name="'details[' + ${idx} + '].uom'"
-                                                class="form-control uom-select" th:id="'uom-' + ${idx}"
-                                                th:disabled="${poDTO.poStatus != null && poDTO.poStatus != 'Draft' && poDTO.poStatus != 'Rejected'}">
-                                            <option value="">-- Select UoM --</option>
-                                            <!-- Will be populated by JS on load for existing lines -->
-                                            <option th:if="${detail.uom != null}" th:value="${detail.uom}"
-                                                    th:text="${detail.uom}" selected></option>
-                                        </select>
-                                        <div class="text-danger"
-                                             th:if="${#fields.hasErrors('details[' + idx + '].uom')}"
-                                             th:errors="*{details[__${idx}__].uom}" style="font-size: 0.75rem;">
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <input type="number" th:name="'details[' + ${idx} + '].orderedQty'"
-                                               class="form-control" th:value="${detail.orderedQty}"
-                                               th:readonly="${poDTO.poStatus != null && poDTO.poStatus != 'Draft' && poDTO.poStatus != 'Rejected'}">
-                                        <div class="text-danger"
-                                             th:if="${#fields.hasErrors('details[' + idx + '].orderedQty')}"
-                                             th:errors="*{details[__${idx}__].orderedQty}"
-                                             style="font-size: 0.75rem;"></div>
-                                    </td>
-                                    <td>
-                                        <button type="button" class="btn btn-danger btn-sm"
-                                                onclick="removeLine(this)"
-                                                th:if="${poDTO.poStatus == null || poDTO.poStatus == 'Draft' || poDTO.poStatus == 'Rejected'}">✕</button>
-                                    </td>
-                                </tr>
-                                </tbody>
-                            </table>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-wrapper">
+                                <table id="linesTable">
+                                    <thead>
+                                        <tr>
+                                            <th style="width:5%;">#</th>
+                                            <th style="width:35%;">Product</th>
+                                            <th style="width:25%;">UoM</th>
+                                            <th style="width:20%;">Quantity</th>
+                                            <th style="width:15%;">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="linesBody">
+                                        <!-- Existing lines (for edit) -->
+                                        <tr th:each="detail, iter : ${poDTO.details}" th:with="idx=${iter.index}">
+                                            <td class="line-number" th:text="${iter.count}"></td>
+                                            <td>
+                                                <select th:name="'details[' + ${idx} + '].productId'"
+                                                    class="form-control product-select" th:attr="data-index=${idx}"
+                                                    onchange="onProductChange(this)"
+                                                    th:disabled="${poDTO.poStatus != null && poDTO.poStatus != 'Draft' && poDTO.poStatus != 'Rejected'}">
+                                                    <option value="">-- Select Product --</option>
+                                                    <option th:each="p : ${products}" th:value="${p.productId}"
+                                                        th:text="${p.sku + ' - ' + p.productName}"
+                                                        th:selected="${detail.productId != null && detail.productId == p.productId}">
+                                                    </option>
+                                                </select>
+                                                <div class="text-danger"
+                                                    th:if="${#fields.hasErrors('details[' + idx + '].productId')}"
+                                                    th:errors="*{details[__${idx}__].productId}"
+                                                    style="font-size: 0.75rem;"></div>
+                                                <input type="hidden" th:name="'details[' + ${idx} + '].poDetailId'"
+                                                    th:value="${detail.poDetailId}">
+                                            </td>
+                                            <td>
+                                                <select th:name="'details[' + ${idx} + '].uom'"
+                                                    class="form-control uom-select" th:id="'uom-' + ${idx}"
+                                                    th:disabled="${poDTO.poStatus != null && poDTO.poStatus != 'Draft' && poDTO.poStatus != 'Rejected'}">
+                                                    <option value="">-- Select UoM --</option>
+                                                    <!-- Will be populated by JS on load for existing lines -->
+                                                    <option th:if="${detail.uom != null}" th:value="${detail.uom}"
+                                                        th:text="${detail.uom}" selected></option>
+                                                </select>
+                                                <div class="text-danger"
+                                                    th:if="${#fields.hasErrors('details[' + idx + '].uom')}"
+                                                    th:errors="*{details[__${idx}__].uom}" style="font-size: 0.75rem;">
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <input type="number" th:name="'details[' + ${idx} + '].orderedQty'"
+                                                    class="form-control" th:value="${detail.orderedQty}"
+                                                    th:readonly="${poDTO.poStatus != null && poDTO.poStatus != 'Draft' && poDTO.poStatus != 'Rejected'}">
+                                                <div class="text-danger"
+                                                    th:if="${#fields.hasErrors('details[' + idx + '].orderedQty')}"
+                                                    th:errors="*{details[__${idx}__].orderedQty}"
+                                                    style="font-size: 0.75rem;"></div>
+                                            </td>
+                                            <td>
+                                                <button type="button" class="btn btn-danger btn-sm"
+                                                    onclick="removeLine(this)"
+                                                    th:if="${poDTO.poStatus == null || poDTO.poStatus == 'Draft' || poDTO.poStatus == 'Rejected'}">✕</button>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <!-- Action Buttons -->
-                <div class="card"
-                     th:if="${poDTO.poStatus == null || poDTO.poStatus == 'Draft' || poDTO.poStatus == 'Rejected'}">
-                    <div class="card-body" style="display: flex; gap: 1rem; justify-content: flex-end;">
-                        <a th:href="@{/purchasing/orders}" class="btn btn-outline">Cancel</a>
-                        <button type="submit" name="action" value="draft" class="btn btn-outline">Save
-                            Draft</button>
-                        <button type="submit" name="action" value="submit" class="btn btn-primary">Submit for
-                            Approval</button>
+                    <!-- Action Buttons -->
+                    <div class="card"
+                        th:if="${poDTO.poStatus == null || poDTO.poStatus == 'Draft' || poDTO.poStatus == 'Rejected'}">
+                        <div class="card-body" style="display: flex; gap: 1rem; justify-content: flex-end;">
+                            <a th:href="@{/purchasing/orders}" class="btn btn-outline">Cancel</a>
+                            <button type="submit" name="action" value="draft" class="btn btn-outline">Save
+                                Draft</button>
+                            <button type="submit" name="action" value="submit" class="btn btn-primary">Submit for
+                                Approval</button>
+                        </div>
                     </div>
-                </div>
-                <div class="card"
-                     th:unless="${poDTO.poStatus == null || poDTO.poStatus == 'Draft' || poDTO.poStatus == 'Rejected'}">
-                    <div class="card-body" style="display: flex; gap: 1rem; justify-content: flex-end;">
-                        <a th:href="@{/purchasing/orders}" class="btn btn-outline">Back to List</a>
+                    <div class="card"
+                        th:unless="${poDTO.poStatus == null || poDTO.poStatus == 'Draft' || poDTO.poStatus == 'Rejected'}">
+                        <div class="card-body" style="display: flex; gap: 1rem; justify-content: flex-end;">
+                            <a th:href="@{/purchasing/orders}" class="btn btn-outline">Back to List</a>
+                        </div>
                     </div>
-                </div>
-            </form>
+                </form>
+            </div>
         </div>
     </div>
-</div>
 
-<script th:inline="javascript">
-    /*<![CDATA[*/
-    // Product data for generating new line dropdowns
-    var products = /*[[${products}]]*/[];
-    var contextPath = /*[[@{/}]]*/ '/';
-    var lineIndex = /*[[${poDTO.details != null ? poDTO.details.size() : 0}]]*/ 0;
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        // Product data for generating new line dropdowns
+        var products = /*[[${products}]]*/[];
+        var contextPath = /*[[@{/}]]*/ '/';
+        var lineIndex = /*[[${poDTO.details != null ? poDTO.details.size() : 0}]]*/ 0;
 
-    // Format context path for API calls
-    if (contextPath.endsWith('/')) {
-        contextPath = contextPath.substring(0, contextPath.length - 1);
-    }
-
-    // ===== Add new product line =====
-    function addLine() {
-        var tbody = document.getElementById('linesBody');
-        var idx = lineIndex++;
-        var tr = document.createElement('tr');
-
-        // Build product options HTML
-        var productOptions = '<option value="">-- Select Product --</option>';
-        for (var i = 0; i < products.length; i++) {
-            var p = products[i];
-            productOptions += '<option value="' + p.productId + '">' + p.sku + ' - ' + p.productName + '</option>';
+        // Format context path for API calls
+        if (contextPath.endsWith('/')) {
+            contextPath = contextPath.substring(0, contextPath.length - 1);
         }
 
-        tr.innerHTML =
-            '<td class="line-number">' + (tbody.rows.length + 1) + '</td>' +
-            '<td>' +
-            '<select name="details[' + idx + '].productId" class="form-control product-select" data-index="' + idx + '" onchange="onProductChange(this)">' +
-            productOptions +
-            '</select>' +
-            '</td>' +
-            '<td>' +
-            '<select name="details[' + idx + '].uom" id="uom-' + idx + '" class="form-control uom-select">' +
-            '<option value="">-- Select UoM --</option>' +
-            '</select>' +
-            '</td>' +
-            '<td>' +
-            '<input type="number" name="details[' + idx + '].orderedQty" class="form-control" min="1" placeholder="Qty">' +
-            '</td>' +
-            '<td>' +
-            '<button type="button" class="btn btn-danger btn-sm" onclick="removeLine(this)">✕</button>' +
-            '</td>';
+        // ===== Add new product line =====
+        function addLine() {
+            var tbody = document.getElementById('linesBody');
+            var idx = lineIndex++;
+            var tr = document.createElement('tr');
 
-        tbody.appendChild(tr);
-        renumberLines();
-    }
-
-    // ===== Remove product line =====
-    function removeLine(btn) {
-        var tr = btn.closest('tr');
-        tr.remove();
-        renumberLines();
-    }
-
-    // ===== Renumber line numbers =====
-    function renumberLines() {
-        var rows = document.querySelectorAll('#linesBody tr');
-        for (var i = 0; i < rows.length; i++) {
-            rows[i].querySelector('.line-number').textContent = (i + 1);
-        }
-    }
-
-    // ===== On product change: load UoMs via AJAX =====
-    function onProductChange(selectEl) {
-        var productId = selectEl.value;
-        var idx = selectEl.getAttribute('data-index');
-        var uomSelect = document.getElementById('uom-' + idx);
-
-        // Clear UoM dropdown
-        uomSelect.innerHTML = '<option value="">-- Select UoM --</option>';
-
-        if (!productId) return;
-
-        // AJAX call to get UoMs
-        fetch(contextPath + '/api/purchasing/products/' + productId + '/uoms')
-            .then(function (response) {
-                if (!response.ok) throw new Error('Failed to load UoMs');
-                return response.json();
-            })
-            .then(function (uoms) {
-                for (var i = 0; i < uoms.length; i++) {
-                    var option = document.createElement('option');
-                    option.value = uoms[i].uom;
-                    option.textContent = uoms[i].label;
-                    uomSelect.appendChild(option);
-                }
-            })
-            .catch(function (err) {
-                console.error('Error loading UoMs:', err);
-            });
-    }
-
-    // ===== On page load: load UoMs for existing lines =====
-    document.addEventListener('DOMContentLoaded', function () {
-        var existingSelects = document.querySelectorAll('.product-select');
-        existingSelects.forEach(function (sel) {
-            if (sel.value) {
-                var idx = sel.getAttribute('data-index');
-                var uomSelect = document.getElementById('uom-' + idx);
-                var currentUom = uomSelect.value; // preserve current selection
-
-                fetch(contextPath + '/api/purchasing/products/' + sel.value + '/uoms')
-                    .then(function (response) { return response.json(); })
-                    .then(function (uoms) {
-                        uomSelect.innerHTML = '<option value="">-- Select UoM --</option>';
-                        for (var i = 0; i < uoms.length; i++) {
-                            var option = document.createElement('option');
-                            option.value = uoms[i].uom;
-                            option.textContent = uoms[i].label;
-                            if (uoms[i].uom === currentUom) {
-                                option.selected = true;
-                            }
-                            uomSelect.appendChild(option);
-                        }
-                    })
-                    .catch(function (err) {
-                        console.error('Error loading UoMs for existing line:', err);
-                    });
+            // Build product options HTML
+            var productOptions = '<option value="">-- Select Product --</option>';
+            for (var i = 0; i < products.length; i++) {
+                var p = products[i];
+                productOptions += '<option value="' + p.productId + '">' + p.sku + ' - ' + p.productName + '</option>';
             }
+
+            tr.innerHTML =
+                '<td class="line-number">' + (tbody.rows.length + 1) + '</td>' +
+                '<td>' +
+                '<select name="details[' + idx + '].productId" class="form-control product-select" data-index="' + idx + '" onchange="onProductChange(this)">' +
+                productOptions +
+                '</select>' +
+                '</td>' +
+                '<td>' +
+                '<select name="details[' + idx + '].uom" id="uom-' + idx + '" class="form-control uom-select">' +
+                '<option value="">-- Select UoM --</option>' +
+                '</select>' +
+                '</td>' +
+                '<td>' +
+                '<input type="number" name="details[' + idx + '].orderedQty" class="form-control" min="1" placeholder="Qty">' +
+                '</td>' +
+                '<td>' +
+                '<button type="button" class="btn btn-danger btn-sm" onclick="removeLine(this)">✕</button>' +
+                '</td>';
+
+            tbody.appendChild(tr);
+            renumberLines();
+        }
+
+        // ===== Remove product line =====
+        function removeLine(btn) {
+            var tr = btn.closest('tr');
+            tr.remove();
+            renumberLines();
+        }
+
+        // ===== Renumber line numbers =====
+        function renumberLines() {
+            var rows = document.querySelectorAll('#linesBody tr');
+            for (var i = 0; i < rows.length; i++) {
+                rows[i].querySelector('.line-number').textContent = (i + 1);
+            }
+        }
+
+        // ===== On product change: load UoMs via AJAX =====
+        function onProductChange(selectEl) {
+            var productId = selectEl.value;
+            var idx = selectEl.getAttribute('data-index');
+            var uomSelect = document.getElementById('uom-' + idx);
+
+            // Clear UoM dropdown
+            uomSelect.innerHTML = '<option value="">-- Select UoM --</option>';
+
+            if (!productId) return;
+
+            // AJAX call to get UoMs
+            fetch(contextPath + '/api/products/' + productId + '/uoms')
+                .then(function (response) {
+                    if (!response.ok) throw new Error('Failed to load UoMs');
+                    return response.json();
+                })
+                .then(function (uoms) {
+                    for (var i = 0; i < uoms.length; i++) {
+                        var option = document.createElement('option');
+                        option.value = uoms[i].uom;
+                        option.textContent = uoms[i].display;
+                        uomSelect.appendChild(option);
+                    }
+                })
+                .catch(function (err) {
+                    console.error('Error loading UoMs:', err);
+                });
+        }
+
+        // ===== On page load: load UoMs for existing lines =====
+        document.addEventListener('DOMContentLoaded', function () {
+            var existingSelects = document.querySelectorAll('.product-select');
+            existingSelects.forEach(function (sel) {
+                if (sel.value) {
+                    var idx = sel.getAttribute('data-index');
+                    var uomSelect = document.getElementById('uom-' + idx);
+                    var currentUom = uomSelect.value; // preserve current selection
+
+                    fetch(contextPath + '/api/products/' + sel.value + '/uoms')
+                        .then(function (response) { return response.json(); })
+                        .then(function (uoms) {
+                            uomSelect.innerHTML = '<option value="">-- Select UoM --</option>';
+                            for (var i = 0; i < uoms.length; i++) {
+                                var option = document.createElement('option');
+                                option.value = uoms[i].uom;
+                                option.textContent = uoms[i].display;
+                                if (uoms[i].uom === currentUom) {
+                                    option.selected = true;
+                                }
+                                uomSelect.appendChild(option);
+                            }
+                        })
+                        .catch(function (err) {
+                            console.error('Error loading UoMs for existing line:', err);
+                        });
+                }
+            });
         });
-    });
-    /*]]>*/
-</script>
+        /*]]>*/
+    </script>
 </body>
 
 </html>

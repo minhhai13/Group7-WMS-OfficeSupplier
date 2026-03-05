@@ -302,7 +302,7 @@ public class SalesOrderServiceImpl implements SalesOrderService {
             if (remainingToReserve > 0) {
                 throw new IllegalArgumentException(
                         "Không đủ tồn kho cho sản phẩm '" + product.getProductName()
-                                + "'. Thiếu " + remainingToReserve + " " + product.getBaseUoM() + ".");
+                        + "'. Thiếu " + remainingToReserve + " " + product.getBaseUoM() + ".");
             }
         }
 
@@ -357,30 +357,6 @@ public class SalesOrderServiceImpl implements SalesOrderService {
             pr.setStatus("Rejected");
             prRepository.save(pr);
         }
-    }
-
-    // ==================== UoM Lookup ====================
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<Map<String, String>> getAvailableUoMs(Integer productId) {
-        Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new IllegalArgumentException("Product not found: " + productId));
-        List<Map<String, String>> uomList = new ArrayList<>();
-        Map<String, String> baseEntry = new LinkedHashMap<>();
-        baseEntry.put("uom", product.getBaseUoM());
-        baseEntry.put("label", product.getBaseUoM() + " (Base)");
-        uomList.add(baseEntry);
-        List<ProductUoMConversion> conversions = uomConversionRepository.findByProduct_ProductId(productId);
-        for (ProductUoMConversion conv : conversions) {
-            if (!conv.getFromUoM().equals(product.getBaseUoM())) {
-                Map<String, String> entry = new LinkedHashMap<>();
-                entry.put("uom", conv.getFromUoM());
-                entry.put("label", conv.getFromUoM() + " (1 " + conv.getFromUoM() + " = " + conv.getConversionFactor() + " " + conv.getToUoM() + ")");
-                uomList.add(entry);
-            }
-        }
-        return uomList;
     }
 
     // ==================== Number Generation ====================
@@ -480,6 +456,12 @@ public class SalesOrderServiceImpl implements SalesOrderService {
                     .orElseThrow(() -> new IllegalArgumentException("Sales Order not found: " + dto.getSoId()));
             if (!"Draft".equals(so.getSoStatus()) && !"Rejected".equals(so.getSoStatus())) {
                 throw new IllegalArgumentException("Only Draft or Rejected SOs can be edited.");
+            }
+            if (so.getPurchaseRequest() != null) {
+                prRepository.delete(so.getPurchaseRequest());
+                so.setPurchaseRequest(null);
+                // Flush thay đổi xuống DB ngay lập tức để giải phóng khóa ngoại
+                prRepository.flush();
             }
             if (so.getDetails() != null) so.getDetails().clear();
         } else {

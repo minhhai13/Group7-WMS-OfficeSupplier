@@ -34,6 +34,6 @@ public class ProductDTO {
 
     @Min(value = 0, message = "Minimum stock level must be 0 or greater")
     private Integer minStockLevel;
-
+    
     private Boolean isActive;
 }

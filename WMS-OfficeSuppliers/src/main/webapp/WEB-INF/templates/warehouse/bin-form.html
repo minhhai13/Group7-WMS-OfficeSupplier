@@ -9,61 +9,61 @@
 </head>
 
 <body>
-<div class="app-layout">
-    <div th:replace="~{fragments/layout :: sidebar-warehouse}"></div>
-    <div class="main-content">
-        <div th:replace="~{fragments/layout :: topbar(${bin.binId != null} ? 'Edit Bin' : 'New Bin')}"></div>
-        <div class="content-area">
-            <div th:replace="~{fragments/layout :: alerts}"></div>
+    <div class="app-layout">
+        <div th:replace="~{fragments/layout :: sidebar-warehouse}"></div>
+        <div class="main-content">
+            <div th:replace="~{fragments/layout :: topbar(${bin.binId != null} ? 'Edit Bin - ' + ${currentWarehouseName} : 'New Bin - ' + ${currentWarehouseName})}"></div>
+            <div class="content-area">
+                <div th:replace="~{fragments/layout :: alerts}"></div>
 
-            <div class="card" style="max-width:500px;">
-                <div class="card-header">
-                    <h2 th:text="${bin.binId != null} ? 'Edit Bin' : 'Create New Bin'">Form</h2>
-                </div>
-                <div class="card-body">
-                    <!-- Show capacity info when editing -->
-                    <div th:if="${bin.binId != null}"
-                         style="margin-bottom:1rem;padding:1rem;background:#f8fafc;border-radius:8px;">
-                        <p style="font-size:.85rem;color:var(--text-muted);">
-                            Current Weight: <strong th:text="${currentWeight} + ' kg'">0</strong> |
-                            Available: <strong th:text="${availableCapacity} + ' kg'">0</strong>
-                        </p>
+                <div class="card" style="max-width:500px;">
+                    <div class="card-header">
+                        <h2 th:text="${bin.binId != null} ? 'Edit Bin' : 'Create New Bin'">Form</h2>
                     </div>
-
-                    <form th:action="@{/warehouse/bins/save}" method="post" th:object="${bin}">
-                        <input type="hidden" th:field="*{binId}">
-                        <!-- Warehouse ID is handled in controller via session, but we can keep it out of form hidden fields if not needed, or add if we want to pass it back. Controller sets it from session, so we can verify if we need it. Controller logic: "binDTO.setWarehouseId(warehouse.getWarehouseId());" so it ignores form value if present. Safe to omit. -->
-
-                        <div class="form-group">
-                            <label for="binLocation">Bin Location *</label>
-                            <input type="text" id="binLocation" class="form-control" th:field="*{binLocation}"
-                                   required pattern="W[0-9]{2}-Z[0-9]{2}-S[0-9]{2}-B[0-9]{2}"
-                                   placeholder="e.g. W01-Z02-S01-B05"
-                                   title="Format: Wxx-Zxx-Sxx-Bxx (e.g. W01-Z02-S01-B05)"
-                                   th:classappend="${#fields.hasErrors('binLocation')} ? 'is-invalid'">
-                            <div class="invalid-feedback" th:if="${#fields.hasErrors('binLocation')}"
-                                 th:errors="*{binLocation}">Location error</div>
+                    <div class="card-body">
+                        <!-- Show capacity info when editing -->
+                        <div th:if="${bin.binId != null}"
+                            style="margin-bottom:1rem;padding:1rem;background:#f8fafc;border-radius:8px;">
+                            <p style="font-size:.85rem;color:var(--text-muted);">
+                                Current Weight: <strong th:text="${currentWeight} + ' kg'">0</strong> |
+                                Available: <strong th:text="${availableCapacity} + ' kg'">0</strong>
+                            </p>
                         </div>
 
-                        <div class="form-group">
-                            <label for="maxWeight">Max Weight (kg) *</label>
-                            <input type="number" id="maxWeight" class="form-control" th:field="*{maxWeight}"
-                                   required min="0.01" step="0.01" placeholder="e.g. 500.00"
-                                   th:classappend="${#fields.hasErrors('maxWeight')} ? 'is-invalid'">
-                            <div class="invalid-feedback" th:if="${#fields.hasErrors('maxWeight')}"
-                                 th:errors="*{maxWeight}">Weight error</div>
-                        </div>
+                        <form th:action="@{/warehouse/bins/save}" method="post" th:object="${bin}">
+                            <input type="hidden" th:field="*{binId}">
+                            <!-- Warehouse ID is handled in controller via session, but we can keep it out of form hidden fields if not needed, or add if we want to pass it back. Controller sets it from session, so we can verify if we need it. Controller logic: "binDTO.setWarehouseId(warehouse.getWarehouseId());" so it ignores form value if present. Safe to omit. -->
 
-                        <div class="form-actions">
-                            <button type="submit" class="btn btn-primary">Save Bin</button>
-                            <a th:href="@{/warehouse/bins}" class="btn btn-outline">Cancel</a>
-                        </div>
-                    </form>
+                            <div class="form-group">
+                                <label for="binLocation">Bin Location *</label>
+                                <input type="text" id="binLocation" class="form-control" th:field="*{binLocation}"
+                                    required pattern="W[0-9]{2}-Z[0-9]{2}-S[0-9]{2}-B[0-9]{2}"
+                                    placeholder="e.g. W01-Z02-S01-B05"
+                                    title="Format: Wxx-Zxx-Sxx-Bxx (e.g. W01-Z02-S01-B05)"
+                                    th:classappend="${#fields.hasErrors('binLocation')} ? 'is-invalid'">
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('binLocation')}"
+                                    th:errors="*{binLocation}">Location error</div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="maxWeight">Max Weight (kg) *</label>
+                                <input type="number" id="maxWeight" class="form-control" th:field="*{maxWeight}"
+                                    required min="0.01" step="0.01" placeholder="e.g. 500.00"
+                                    th:classappend="${#fields.hasErrors('maxWeight')} ? 'is-invalid'">
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('maxWeight')}"
+                                    th:errors="*{maxWeight}">Weight error</div>
+                            </div>
+
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary">Save Bin</button>
+                                <a th:href="@{/warehouse/bins}" class="btn btn-outline">Cancel</a>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 </body>
 
 </html>

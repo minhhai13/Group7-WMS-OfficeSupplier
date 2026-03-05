@@ -19,7 +19,7 @@ public class UserDTO {
 
     // Password validation is tricky on edit (optional), handled in service/controller usually, 
     // but for DTO we can keep it simple or use groups. For now, simple.
-    private String password;
+    private String password; 
 
     @NotBlank(message = "Full name is required")
     @Size(max = 100, message = "Full name must be less than 100 characters")
@@ -29,7 +29,7 @@ public class UserDTO {
     private String role;
 
     private Integer warehouseId;
-
+    
     // Add isActive if needed for form binding, though typically handled via toggle
     private Boolean isActive;
 }

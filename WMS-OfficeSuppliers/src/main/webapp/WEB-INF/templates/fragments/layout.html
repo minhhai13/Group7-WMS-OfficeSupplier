@@ -1,152 +1,132 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-
+<!-- ===== Admin Sidebar ===== -->
 <div th:fragment="sidebar-admin" class="sidebar">
-    <div class="sidebar-brand"><span>📦</span> WMS Office Suppliers</div>
+    <div class="sidebar-brand">
+        <span>📦</span> WMS Office Suppliers
+    </div>
     <ul class="sidebar-nav">
         <li class="nav-section">Administration</li>
-        <li><a th:href="@{/admin/dashboard}" th:classappend="${activePage == 'admin-dashboard'} ? 'active'">🏠 Dashboard</a></li>
-        <li><a th:href="@{/admin/warehouses}" th:classappend="${activePage == 'admin-warehouses'} ? 'active'">🏭 Warehouses</a></li>
-        <li><a th:href="@{/admin/users}" th:classappend="${activePage == 'admin-users'} ? 'active'">👥 Users</a></li>
+        <li><a th:href="@{/admin/dashboard}" th:classappend="${activePage == 'admin-dashboard'} ? 'active'">🏠
+                Dashboard</a></li>
+        <li><a th:href="@{/admin/warehouses}" th:classappend="${activePage == 'admin-warehouses'} ? 'active'">🏭
+                Warehouses</a></li>
+        <li><a th:href="@{/admin/users}" th:classappend="${activePage == 'admin-users'} ? 'active'">👥
+                Users</a></li>
     </ul>
-    <div class="sidebar-footer"><a th:href="@{/logout}">🚪 Logout</a></div>
+    <div class="sidebar-footer">
+        <a th:href="@{/logout}">🚪 Logout</a>
+    </div>
 </div>
 
+<!-- ===== Warehouse Admin Sidebar ===== -->
 <div th:fragment="sidebar-warehouse" class="sidebar">
-    <div class="sidebar-brand"><span>📦</span> WMS Office Suppliers</div>
+    <div class="sidebar-brand">
+        <span>📦</span> WMS Office Suppliers
+    </div>
     <ul class="sidebar-nav">
         <li class="nav-section">Warehouse Management</li>
-        <li><a th:href="@{/warehouse/dashboard}" th:classappend="${activePage == 'warehouse-dashboard'} ? 'active'">🏠 Dashboard</a></li>
-        <li><a th:href="@{/warehouse/bins}" th:classappend="${activePage == 'warehouse-bins'} ? 'active'">📍 Bins</a></li>
-        <li><a th:href="@{/warehouse/products}" th:classappend="${activePage == 'warehouse-products'} ? 'active'">📋 Products</a></li>
-        <li><a th:href="@{/warehouse/uom-conversions}" th:classappend="${activePage == 'warehouse-uom-conversions'} ? 'active'">🔄 UoM Conversions</a></li>
-        <li><a th:href="@{/warehouse/partners}" th:classappend="${activePage == 'warehouse-partners'} ? 'active'">🤝 Partners</a></li>
+        <li><a th:href="@{/warehouse/dashboard}" th:classappend="${activePage == 'warehouse-dashboard'} ? 'active'">🏠
+                Dashboard</a></li>
+        <li><a th:href="@{/warehouse/bins}" th:classappend="${activePage == 'warehouse-bins'} ? 'active'">📍 Bins</a>
+        </li>
+        <li><a th:href="@{/warehouse/products}" th:classappend="${activePage == 'warehouse-products'} ? 'active'">📋
+                Products</a></li>
+        <li><a th:href="@{/warehouse/uom-conversions}"
+                th:classappend="${activePage == 'warehouse-uom-conversions'} ? 'active'">🔄
+                UoM Conversions</a></li>
+        <li><a th:href="@{/warehouse/partners}" th:classappend="${activePage == 'warehouse-partners'} ? 'active'">🤝
+                Partners</a></li>
     </ul>
-    <div class="sidebar-footer"><a th:href="@{/logout}">🚪 Logout</a></div>
+    <div class="sidebar-footer">
+        <a th:href="@{/logout}">🚪 Logout</a>
+    </div>
 </div>
 
-<div th:fragment="sidebar-warehouse-manager" class="sidebar">
-    <div class="sidebar-brand"><span>📦</span> WMS Manager</div>
-    <ul class="sidebar-nav">
-        <li class="nav-section">Workspace</li>
-        <li><a th:href="@{/wm/dashboard}" th:classappend="${activePage == 'wm-dashboard'} ? 'active'">🏠 Dashboard</a></li>
-
-        <li class="nav-section">Report Center</li>
-        <li>
-            <a th:href="@{/transfer/requests}"
-               th:classappend="${activePage == 'transfer-requests'} ? 'active'">
-                📝 Transfer Request
-            </a>
-        </li>
-        <li>
-            <a th:href="@{/transfer/approvals}"
-               th:classappend="${activePage == 'transfer-approvals'} ? 'active'">
-                ✅ Approvals
-            </a>
-        </li>
-        <li><a th:href="@{/wm/reports/inventory}" th:classappend="${activePage == 'report-inventory'} ? 'active'">📦 Physical Inventory</a></li>
-        <li><a th:href="@{/wm/reports/inbound}" th:classappend="${activePage == 'report-inbound'} ? 'active'">📥 Inbound Movement</a></li>
-        <li><a th:href="@{/wm/reports/outbound}" th:classappend="${activePage == 'report-outbound'} ? 'active'">📤 Outbound Movement</a></li>
-        <li><a th:href="@{/wm/reports/in-out-balance}" th:classappend="${activePage == 'report-balance'} ? 'active'">⚖️ In-Out-Balance</a></li>
-    </ul>
-    <div class="sidebar-footer"><a th:href="@{/logout}">🚪 Logout</a></div>
-</div>
-
+<!-- ===== Purchasing Sidebar ===== -->
 <div th:fragment="sidebar-purchasing" class="sidebar">
-    <div class="sidebar-brand"><span>📦</span> WMS Office Suppliers</div>
+    <div class="sidebar-brand">
+        <span>📦</span> WMS Office Suppliers
+    </div>
     <ul class="sidebar-nav">
         <li class="nav-section">Purchasing</li>
-        <li><a th:href="@{/purchasing/orders}" th:classappend="${activePage == 'purchasing-orders'} ? 'active'">📋 Purchase Orders</a></li>
-        <li><a th:href="@{/purchasing/requests}" th:classappend="${activePage == 'purchasing-requests'} ? 'active'">📝 Purchase Requests</a></li>
-        <li th:if="${loggedInUserRole == 'Purchasing Manager'}">
-            <a th:href="@{/purchasing/approvals}" th:classappend="${activePage == 'purchasing-approvals'} ? 'active'">✅ Approvals</a>
-        </li>
+        <li><a th:href="@{/purchasing/orders}" th:classappend="${activePage == 'purchasing-orders'} ? 'active'">📋
+                Purchase Orders</a></li>
+        <li><a th:href="@{/purchasing/requests}" th:classappend="${activePage == 'purchasing-requests'} ? 'active'">📝
+                Purchase Requests</a></li>
+        <li th:if="${loggedInUserRole == 'Purchasing Manager'}"><a th:href="@{/purchasing/approvals}"
+                th:classappend="${activePage == 'purchasing-approvals'} ? 'active'">✅
+                Approvals</a></li>
     </ul>
-    <div class="sidebar-footer"><a th:href="@{/logout}">🚪 Logout</a></div>
+    <div class="sidebar-footer">
+        <a th:href="@{/logout}">🚪 Logout</a>
+    </div>
 </div>
 
+<!-- ===== Sales Sidebar ===== -->
 <div th:fragment="sidebar-sales" class="sidebar">
-    <div class="sidebar-brand"><span>📦</span> WMS Office Suppliers</div>
+    <div class="sidebar-brand">
+        <span>📦</span> WMS Office Suppliers
+    </div>
     <ul class="sidebar-nav">
         <li class="nav-section">Sales</li>
-        <li><a th:href="@{/sales/orders}" th:classappend="${activePage == 'sales-orders'} ? 'active'">📋 Sales Orders</a></li>
-        <li th:if="${loggedInUserRole == 'Sales Manager'}">
-            <a th:href="@{/sales/approvals}" th:classappend="${activePage == 'sales-approvals'} ? 'active'">✅ Approvals</a>
-        </li>
+        <li><a th:href="@{/sales/orders}" th:classappend="${activePage == 'sales-orders'} ? 'active'">📋
+                Sales Orders</a></li>
+        <li th:if="${loggedInUserRole == 'Sales Manager'}"><a th:href="@{/sales/approvals}"
+                th:classappend="${activePage == 'sales-approvals'} ? 'active'">✅
+                Approvals</a></li>
     </ul>
-    <div class="sidebar-footer"><a th:href="@{/logout}">🚪 Logout</a></div>
+    <div class="sidebar-footer">
+        <a th:href="@{/logout}">🚪 Logout</a>
+    </div>
 </div>
 
+<!-- ===== Storekeeper Sidebar ===== -->
 <div th:fragment="sidebar-storekeeper" class="sidebar">
-    <div class="sidebar-brand"><span>📦</span> WMS Office Suppliers</div>
+    <div class="sidebar-brand">
+        <span>📦</span> WMS Office Suppliers
+    </div>
     <ul class="sidebar-nav">
         <li class="nav-section">Storekeeper</li>
-        <li><a th:href="@{/storekeeper/grn}" th:classappend="${activePage == 'storekeeper-grn'} ? 'active'">📥 Goods Receipt</a></li>
-        <li><a th:href="@{/storekeeper/gin}" th:classappend="${activePage == 'storekeeper-gin'} ? 'active'">📤 Goods Issue</a></li>
+        <li><a th:href="@{/storekeeper/grn}" th:classappend="${activePage == 'storekeeper-grn'} ? 'active'">📥
+                Goods Receipt</a></li>
+        <li><a th:href="@{/storekeeper/gin}" th:classappend="${activePage == 'storekeeper-gin'} ? 'active'">📤
+                Goods Issue</a></li>
     </ul>
-    <div class="sidebar-footer"><a th:href="@{/logout}">🚪 Logout</a></div>
+    <div class="sidebar-footer">
+        <a th:href="@{/logout}">🚪 Logout</a>
+    </div>
 </div>
 
+<!-- ===== Report / Warehouse Manager Sidebar ===== -->
+<div th:fragment="sidebar-report" class="sidebar">
+    <div class="sidebar-brand">
+        <span>📦</span> WMS Office Suppliers
+    </div>
+    <ul class="sidebar-nav">
+        <li class="nav-section">Reports</li>
+        <li><a th:href="@{/reports/inbound}" th:classappend="${activePage == 'report-inbound'} ? 'active'">📥
+                Inbound History</a></li>
+        <li><a th:href="@{/reports/outbound}" th:classappend="${activePage == 'report-outbound'} ? 'active'">📤
+                Outbound History</a></li>
+        <li><a th:href="@{/reports/inventory-balance}" th:classappend="${activePage == 'report-inventory'} ? 'active'">📊
+                Inventory Balance</a></li>
+    </ul>
+    <div class="sidebar-footer">
+        <a th:href="@{/logout}">🚪 Logout</a>
+    </div>
+</div>
+<!-- ===== Top bar =====-->
 <div th:fragment="topbar(title)" class="topbar">
     <div class="topbar-title" th:text="${title}">Page Title</div>
-    <div class="topbar-user" th:text="${loggedInUserName != null} ? ${loggedInUserName} : ''"></div>
+    <div class="topbar-user" th:text="${loggedInUserName != null} ? ${loggedInUserName} : ''">
+    </div>
 </div>
 
+<!-- ===== Alert Messages ===== -->
 <div th:fragment="alerts">
     <div th:if="${success}" class="alert alert-success" th:text="${success}"></div>
     <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
 </div>
 
-
-<html th:fragment="layout(title, content)">
-<head>
-    <meta charset="UTF-8">
-    <title th:replace="${title}">WMS Office Suppliers</title>
-
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
-    <link rel="stylesheet" th:href="@{/static/css/style.css}">
-</head>
-<body>
-<div class="wrapper d-flex">
-
-    <th:block th:if="${loggedInUserRole != null}">
-
-        <th:block th:if="${loggedInUserRole == 'System Admin'}">
-            <div th:replace="~{fragments/layout :: sidebar-admin}"></div>
-        </th:block>
-
-        <th:block th:if="${loggedInUserRole == 'Warehouse Admin'}">
-            <div th:replace="~{fragments/layout :: sidebar-warehouse}"></div>
-        </th:block>
-
-        <th:block th:if="${loggedInUserRole == 'Warehouse Manager'}">
-            <div th:replace="~{fragments/layout :: sidebar-warehouse-manager}"></div>
-        </th:block>
-
-        <th:block th:if="${loggedInUserRole == 'Purchasing Manager' or loggedInUserRole == 'Purchasing Staff'}">
-            <div th:replace="~{fragments/layout :: sidebar-purchasing}"></div>
-        </th:block>
-
-        <th:block th:if="${loggedInUserRole == 'Sales Manager' or loggedInUserRole == 'Sales Staff'}">
-            <div th:replace="~{fragments/layout :: sidebar-sales}"></div>
-        </th:block>
-
-        <th:block th:if="${loggedInUserRole == 'Storekeeper'}">
-            <div th:replace="~{fragments/layout :: sidebar-storekeeper}"></div>
-        </th:block>
-
-    </th:block>
-
-    <div class="main-content flex-grow-1 p-3">
-        <div th:replace="~{fragments/layout :: topbar('WMS System')}"></div>
-        <div th:replace="~{fragments/layout :: alerts}"></div>
-
-        <div th:replace="${content}"></div>
-    </div>
-
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
 </html>

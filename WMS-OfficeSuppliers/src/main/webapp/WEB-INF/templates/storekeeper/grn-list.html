@@ -9,73 +9,73 @@
 </head>
 
 <body>
-<div class="app-layout">
-    <div th:replace="~{fragments/layout :: sidebar-storekeeper}"></div>
-    <div class="main-content">
-        <div th:replace="~{fragments/layout :: topbar('Goods Receipt')}"></div>
-        <div class="content-area">
-            <div th:replace="~{fragments/layout :: alerts}"></div>
+    <div class="app-layout">
+        <div th:replace="~{fragments/layout :: sidebar-storekeeper}"></div>
+        <div class="main-content">
+            <div th:replace="~{fragments/layout :: topbar('Goods Receipt')}"></div>
+            <div class="content-area">
+                <div th:replace="~{fragments/layout :: alerts}"></div>
 
-            <div class="card">
-                <div class="card-header">
-                    <h2>Goods Receipt Notes</h2>
-                </div>
-                <div class="card-body">
-                    <!-- Filter Bar -->
-                    <form th:action="@{/storekeeper/grn}" method="get" class="search-bar">
-                        <select name="status" class="form-control" style="max-width: 200px;">
-                            <option value="All" th:selected="${selectedStatus == 'All'}">All Statuses</option>
-                            <option value="Draft" th:selected="${selectedStatus == 'Draft'}">Draft</option>
-                            <option value="Posted" th:selected="${selectedStatus == 'Posted'}">Posted</option>
-                        </select>
-                        <button type="submit" class="btn btn-outline">Filter</button>
-                        <a th:href="@{/storekeeper/grn}" class="btn btn-outline">Reset</a>
-                    </form>
-
-                    <div th:if="${#lists.isEmpty(grns)}" class="empty-state">
-                        <p>No goods receipt notes found.</p>
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Goods Receipt Notes</h2>
                     </div>
-                    <div th:unless="${#lists.isEmpty(grns)}" class="table-wrapper">
-                        <table>
-                            <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>GRN Number</th>
-                                <th>PO Number</th>
-                                <th>Supplier</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            <tr th:each="grn, iter : ${grns}">
-                                <td th:text="${iter.count}"></td>
-                                <td><strong th:text="${grn.grnNumber}"></strong></td>
-                                <td th:text="${grn.poNumber}"></td>
-                                <td th:text="${grn.supplierName} ?: '—'"></td>
-                                <td>
+                    <div class="card-body">
+                        <!-- Filter Bar -->
+                        <form th:action="@{/storekeeper/grn}" method="get" class="search-bar">
+                            <select name="status" class="form-control" style="max-width: 200px;">
+                                <option value="All" th:selected="${selectedStatus == 'All'}">All Statuses</option>
+                                <option value="Draft" th:selected="${selectedStatus == 'Draft'}">Draft</option>
+                                <option value="Posted" th:selected="${selectedStatus == 'Posted'}">Posted</option>
+                            </select>
+                            <button type="submit" class="btn btn-outline">Filter</button>
+                            <a th:href="@{/storekeeper/grn}" class="btn btn-outline">Reset</a>
+                        </form>
+
+                        <div th:if="${#lists.isEmpty(grns)}" class="empty-state">
+                            <p>No goods receipt notes found.</p>
+                        </div>
+                        <div th:unless="${#lists.isEmpty(grns)}" class="table-wrapper">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>GRN Number</th>
+                                        <th>PO Number</th>
+                                        <th>Supplier</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr th:each="grn, iter : ${grns}">
+                                        <td th:text="${iter.count}"></td>
+                                        <td><strong th:text="${grn.grnNumber}"></strong></td>
+                                        <td th:text="${grn.poNumber}"></td>
+                                        <td th:text="${grn.supplierName} ?: '—'"></td>
+                                        <td>
                                             <span th:if="${grn.grStatus == 'Draft'}" class="badge badge-warning"
-                                                  th:text="${grn.grStatus}"></span>
-                                    <span th:if="${grn.grStatus == 'Posted'}" class="badge badge-success"
-                                          th:text="${grn.grStatus}"></span>
-                                </td>
-                                <td>
-                                    <a th:if="${grn.grStatus == 'Draft'}"
-                                       th:href="@{/storekeeper/grn/{id}/receive(id=${grn.grnId})}"
-                                       class="btn btn-primary btn-sm">📥 Receive Goods</a>
-                                    <a th:if="${grn.grStatus == 'Posted'}"
-                                       th:href="@{/storekeeper/grn/{id}/receive(id=${grn.grnId})}"
-                                       class="btn btn-outline btn-sm">View</a>
-                                </td>
-                            </tr>
-                            </tbody>
-                        </table>
+                                                th:text="${grn.grStatus}"></span>
+                                            <span th:if="${grn.grStatus == 'Posted'}" class="badge badge-success"
+                                                th:text="${grn.grStatus}"></span>
+                                        </td>
+                                        <td>
+                                            <a th:if="${grn.grStatus == 'Draft'}"
+                                                th:href="@{/storekeeper/grn/{id}/receive(id=${grn.grnId})}"
+                                                class="btn btn-primary btn-sm">📥 Receive Goods</a>
+                                            <a th:if="${grn.grStatus == 'Posted'}"
+                                                th:href="@{/storekeeper/grn/{id}/receive(id=${grn.grnId})}"
+                                                class="btn btn-outline btn-sm">View</a>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 </body>
 
 </html>

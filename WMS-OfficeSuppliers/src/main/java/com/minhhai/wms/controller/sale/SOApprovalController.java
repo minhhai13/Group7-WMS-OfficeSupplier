@@ -80,6 +80,7 @@ public class SOApprovalController {
             }
         } catch (IllegalArgumentException e) {
             redirectAttributes.addFlashAttribute("error", e.getMessage());
+            return "redirect:/sales/approvals/" + id + "/review";
         }
         return "redirect:/sales/approvals";
     }

@@ -79,17 +79,12 @@ public class LoginController {
     private String redirectByRole(String role) {
         return switch (role) {
             case "System Admin" -> "redirect:/admin/dashboard";
-
-            // TÁCH RIÊNG 2 ROLE NÀY RA
             case "Warehouse Admin" -> "redirect:/warehouse/dashboard";
-            case "Warehouse Manager" -> "redirect:/wm/reports/inventory"; // Hoặc /wm/dashboard nếu bạn đã tạo màn dashboard riêng
-
             case "Purchasing Staff", "Purchasing Manager" -> "redirect:/purchasing/orders";
             case "Sales Staff", "Sales Manager" -> "redirect:/sales/orders";
             case "Storekeeper" -> "redirect:/storekeeper/grn";
+            case "Warehouse Manager" -> "redirect:/reports/inventory-balance";
             default -> "redirect:/login";
         };
     }
-
 }
-

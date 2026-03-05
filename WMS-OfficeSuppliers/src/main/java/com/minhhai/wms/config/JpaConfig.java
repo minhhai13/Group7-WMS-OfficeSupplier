@@ -30,7 +30,7 @@ public class JpaConfig {
         config.setDriverClassName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
         config.setJdbcUrl("jdbc:sqlserver://localhost:1433;databaseName=WMS_OfficeSupplies;encrypt=false");
         config.setUsername("sa");
-        config.setPassword("123");
+        config.setPassword("Haik19@FPT2026");
 
         // Pool tuning
         config.setMaximumPoolSize(10);

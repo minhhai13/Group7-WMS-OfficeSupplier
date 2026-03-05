@@ -61,7 +61,7 @@ public class ProductController {
                        BindingResult bindingResult,
                        Model model,
                        RedirectAttributes redirectAttributes) {
-
+        
         if (bindingResult.hasErrors()) {
             model.addAttribute("activePage", "warehouse-products");
             return "warehouse/product-form";
@@ -83,7 +83,7 @@ public class ProductController {
             redirectAttributes.addFlashAttribute("error", "Error: " + e.getMessage());
             return "redirect:/warehouse/products";
         }
-
+        
         return "redirect:/warehouse/products";
     }
 

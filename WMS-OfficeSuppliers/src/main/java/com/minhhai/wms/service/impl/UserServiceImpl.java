@@ -61,7 +61,13 @@ public class UserServiceImpl implements UserService {
             // Update
             user = userRepository.findById(userDTO.getUserId())
                     .orElseThrow(() -> new IllegalArgumentException("User not found: " + userDTO.getUserId()));
+            if (user.getIsActive() && "System Admin".equals(user.getRole()) && !"System Admin".equals(userDTO.getRole())) {
+                long activeAdminCount = userRepository.countByRoleAndIsActiveTrue("System Admin");
 
+                if (activeAdminCount <= 1) {
+                    throw new IllegalArgumentException("Can not change role of the last admin in the system!");
+                }
+            }
             user.setUsername(userDTO.getUsername());
             user.setFullName(userDTO.getFullName());
             user.setRole(userDTO.getRole());
@@ -92,15 +98,13 @@ public class UserServiceImpl implements UserService {
     public void toggleActive(Integer userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found: " + userId));
-        if (user.getIsActive()) {
-            if ("System Admin".equals(user.getRole())) {
+            if (user.getIsActive() && "System Admin".equals(user.getRole())) {
                 long activeAdminCount = userRepository.countByRoleAndIsActiveTrue("System Admin");
 
                 if (activeAdminCount <= 1) {
                     throw new IllegalArgumentException("Can not deactive the last admin in the system!");
                 }
             }
-        }
         user.setIsActive(!user.getIsActive());
         userRepository.save(user);
     }
@@ -117,7 +121,7 @@ public class UserServiceImpl implements UserService {
             }
         }
         return Optional.empty();
-    }// main/java/com/minhhai/wms/service/impl/UserServiceImpl.java
+    }
 
     @Override
     @Transactional(readOnly = true)

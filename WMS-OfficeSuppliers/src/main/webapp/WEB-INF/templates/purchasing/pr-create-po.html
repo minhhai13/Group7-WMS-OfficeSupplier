@@ -9,109 +9,109 @@
 </head>
 
 <body>
-<div class="app-layout">
-    <div th:replace="~{fragments/layout :: sidebar-purchasing}"></div>
-    <div class="main-content">
-        <div th:replace="~{fragments/layout :: topbar('Create PO from Purchase Requests')}"></div>
-        <div class="content-area">
-            <div th:replace="~{fragments/layout :: alerts}"></div>
+    <div class="app-layout">
+        <div th:replace="~{fragments/layout :: sidebar-purchasing}"></div>
+        <div class="main-content">
+            <div th:replace="~{fragments/layout :: topbar('Create PO from Purchase Requests')}"></div>
+            <div class="content-area">
+                <div th:replace="~{fragments/layout :: alerts}"></div>
 
-            <form th:action="@{/purchasing/requests/generate-po}" method="post" id="createPOForm">
+                <form th:action="@{/purchasing/requests/generate-po}" method="post" id="createPOForm">
 
-                <!-- Step 1: Select Supplier -->
-                <div class="card" style="margin-bottom: 1.5rem;">
-                    <div class="card-header">
-                        <h2>1. Select Supplier</h2>
-                    </div>
-                    <div class="card-body">
-                        <div class="form-group" style="max-width: 400px;">
-                            <label for="supplierId">Supplier <span style="color:red;">*</span></label>
-                            <select id="supplierId" name="supplierId" class="form-control" required>
-                                <option value="">-- Select Supplier --</option>
-                                <option th:each="s : ${suppliers}" th:value="${s.partnerId}"
+                    <!-- Step 1: Select Supplier -->
+                    <div class="card" style="margin-bottom: 1.5rem;">
+                        <div class="card-header">
+                            <h2>1. Select Supplier</h2>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-group" style="max-width: 400px;">
+                                <label for="supplierId">Supplier <span style="color:red;">*</span></label>
+                                <select id="supplierId" name="supplierId" class="form-control" required>
+                                    <option value="">-- Select Supplier --</option>
+                                    <option th:each="s : ${suppliers}" th:value="${s.partnerId}"
                                         th:text="${s.partnerName}"></option>
-                            </select>
+                                </select>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <!-- Step 2: Select Approved PRs -->
-                <div class="card" style="margin-bottom: 1.5rem;">
-                    <div class="card-header">
-                        <h2>2. Select Approved Purchase Requests</h2>
-                    </div>
-                    <div class="card-body">
-                        <div th:if="${#lists.isEmpty(approvedPRs)}" class="empty-state">
-                            <p>Không có Purchase Request nào ở trạng thái Approved.</p>
+                    <!-- Step 2: Select Approved PRs -->
+                    <div class="card" style="margin-bottom: 1.5rem;">
+                        <div class="card-header">
+                            <h2>2. Select Approved Purchase Requests</h2>
                         </div>
-                        <div th:unless="${#lists.isEmpty(approvedPRs)}" class="table-wrapper">
-                            <table>
-                                <thead>
-                                <tr>
-                                    <th style="width:5%;"><input type="checkbox" id="selectAll"
-                                                                 onclick="toggleAll(this)"></th>
-                                    <th>PR Number</th>
-                                    <th>Related SO</th>
-                                    <th>Products</th>
-                                </tr>
-                                </thead>
-                                <tbody>
-                                <tr th:each="pr : ${approvedPRs}">
-                                    <td>
-                                        <input type="checkbox" name="prIds" th:value="${pr.prId}"
-                                               class="pr-checkbox">
-                                    </td>
-                                    <td><strong th:text="${pr.prNumber}"></strong></td>
-                                    <td th:text="${pr.relatedSONumber} ?: '—'"></td>
-                                    <td>
-                                        <div th:each="d : ${pr.details}">
-                                            <small
-                                                    th:text="${d.productDisplayName + ' × ' + d.requestedQty + ' ' + d.uom}"></small>
-                                        </div>
-                                    </td>
-                                </tr>
-                                </tbody>
-                            </table>
+                        <div class="card-body">
+                            <div th:if="${#lists.isEmpty(approvedPRs)}" class="empty-state">
+                                <p>Không có Purchase Request nào ở trạng thái Approved.</p>
+                            </div>
+                            <div th:unless="${#lists.isEmpty(approvedPRs)}" class="table-wrapper">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th style="width:5%;"><input type="checkbox" id="selectAll"
+                                                    onclick="toggleAll(this)"></th>
+                                            <th>PR Number</th>
+                                            <th>Related SO</th>
+                                            <th>Products</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr th:each="pr : ${approvedPRs}">
+                                            <td>
+                                                <input type="checkbox" name="prIds" th:value="${pr.prId}"
+                                                    class="pr-checkbox">
+                                            </td>
+                                            <td><strong th:text="${pr.prNumber}"></strong></td>
+                                            <td th:text="${pr.relatedSONumber} ?: '—'"></td>
+                                            <td>
+                                                <div th:each="d : ${pr.details}">
+                                                    <small
+                                                        th:text="${d.productDisplayName + ' × ' + d.requestedQty + ' ' + d.uom}"></small>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <!-- Action Buttons -->
-                <div class="card">
-                    <div class="card-body" style="display: flex; gap: 1rem; justify-content: flex-end;">
-                        <a th:href="@{/purchasing/requests}" class="btn btn-outline">Cancel</a>
-                        <button type="submit" class="btn btn-primary" onclick="return validateForm();">
-                            📦 Generate PO
-                        </button>
+                    <!-- Action Buttons -->
+                    <div class="card">
+                        <div class="card-body" style="display: flex; gap: 1rem; justify-content: flex-end;">
+                            <a th:href="@{/purchasing/requests}" class="btn btn-outline">Cancel</a>
+                            <button type="submit" class="btn btn-primary" onclick="return validateForm();">
+                                📦 Generate PO
+                            </button>
+                        </div>
                     </div>
-                </div>
-            </form>
+                </form>
+            </div>
         </div>
     </div>
-</div>
 
-<script>
-    function toggleAll(source) {
-        var checkboxes = document.querySelectorAll('.pr-checkbox');
-        for (var i = 0; i < checkboxes.length; i++) {
-            checkboxes[i].checked = source.checked;
+    <script>
+        function toggleAll(source) {
+            var checkboxes = document.querySelectorAll('.pr-checkbox');
+            for (var i = 0; i < checkboxes.length; i++) {
+                checkboxes[i].checked = source.checked;
+            }
         }
-    }
 
-    function validateForm() {
-        var supplier = document.getElementById('supplierId').value;
-        if (!supplier) {
-            alert('Vui lòng chọn nhà cung cấp.');
-            return false;
+        function validateForm() {
+            var supplier = document.getElementById('supplierId').value;
+            if (!supplier) {
+                alert('Vui lòng chọn nhà cung cấp.');
+                return false;
+            }
+            var checked = document.querySelectorAll('.pr-checkbox:checked');
+            if (checked.length === 0) {
+                alert('Vui lòng chọn ít nhất một Purchase Request.');
+                return false;
+            }
+            return confirm('Xác nhận tạo Purchase Order từ ' + checked.length + ' PR đã chọn?');
         }
-        var checked = document.querySelectorAll('.pr-checkbox:checked');
-        if (checked.length === 0) {
-            alert('Vui lòng chọn ít nhất một Purchase Request.');
-            return false;
-        }
-        return confirm('Xác nhận tạo Purchase Order từ ' + checked.length + ' PR đã chọn?');
-    }
-</script>
+    </script>
 </body>
 
 </html>

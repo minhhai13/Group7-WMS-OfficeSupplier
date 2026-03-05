@@ -1,20 +1,23 @@
 package com.minhhai.wms.dto;
 
+import lombok.*;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class OutboundReportDTO {
-    private LocalDateTime outboundDate;
-    private String ginNumber;
-    private String skuCode;
+
+    private LocalDateTime movementDate;
+    private String warehouseName;
     private String productName;
-    private Integer issuedQuantity;
-    private String sourceBin;
+    private String sku;
     private String batchNumber;
+    private String binLocation;
+    private Integer quantity;
+    private String uom;
+    private Integer balanceAfter;
 }

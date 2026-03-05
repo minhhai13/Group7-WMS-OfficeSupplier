@@ -9,131 +9,131 @@
 </head>
 
 <body>
-<div class="app-layout">
-    <div th:replace="~{fragments/layout :: sidebar-storekeeper}"></div>
-    <div class="main-content">
-        <div th:replace="~{fragments/layout :: topbar('Issue Goods')}"></div>
-        <div class="content-area">
-            <div th:replace="~{fragments/layout :: alerts}"></div>
+    <div class="app-layout">
+        <div th:replace="~{fragments/layout :: sidebar-storekeeper}"></div>
+        <div class="main-content">
+            <div th:replace="~{fragments/layout :: topbar('Issue Goods')}"></div>
+            <div class="content-area">
+                <div th:replace="~{fragments/layout :: alerts}"></div>
 
-            <!-- GIN Header (Read-only) -->
-            <div class="card" style="margin-bottom: 1.5rem;">
-                <div class="card-header">
-                    <h2>GIN Information</h2>
-                    <span th:if="${ginDTO.giStatus == 'Draft'}" class="badge badge-warning"
-                          th:text="${ginDTO.giStatus}"></span>
-                    <span th:if="${ginDTO.giStatus == 'Posted'}" class="badge badge-success"
-                          th:text="${ginDTO.giStatus}"></span>
-                </div>
-                <div class="card-body">
-                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 1.5rem;">
-                        <div class="form-group">
-                            <label>GIN Number</label>
-                            <input type="text" class="form-control" th:value="${ginDTO.ginNumber}" readonly
-                                   disabled>
-                        </div>
-                        <div class="form-group">
-                            <label>SO Number</label>
-                            <input type="text" class="form-control" th:value="${ginDTO.soNumber}" readonly disabled>
-                        </div>
-                        <div class="form-group">
-                            <label>Customer</label>
-                            <input type="text" class="form-control" th:value="${ginDTO.customerName}" readonly
-                                   disabled>
-                        </div>
-                        <div class="form-group">
-                            <label>Warehouse</label>
-                            <input type="text" class="form-control" th:value="${ginDTO.warehouseName}" readonly
-                                   disabled>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- GIN Details -->
-            <form th:action="@{/storekeeper/gin/{id}/post(id=${ginDTO.ginId})}" method="post" id="ginForm">
+                <!-- GIN Header (Read-only) -->
                 <div class="card" style="margin-bottom: 1.5rem;">
                     <div class="card-header">
-                        <h2>Goods Detail Lines</h2>
+                        <h2>GIN Information</h2>
+                        <span th:if="${ginDTO.giStatus == 'Draft'}" class="badge badge-warning"
+                            th:text="${ginDTO.giStatus}"></span>
+                        <span th:if="${ginDTO.giStatus == 'Posted'}" class="badge badge-success"
+                            th:text="${ginDTO.giStatus}"></span>
                     </div>
                     <div class="card-body">
-                        <div class="table-wrapper">
-                            <table>
-                                <thead>
-                                <tr>
-                                    <th style="width:5%;">#</th>
-                                    <th style="width:25%;">Product</th>
-                                    <th style="width:10%;">UoM</th>
-                                    <th style="width:12%;">Bin</th>
-                                    <th style="width:13%;">Batch</th>
-                                    <th style="width:10%;">Remaining Qty</th>
-                                    <th style="width:15%;">Issued Qty</th>
-                                </tr>
-                                </thead>
-                                <tbody>
-                                <tr th:each="detail, iter : ${ginDTO.details}">
-                                    <td th:text="${iter.count}"></td>
-                                    <td th:text="${detail.productDisplayName}"></td>
-                                    <td th:text="${detail.uom}"></td>
-                                    <td><span class="badge badge-secondary"
-                                              th:text="${detail.binLocation}"></span></td>
-                                    <td><small th:text="${detail.batchNumber}"></small></td>
-                                    <td><strong th:text="${detail.orderedQty}"></strong></td>
-                                    <td>
-                                        <input type="hidden" name="giDetailId" th:value="${detail.giDetailId}">
-                                        <!-- Draft: editable input -->
-                                        <input th:if="${ginDTO.giStatus == 'Draft'}" type="number"
-                                               name="issuedQty" class="form-control issued-qty-input"
-                                               th:value="${detail.issuedQty}" min="0" th:max="${detail.orderedQty}"
-                                               th:data-ordered="${detail.orderedQty}" required
-                                               style="max-width: 120px;">
-                                        <!-- Posted: read-only display -->
-                                        <span th:if="${ginDTO.giStatus == 'Posted'}"
-                                              th:text="${detail.issuedQty}"></span>
-                                    </td>
-                                </tr>
-                                </tbody>
-                            </table>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 1.5rem;">
+                            <div class="form-group">
+                                <label>GIN Number</label>
+                                <input type="text" class="form-control" th:value="${ginDTO.ginNumber}" readonly
+                                    disabled>
+                            </div>
+                            <div class="form-group">
+                                <label>SO Number</label>
+                                <input type="text" class="form-control" th:value="${ginDTO.soNumber}" readonly disabled>
+                            </div>
+                            <div class="form-group">
+                                <label>Customer</label>
+                                <input type="text" class="form-control" th:value="${ginDTO.customerName}" readonly
+                                    disabled>
+                            </div>
+                            <div class="form-group">
+                                <label>Warehouse</label>
+                                <input type="text" class="form-control" th:value="${ginDTO.warehouseName}" readonly
+                                    disabled>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Action Buttons -->
-                <div class="card">
-                    <div class="card-body" style="display: flex; gap: 1rem; justify-content: flex-end;">
-                        <a th:href="@{/storekeeper/gin}" class="btn btn-outline">Back to List</a>
-                        <button th:if="${ginDTO.giStatus == 'Draft'}" type="submit" class="btn btn-primary"
-                                onclick="return validateAndConfirm();">
-                            ✅ Confirm & Post
-                        </button>
+                <!-- GIN Details -->
+                <form th:action="@{/storekeeper/gin/{id}/post(id=${ginDTO.ginId})}" method="post" id="ginForm">
+                    <div class="card" style="margin-bottom: 1.5rem;">
+                        <div class="card-header">
+                            <h2>Goods Detail Lines</h2>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-wrapper">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th style="width:5%;">#</th>
+                                            <th style="width:25%;">Product</th>
+                                            <th style="width:10%;">UoM</th>
+                                            <th style="width:12%;">Bin</th>
+                                            <th style="width:13%;">Batch</th>
+                                            <th style="width:10%;">Remaining Qty</th>
+                                            <th style="width:15%;">Issued Qty</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr th:each="detail, iter : ${ginDTO.details}">
+                                            <td th:text="${iter.count}"></td>
+                                            <td th:text="${detail.productDisplayName}"></td>
+                                            <td th:text="${detail.uom}"></td>
+                                            <td><span class="badge badge-secondary"
+                                                    th:text="${detail.binLocation}"></span></td>
+                                            <td><small th:text="${detail.batchNumber}"></small></td>
+                                            <td><strong th:text="${detail.orderedQty}"></strong></td>
+                                            <td>
+                                                <input type="hidden" name="giDetailId" th:value="${detail.giDetailId}">
+                                                <!-- Draft: editable input -->
+                                                <input th:if="${ginDTO.giStatus == 'Draft'}" type="number"
+                                                    name="issuedQty" class="form-control issued-qty-input"
+                                                    th:value="${detail.issuedQty}" min="0" th:max="${detail.orderedQty}"
+                                                    th:data-ordered="${detail.orderedQty}" required
+                                                    style="max-width: 120px;">
+                                                <!-- Posted: read-only display -->
+                                                <span th:if="${ginDTO.giStatus == 'Posted'}"
+                                                    th:text="${detail.issuedQty}"></span>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
-                </div>
-            </form>
+
+                    <!-- Action Buttons -->
+                    <div class="card">
+                        <div class="card-body" style="display: flex; gap: 1rem; justify-content: flex-end;">
+                            <a th:href="@{/storekeeper/gin}" class="btn btn-outline">Back to List</a>
+                            <button th:if="${ginDTO.giStatus == 'Draft'}" type="submit" class="btn btn-primary"
+                                onclick="return validateAndConfirm();">
+                                ✅ Confirm & Post
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
-</div>
 
-<script>
-    function validateAndConfirm() {
-        var inputs = document.querySelectorAll('.issued-qty-input');
-        for (var i = 0; i < inputs.length; i++) {
-            var issued = parseInt(inputs[i].value) || 0;
-            var ordered = parseInt(inputs[i].getAttribute('data-ordered')) || 0;
+    <script>
+        function validateAndConfirm() {
+            var inputs = document.querySelectorAll('.issued-qty-input');
+            for (var i = 0; i < inputs.length; i++) {
+                var issued = parseInt(inputs[i].value) || 0;
+                var ordered = parseInt(inputs[i].getAttribute('data-ordered')) || 0;
 
-            if (issued < 0) {
-                alert('Số lượng thực xuất không được âm.');
-                inputs[i].focus();
-                return false;
+                if (issued < 0) {
+                    alert('Số lượng thực xuất không được âm.');
+                    inputs[i].focus();
+                    return false;
+                }
+                if (issued > ordered) {
+                    alert('Số lượng thực xuất không được lớn hơn số lượng còn thiếu (' + ordered + ').');
+                    inputs[i].focus();
+                    return false;
+                }
             }
-            if (issued > ordered) {
-                alert('Số lượng thực xuất không được lớn hơn số lượng còn thiếu (' + ordered + ').');
-                inputs[i].focus();
-                return false;
-            }
+            return confirm('Bạn có chắc chắn muốn ghi sổ (Post) phiếu xuất kho này? Hành động này không thể hoàn tác.');
         }
-        return confirm('Bạn có chắc chắn muốn ghi sổ (Post) phiếu xuất kho này? Hành động này không thể hoàn tác.');
-    }
-</script>
+    </script>
 </body>
 
 </html>

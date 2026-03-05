@@ -19,6 +19,6 @@ public interface ProductUoMConversionService {
 
     void delete(Integer conversionId);
 
-
     List<Map<String, String>> getAvailableUoMs(Integer productId);
+
 }

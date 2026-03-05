@@ -59,7 +59,7 @@ public class PartnerController {
                        BindingResult bindingResult,
                        Model model,
                        RedirectAttributes redirectAttributes) {
-
+        
         if (bindingResult.hasErrors()) {
             model.addAttribute("activePage", "warehouse-partners");
             return "warehouse/partner-form";

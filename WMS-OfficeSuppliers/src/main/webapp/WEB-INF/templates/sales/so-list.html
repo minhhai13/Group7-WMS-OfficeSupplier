@@ -9,108 +9,108 @@
 </head>
 
 <body>
-<div class="app-layout">
-    <div th:replace="~{fragments/layout :: sidebar-sales}"></div>
-    <div class="main-content">
-        <div th:replace="~{fragments/layout :: topbar('Sales Orders')}"></div>
-        <div class="content-area">
-            <div th:replace="~{fragments/layout :: alerts}"></div>
+    <div class="app-layout">
+        <div th:replace="~{fragments/layout :: sidebar-sales}"></div>
+        <div class="main-content">
+            <div th:replace="~{fragments/layout :: topbar('Sales Orders')}"></div>
+            <div class="content-area">
+                <div th:replace="~{fragments/layout :: alerts}"></div>
 
-            <div class="card">
-                <div class="card-header">
-                    <h2>Sales Orders</h2>
-                    <a th:href="@{/sales/orders/new}" class="btn btn-primary btn-sm">+ New SO</a>
-                </div>
-                <div class="card-body">
-                    <!-- Filter Bar -->
-                    <form th:action="@{/sales/orders}" method="get" class="search-bar">
-                        <select name="status" class="form-control" style="max-width: 200px;">
-                            <option value="">All Statuses</option>
-                            <option value="Draft" th:selected="${selectedStatus == 'Draft'}">Draft</option>
-                            <option value="Pending Approval" th:selected="${selectedStatus == 'Pending Approval'}">
-                                Pending Approval
-                            </option>
-                            <option value="Approved" th:selected="${selectedStatus == 'Approved'}">Approved</option>
-                            <option value="Incomplete" th:selected="${selectedStatus == 'Incomplete'}">Incomplete
-                            </option>
-                            <option value="Completed" th:selected="${selectedStatus == 'Completed'}">Completed
-                            </option>
-                            <option value="Waiting for Stock" th:selected="${selectedStatus == 'Waiting for Stock'}">Waiting for Stock</option>
-                            <option value="Rejected" th:selected="${selectedStatus == 'Rejected'}">Rejected</option>
-                        </select>
-                        <select name="customerId" class="form-control" style="max-width: 220px;">
-                            <option value="">All Customers</option>
-                            <option th:each="c : ${customers}" th:value="${c.partnerId}" th:text="${c.partnerName}"
-                                    th:selected="${selectedCustomerId != null && selectedCustomerId == c.partnerId}">
-                            </option>
-                        </select>
-                        <button type="submit" class="btn btn-outline">Filter</button>
-                        <a th:href="@{/sales/orders}" class="btn btn-outline"
-                           th:if="${selectedStatus != null || selectedCustomerId != null}">Clear</a>
-                    </form>
-
-                    <div th:if="${#lists.isEmpty(orders)}" class="empty-state">
-                        <p>No sales orders found.</p>
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Sales Orders</h2>
+                        <a th:href="@{/sales/orders/new}" class="btn btn-primary btn-sm">+ New SO</a>
                     </div>
-                    <div th:unless="${#lists.isEmpty(orders)}" class="table-wrapper">
-                        <table>
-                            <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>SO Number</th>
-                                <th>Customer</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            <tr th:each="so, iter : ${orders}">
-                                <td th:text="${iter.count}"></td>
-                                <td><strong th:text="${so.soNumber}"></strong></td>
-                                <td th:text="${so.customerName} ?: '—'"></td>
-                                <td>
-                                            <span th:if="${so.soStatus == 'Draft'}" class="badge badge-secondary"
-                                                  th:text="${so.soStatus}"></span>
-                                    <span th:if="${so.soStatus == 'Pending Approval'}"
-                                          class="badge badge-warning" th:text="${so.soStatus}"></span>
-                                    <span th:if="${so.soStatus == 'Approved'}" class="badge badge-info"
-                                          th:text="${so.soStatus}"></span>
-                                    <span th:if="${so.soStatus == 'Waiting for Stock'}" class="badge badge-warning"
-                                          th:text="${so.soStatus}"></span>
-                                    <span th:if="${so.soStatus == 'Completed'}" class="badge badge-success"
-                                          th:text="${so.soStatus}"></span>
-                                    <span th:if="${so.soStatus == 'Incomplete'}" class="badge badge-warning"
-                                          th:text="${so.soStatus}"></span>
-                                    <span th:if="${so.soStatus == 'Rejected'}" class="badge badge-danger"
-                                          th:text="${so.soStatus}" style="cursor: help;"
-                                          th:title="${so.rejectReason != null ? 'Lý do: ' + so.rejectReason : 'Không có lý do cụ thể'}"></span>
+                    <div class="card-body">
+                        <!-- Filter Bar -->
+                        <form th:action="@{/sales/orders}" method="get" class="search-bar">
+                            <select name="status" class="form-control" style="max-width: 200px;">
+                                <option value="">All Statuses</option>
+                                <option value="Draft" th:selected="${selectedStatus == 'Draft'}">Draft</option>
+                                <option value="Pending Approval" th:selected="${selectedStatus == 'Pending Approval'}">
+                                    Pending Approval
+                                </option>
+                                <option value="Approved" th:selected="${selectedStatus == 'Approved'}">Approved</option>
+                                <option value="Incomplete" th:selected="${selectedStatus == 'Incomplete'}">Incomplete
+                                </option>
+                                <option value="Completed" th:selected="${selectedStatus == 'Completed'}">Completed
+                                </option>
+                                <option value="Waiting for Stock" th:selected="${selectedStatus == 'Waiting for Stock'}">Waiting for Stock</option>
+                                <option value="Rejected" th:selected="${selectedStatus == 'Rejected'}">Rejected</option>
+                            </select>
+                            <select name="customerId" class="form-control" style="max-width: 220px;">
+                                <option value="">All Customers</option>
+                                <option th:each="c : ${customers}" th:value="${c.partnerId}" th:text="${c.partnerName}"
+                                    th:selected="${selectedCustomerId != null && selectedCustomerId == c.partnerId}">
+                                </option>
+                            </select>
+                            <button type="submit" class="btn btn-outline">Filter</button>
+                            <a th:href="@{/sales/orders}" class="btn btn-outline"
+                                th:if="${selectedStatus != null || selectedCustomerId != null}">Clear</a>
+                        </form>
 
-                                    <div th:if="${so.soStatus == 'Rejected' && so.rejectReason != null}"
-                                         style="font-size: 0.75rem; color: #dc3545; margin-top: 4px;">
-                                        <i th:text="'💬 ' + ${so.rejectReason}"></i>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div class="btn-group">
-                                        <a th:href="@{/sales/orders/{id}/edit(id=${so.soId})}"
-                                           class="btn btn-outline btn-sm">View / Edit</a>
-                                        <form th:if="${so.soStatus == 'Draft' || so.soStatus == 'Rejected'}"
-                                              th:action="@{/sales/orders/{id}/delete(id=${so.soId})}"
-                                              method="post" style="display:inline;"
-                                              onsubmit="return confirm('Are you sure you want to delete this SO?');">
-                                            <button type="submit" class="btn btn-danger btn-sm">Delete</button>
-                                        </form>
-                                    </div>
-                                </td>
-                            </tr>
-                            </tbody>
-                        </table>
+                        <div th:if="${#lists.isEmpty(orders)}" class="empty-state">
+                            <p>No sales orders found.</p>
+                        </div>
+                        <div th:unless="${#lists.isEmpty(orders)}" class="table-wrapper">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>SO Number</th>
+                                        <th>Customer</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr th:each="so, iter : ${orders}">
+                                        <td th:text="${iter.count}"></td>
+                                        <td><strong th:text="${so.soNumber}"></strong></td>
+                                        <td th:text="${so.customerName} ?: '—'"></td>
+                                        <td>
+                                            <span th:if="${so.soStatus == 'Draft'}" class="badge badge-secondary"
+                                                th:text="${so.soStatus}"></span>
+                                            <span th:if="${so.soStatus == 'Pending Approval'}"
+                                                class="badge badge-warning" th:text="${so.soStatus}"></span>
+                                            <span th:if="${so.soStatus == 'Approved'}" class="badge badge-info"
+                                                th:text="${so.soStatus}"></span>
+                                            <span th:if="${so.soStatus == 'Waiting for Stock'}" class="badge badge-warning"
+                                                  th:text="${so.soStatus}"></span>
+                                            <span th:if="${so.soStatus == 'Completed'}" class="badge badge-success"
+                                                th:text="${so.soStatus}"></span>
+                                            <span th:if="${so.soStatus == 'Incomplete'}" class="badge badge-warning"
+                                                th:text="${so.soStatus}"></span>
+                                            <span th:if="${so.soStatus == 'Rejected'}" class="badge badge-danger"
+                                                th:text="${so.soStatus}" style="cursor: help;"
+                                                th:title="${so.rejectReason != null ? 'Lý do: ' + so.rejectReason : 'Không có lý do cụ thể'}"></span>
+
+                                            <div th:if="${so.soStatus == 'Rejected' && so.rejectReason != null}"
+                                                style="font-size: 0.75rem; color: #dc3545; margin-top: 4px;">
+                                                <i th:text="'💬 ' + ${so.rejectReason}"></i>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group">
+                                                <a th:href="@{/sales/orders/{id}/edit(id=${so.soId})}"
+                                                    class="btn btn-outline btn-sm">View / Edit</a>
+                                                <form th:if="${so.soStatus == 'Draft' || so.soStatus == 'Rejected'}"
+                                                    th:action="@{/sales/orders/{id}/delete(id=${so.soId})}"
+                                                    method="post" style="display:inline;"
+                                                    onsubmit="return confirm('Are you sure you want to delete this SO?');">
+                                                    <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 </body>
 
 </html>

@@ -9,57 +9,57 @@
 </head>
 
 <body>
-<div class="app-layout">
-    <div th:replace="~{fragments/layout :: sidebar-warehouse}"></div>
-    <div class="main-content">
-        <div th:replace="~{fragments/layout :: topbar('Warehouse Dashboard')}"></div>
-        <div class="content-area">
-            <div th:replace="~{fragments/layout :: alerts}"></div>
+    <div class="app-layout">
+        <div th:replace="~{fragments/layout :: sidebar-warehouse}"></div>
+        <div class="main-content">
+            <div th:replace="~{fragments/layout :: topbar('Warehouse Dashboard')}"></div>
+            <div class="content-area">
+                <div th:replace="~{fragments/layout :: alerts}"></div>
 
-            <h2 style="margin-bottom:1rem;" th:text="'Welcome, ' + ${loggedInUserName}">Welcome</h2>
-            <p style="margin-bottom:1.5rem;color:var(--text-muted);">
-                Warehouse: <strong th:text="${warehouseName}">N/A</strong>
-            </p>
+                <h2 style="margin-bottom:1rem;" th:text="'Welcome, ' + ${loggedInUserName}">Welcome</h2>
+                <p style="margin-bottom:1.5rem;color:var(--text-muted);">
+                    Warehouse: <strong th:text="${warehouseName}">N/A</strong>
+                </p>
 
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-icon blue">📍</div>
-                    <div class="stat-info">
-                        <h3 th:text="${binCount}">0</h3>
-                        <p>Bins</p>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon blue">📍</div>
+                        <div class="stat-info">
+                            <h3 th:text="${binCount}">0</h3>
+                            <p>Bins</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon green">📋</div>
+                        <div class="stat-info">
+                            <h3 th:text="${productCount}">0</h3>
+                            <p>Products</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon orange">🤝</div>
+                        <div class="stat-info">
+                            <h3 th:text="${partnerCount}">0</h3>
+                            <p>Partners</p>
+                        </div>
                     </div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-icon green">📋</div>
-                    <div class="stat-info">
-                        <h3 th:text="${productCount}">0</h3>
-                        <p>Products</p>
-                    </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon orange">🤝</div>
-                    <div class="stat-info">
-                        <h3 th:text="${partnerCount}">0</h3>
-                        <p>Partners</p>
-                    </div>
-                </div>
-            </div>
 
-            <div class="card">
-                <div class="card-header">
-                    <h2>Quick Actions</h2>
-                </div>
-                <div class="card-body">
-                    <div class="btn-group">
-                        <a th:href="@{/warehouse/bins/new}" class="btn btn-primary">+ New Bin</a>
-                        <a th:href="@{/warehouse/products/new}" class="btn btn-success">+ New Product</a>
-                        <a th:href="@{/warehouse/partners/new}" class="btn btn-warning">+ New Partner</a>
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Quick Actions</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="btn-group">
+                            <a th:href="@{/warehouse/bins/new}" class="btn btn-primary">+ New Bin</a>
+                            <a th:href="@{/warehouse/products/new}" class="btn btn-success">+ New Product</a>
+                            <a th:href="@{/warehouse/partners/new}" class="btn btn-warning">+ New Partner</a>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 </body>
 
 </html>

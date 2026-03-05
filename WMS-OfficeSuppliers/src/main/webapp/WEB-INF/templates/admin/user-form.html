@@ -9,85 +9,85 @@
 </head>
 
 <body>
-<div class="app-layout">
-    <div th:replace="~{fragments/layout :: sidebar-admin}"></div>
-    <div class="main-content">
-        <div th:replace="~{fragments/layout :: topbar(${user.userId != null} ? 'Edit User' : 'New User')}"></div>
-        <div class="content-area">
-            <div th:replace="~{fragments/layout :: alerts}"></div>
+    <div class="app-layout">
+        <div th:replace="~{fragments/layout :: sidebar-admin}"></div>
+        <div class="main-content">
+            <div th:replace="~{fragments/layout :: topbar(${user.userId != null} ? 'Edit User' : 'New User')}"></div>
+            <div class="content-area">
+                <div th:replace="~{fragments/layout :: alerts}"></div>
 
-            <div class="card" style="max-width:600px;">
-                <div class="card-header">
-                    <h2 th:text="${user.userId != null} ? 'Edit User' : 'Create New User'">Form</h2>
-                </div>
-                <div class="card-body">
-                    <form th:action="@{/admin/users/save}" method="post" th:object="${user}">
-                        <input type="hidden" th:field="*{userId}">
+                <div class="card" style="max-width:600px;">
+                    <div class="card-header">
+                        <h2 th:text="${user.userId != null} ? 'Edit User' : 'Create New User'">Form</h2>
+                    </div>
+                    <div class="card-body">
+                        <form th:action="@{/admin/users/save}" method="post" th:object="${user}">
+                            <input type="hidden" th:field="*{userId}">
 
-                        <div class="form-group">
-                            <label for="username">Username *</label>
-                            <input type="text" id="username" class="form-control" th:field="*{username}"
-                                   th:classappend="${#fields.hasErrors('username')} ? 'is-invalid'"
-                                   placeholder="Enter username">
-                            <div class="invalid-feedback" th:if="${#fields.hasErrors('username')}"
-                                 th:errors="*{username}">Username error</div>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="password"
-                                   th:text="${user.userId != null} ? 'New Password (leave blank to keep current)' : 'Password *'">Password</label>
-                            <input type="password" id="password" name="password" class="form-control"
-                                   th:field="*{password}"
-                                   th:classappend="${#fields.hasErrors('password')} ? 'is-invalid'"
-                                   placeholder="Enter password">
-                            <div class="invalid-feedback" th:if="${#fields.hasErrors('password')}"
-                                 th:errors="*{password}">Password error</div>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="fullName">Full Name *</label>
-                            <input type="text" id="fullName" class="form-control" th:field="*{fullName}"
-                                   th:classappend="${#fields.hasErrors('fullName')} ? 'is-invalid'"
-                                   placeholder="Enter full name">
-                            <div class="invalid-feedback" th:if="${#fields.hasErrors('fullName')}"
-                                 th:errors="*{fullName}">Full name error</div>
-                        </div>
-
-                        <div class="form-row">
                             <div class="form-group">
-                                <label for="role">Role *</label>
-                                <select id="role" class="form-control" th:field="*{role}"
+                                <label for="username">Username *</label>
+                                <input type="text" id="username" class="form-control" th:field="*{username}"
+                                    th:classappend="${#fields.hasErrors('username')} ? 'is-invalid'"
+                                    placeholder="Enter username">
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('username')}"
+                                    th:errors="*{username}">Username error</div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="password"
+                                    th:text="${user.userId != null} ? 'New Password (leave blank to keep current)' : 'Password *'">Password</label>
+                                <input type="password" id="password" name="password" class="form-control"
+                                    th:field="*{password}"
+                                    th:classappend="${#fields.hasErrors('password')} ? 'is-invalid'"
+                                    placeholder="Enter password">
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('password')}"
+                                    th:errors="*{password}">Password error</div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="fullName">Full Name *</label>
+                                <input type="text" id="fullName" class="form-control" th:field="*{fullName}"
+                                    th:classappend="${#fields.hasErrors('fullName')} ? 'is-invalid'"
+                                    placeholder="Enter full name">
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('fullName')}"
+                                    th:errors="*{fullName}">Full name error</div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="role">Role *</label>
+                                    <select id="role" class="form-control" th:field="*{role}"
                                         th:classappend="${#fields.hasErrors('role')} ? 'is-invalid'">
-                                    <option value="">-- Select Role --</option>
-                                    <option th:each="r : ${roles}" th:value="${r}" th:text="${r}"></option>
-                                </select>
-                                <div class="invalid-feedback" th:if="${#fields.hasErrors('role')}"
-                                     th:errors="*{role}">Role error</div>
-                            </div>
-                            <div class="form-group">
-                                <label for="warehouseId">Assigned Warehouse</label>
-                                <select id="warehouseId" class="form-control" th:field="*{warehouseId}"
+                                        <option value="">-- Select Role --</option>
+                                        <option th:each="r : ${roles}" th:value="${r}" th:text="${r}"></option>
+                                    </select>
+                                    <div class="invalid-feedback" th:if="${#fields.hasErrors('role')}"
+                                        th:errors="*{role}">Role error</div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="warehouseId">Assigned Warehouse</label>
+                                    <select id="warehouseId" class="form-control" th:field="*{warehouseId}"
                                         th:classappend="${#fields.hasErrors('warehouseId')} ? 'is-invalid'">
-                                    <option value="">-- None --</option>
-                                    <option th:each="w : ${warehouses}" th:value="${w.warehouseId}"
+                                        <option value="">-- None --</option>
+                                        <option th:each="w : ${warehouses}" th:value="${w.warehouseId}"
                                             th:text="${w.warehouseName}">
-                                    </option>
-                                </select>
-                                <div class="invalid-feedback" th:if="${#fields.hasErrors('warehouseId')}"
-                                     th:errors="*{warehouseId}">Warehouse error</div>
+                                        </option>
+                                    </select>
+                                    <div class="invalid-feedback" th:if="${#fields.hasErrors('warehouseId')}"
+                                        th:errors="*{warehouseId}">Warehouse error</div>
+                                </div>
                             </div>
-                        </div>
 
-                        <div class="form-actions">
-                            <button type="submit" class="btn btn-primary">Save User</button>
-                            <a th:href="@{/admin/users}" class="btn btn-outline">Cancel</a>
-                        </div>
-                    </form>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary">Save User</button>
+                                <a th:href="@{/admin/users}" class="btn btn-outline">Cancel</a>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 </body>
 
 </html>

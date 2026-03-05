@@ -19,7 +19,7 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
     boolean existsBySkuAndProductIdNot(String sku, Integer productId);
 
     @Query("SELECT p FROM Product p WHERE LOWER(p.sku) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
-            "OR LOWER(p.productName) LIKE LOWER(CONCAT('%', :keyword, '%'))")
+           "OR LOWER(p.productName) LIKE LOWER(CONCAT('%', :keyword, '%'))")
     List<Product> searchByKeyword(@Param("keyword") String keyword);
 
     List<Product> findByIsActive(Boolean isActive);
