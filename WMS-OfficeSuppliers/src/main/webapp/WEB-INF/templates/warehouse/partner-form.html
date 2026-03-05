@@ -9,79 +9,79 @@
 </head>
 
 <body>
-    <div class="app-layout">
-        <div th:replace="~{fragments/layout :: sidebar-warehouse}"></div>
-        <div class="main-content">
-            <div
+<div class="app-layout">
+    <div th:replace="~{fragments/layout :: sidebar-warehouse}"></div>
+    <div class="main-content">
+        <div
                 th:replace="~{fragments/layout :: topbar(${partner.partnerId != null} ? 'Edit Partner' : 'New Partner')}">
-            </div>
-            <div class="content-area">
-                <div th:replace="~{fragments/layout :: alerts}"></div>
+        </div>
+        <div class="content-area">
+            <div th:replace="~{fragments/layout :: alerts}"></div>
 
-                <div class="card" style="max-width:600px;">
-                    <div class="card-header">
-                        <h2 th:text="${partner.partnerId != null} ? 'Edit Partner' : 'Create New Partner'">Form</h2>
-                    </div>
-                    <div class="card-body">
-                        <form th:action="@{/warehouse/partners/save}" method="post" th:object="${partner}">
-                            <input type="hidden" th:field="*{partnerId}">
+            <div class="card" style="max-width:600px;">
+                <div class="card-header">
+                    <h2 th:text="${partner.partnerId != null} ? 'Edit Partner' : 'Create New Partner'">Form</h2>
+                </div>
+                <div class="card-body">
+                    <form th:action="@{/warehouse/partners/save}" method="post" th:object="${partner}">
+                        <input type="hidden" th:field="*{partnerId}">
 
-                            <div class="form-group">
-                                <label for="partnerName">Partner Name *</label>
-                                <input type="text" id="partnerName" class="form-control" th:field="*{partnerName}"
-                                    required maxlength="100" placeholder="Enter partner name"
-                                    th:classappend="${#fields.hasErrors('partnerName')} ? 'is-invalid'">
-                                <div class="invalid-feedback" th:if="${#fields.hasErrors('partnerName')}"
-                                    th:errors="*{partnerName}">Name error</div>
-                            </div>
+                        <div class="form-group">
+                            <label for="partnerName">Partner Name *</label>
+                            <input type="text" id="partnerName" class="form-control" th:field="*{partnerName}"
+                                   required maxlength="100" placeholder="Enter partner name"
+                                   th:classappend="${#fields.hasErrors('partnerName')} ? 'is-invalid'">
+                            <div class="invalid-feedback" th:if="${#fields.hasErrors('partnerName')}"
+                                 th:errors="*{partnerName}">Name error</div>
+                        </div>
 
-                            <div class="form-group">
-                                <label>Partner Type *</label>
-                                <div style="display:flex;gap:1.5rem;margin-top:.35rem;"
-                                    th:classappend="${#fields.hasErrors('partnerType')} ? 'is-invalid'">
-                                    <label
+                        <div class="form-group">
+                            <label>Partner Type *</label>
+                            <div style="display:flex;gap:1.5rem;margin-top:.35rem;"
+                                 th:classappend="${#fields.hasErrors('partnerType')} ? 'is-invalid'">
+                                <label
                                         style="display:flex;align-items:center;gap:.4rem;font-weight:normal;cursor:pointer;">
-                                        <input type="radio" th:field="*{partnerType}" value="Supplier"> Supplier
-                                    </label>
-                                    <label
+                                    <input type="radio" th:field="*{partnerType}" value="Supplier"> Supplier
+                                </label>
+                                <label
                                         style="display:flex;align-items:center;gap:.4rem;font-weight:normal;cursor:pointer;">
-                                        <input type="radio" th:field="*{partnerType}" value="Customer"> Customer
-                                    </label>
-                                </div>
-                                <div class="invalid-feedback" style="display:block"
-                                    th:if="${#fields.hasErrors('partnerType')}" th:errors="*{partnerType}">Type error
-                                </div>
+                                    <input type="radio" th:field="*{partnerType}" value="Customer"> Customer
+                                </label>
                             </div>
+                            <div class="invalid-feedback" style="display:block"
+                                 th:if="${#fields.hasErrors('partnerType')}" th:errors="*{partnerType}">Type error
+                            </div>
+                        </div>
 
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="contactPerson">Contact Person</label>
-                                    <input type="text" id="contactPerson" class="form-control"
-                                        th:field="*{contactPerson}" maxlength="100" placeholder="Enter contact person"
-                                        th:classappend="${#fields.hasErrors('contactPerson')} ? 'is-invalid'">
-                                    <div class="invalid-feedback" th:if="${#fields.hasErrors('contactPerson')}"
-                                        th:errors="*{contactPerson}">Contact error</div>
-                                </div>
-                                <div class="form-group">
-                                    <label for="phoneNumber">Phone Number</label>
-                                    <input type="text" id="phoneNumber" class="form-control" th:field="*{phoneNumber}"
-                                        maxlength="20" placeholder="Enter phone number"
-                                        th:classappend="${#fields.hasErrors('phoneNumber')} ? 'is-invalid'">
-                                    <div class="invalid-feedback" th:if="${#fields.hasErrors('phoneNumber')}"
-                                        th:errors="*{phoneNumber}">Phone error</div>
-                                </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="contactPerson">Contact Person</label>
+                                <input type="text" id="contactPerson" class="form-control"
+                                       th:field="*{contactPerson}" maxlength="100" placeholder="Enter contact person"
+                                       th:classappend="${#fields.hasErrors('contactPerson')} ? 'is-invalid'">
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('contactPerson')}"
+                                     th:errors="*{contactPerson}">Contact error</div>
                             </div>
+                            <div class="form-group">
+                                <label for="phoneNumber">Phone Number</label>
+                                <input type="text" id="phoneNumber" class="form-control" th:field="*{phoneNumber}"
+                                       maxlength="20" placeholder="Enter phone number"
+                                       th:classappend="${#fields.hasErrors('phoneNumber')} ? 'is-invalid'">
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('phoneNumber')}"
+                                     th:errors="*{phoneNumber}">Phone error</div>
+                            </div>
+                        </div>
 
-                            <div class="form-actions">
-                                <button type="submit" class="btn btn-primary">Save Partner</button>
-                                <a th:href="@{/warehouse/partners}" class="btn btn-outline">Cancel</a>
-                            </div>
-                        </form>
-                    </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">Save Partner</button>
+                            <a th:href="@{/warehouse/partners}" class="btn btn-outline">Cancel</a>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
     </div>
+</div>
 </body>
 
 </html>

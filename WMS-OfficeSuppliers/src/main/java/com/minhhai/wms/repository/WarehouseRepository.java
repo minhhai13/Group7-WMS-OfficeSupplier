@@ -21,4 +21,7 @@ public interface WarehouseRepository extends JpaRepository<Warehouse, Integer> {
     @Query("SELECT w FROM Warehouse w WHERE LOWER(w.warehouseName) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
             "OR LOWER(w.warehouseCode) LIKE LOWER(CONCAT('%', :keyword, '%'))")
     List<Warehouse> searchByKeyword(@Param("keyword") String keyword);
+
+    List<Warehouse> findByIsActiveTrueAndWarehouseIdNot(Integer warehouseId);
+
 }

@@ -99,10 +99,10 @@ public class BinController {
                        HttpSession session,
                        Model model,
                        RedirectAttributes redirectAttributes) {
-        
+
         User loggedInUser = (User) session.getAttribute("loggedInUser");
         Warehouse warehouse = loggedInUser.getWarehouse();
-        
+
         // Pass warehouse info to DTO
         binDTO.setWarehouseId(warehouse.getWarehouseId());
 

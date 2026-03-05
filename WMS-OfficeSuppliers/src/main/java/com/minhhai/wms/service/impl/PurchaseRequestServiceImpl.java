@@ -81,7 +81,7 @@ public class PurchaseRequestServiceImpl implements PurchaseRequestService {
             if (pr.getDetails() != null) {
                 for (PurchaseRequestDetail prDetail : pr.getDetails()) {
                     detailsByProduct.computeIfAbsent(
-                            prDetail.getProduct().getProductId(), k -> new ArrayList<>())
+                                    prDetail.getProduct().getProductId(), k -> new ArrayList<>())
                             .add(prDetail);
                 }
             }

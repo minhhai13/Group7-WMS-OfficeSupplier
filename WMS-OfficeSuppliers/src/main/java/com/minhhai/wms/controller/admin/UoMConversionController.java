@@ -40,7 +40,7 @@ public class UoMConversionController {
     @PostMapping("/save")
     public String save(@ModelAttribute ProductUoMConversionDTO conversionDTO,
                        RedirectAttributes redirectAttributes) {
-        
+
         try {
             conversionService.save(conversionDTO);
             redirectAttributes.addFlashAttribute("success", "Conversion saved successfully.");
@@ -49,7 +49,7 @@ public class UoMConversionController {
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("error", "Error: " + e.getMessage());
         }
-        
+
         return "redirect:/warehouse/uom-conversions?productId=" + conversionDTO.getProductId();
     }
 

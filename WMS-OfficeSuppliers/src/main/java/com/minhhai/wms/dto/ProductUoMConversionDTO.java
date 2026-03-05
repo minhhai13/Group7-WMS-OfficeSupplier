@@ -10,14 +10,14 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ProductUoMConversionDTO {
-    
+
     private Integer conversionId;
-    
+
     private Integer productId;
-    
+
     private String fromUoM;
-    
+
     private String toUoM;
-    
+
     private Integer conversionFactor;
 }

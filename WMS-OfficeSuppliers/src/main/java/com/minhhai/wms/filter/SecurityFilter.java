@@ -112,6 +112,11 @@ public class SecurityFilter implements Filter {
                     httpResponse.sendRedirect(contextPath + "/403");
                     return;
                 }
+            } else if (relativePath.startsWith("/api/transfer/")) {
+                if (!"Storekeeper".equals(role) && !"Warehouse Manager".equals(role)) {
+                    httpResponse.sendRedirect(contextPath + "/403");
+                    return;
+                }
             }
         }
 

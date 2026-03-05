@@ -302,7 +302,7 @@ public class SalesOrderServiceImpl implements SalesOrderService {
             if (remainingToReserve > 0) {
                 throw new IllegalArgumentException(
                         "Không đủ tồn kho cho sản phẩm '" + product.getProductName()
-                        + "'. Thiếu " + remainingToReserve + " " + product.getBaseUoM() + ".");
+                                + "'. Thiếu " + remainingToReserve + " " + product.getBaseUoM() + ".");
             }
         }
 

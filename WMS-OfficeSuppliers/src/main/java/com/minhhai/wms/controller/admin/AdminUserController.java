@@ -74,7 +74,7 @@ public class AdminUserController {
                        BindingResult bindingResult,
                        Model model,
                        RedirectAttributes redirectAttributes) {
-        
+
         // Return to form if validation fails
         if (bindingResult.hasErrors()) {
             model.addAttribute("activePage", "admin-users");

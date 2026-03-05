@@ -112,7 +112,7 @@ public class GoodsReceiptNoteServiceImpl implements GoodsReceiptNoteService {
             if (inputReceivedQty > remainingQty) {
                 throw new IllegalArgumentException(
                         "Số lượng thực nhận không được lớn hơn số lượng còn thiếu ("
-                        + remainingQty + ") cho sản phẩm '" + poDetail.getProduct().getProductName() + "'.");
+                                + remainingQty + ") cho sản phẩm '" + poDetail.getProduct().getProductName() + "'.");
             }
             totalInputQty += inputReceivedQty;
 
@@ -339,7 +339,7 @@ public class GoodsReceiptNoteServiceImpl implements GoodsReceiptNoteService {
         }
         throw new IllegalArgumentException(
                 "Kho không đủ sức chứa cho mặt hàng '" + productName +
-                "' (Yêu cầu: " + incomingWeight + " kg). Vui lòng giải phóng không gian hoặc thêm bin mới.");
+                        "' (Yêu cầu: " + incomingWeight + " kg). Vui lòng giải phóng không gian hoặc thêm bin mới.");
     }
 
     private BigDecimal calculateCurrentBinWeight(Bin bin) {

@@ -27,6 +27,6 @@ public class BinDTO {
     private BigDecimal maxWeight;
 
     private Integer warehouseId;
-    
+
     private Boolean isActive;
 }

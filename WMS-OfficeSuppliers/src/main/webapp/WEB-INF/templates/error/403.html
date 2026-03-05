@@ -9,14 +9,14 @@
 </head>
 
 <body>
-    <div class="login-wrapper">
-        <div class="login-card" style="text-align:center;">
-            <h1 style="font-size:3rem;margin-bottom:.5rem;">🚫</h1>
-            <h1>403 - Access Denied</h1>
-            <p class="subtitle" th:text="${error != null} ? ${error} : 'You do not have permission to access this page.'"></p>
-            <a th:href="@{/logout}" class="btn btn-primary" style="margin-top:1rem;">Go Back</a>
-        </div>
+<div class="login-wrapper">
+    <div class="login-card" style="text-align:center;">
+        <h1 style="font-size:3rem;margin-bottom:.5rem;">🚫</h1>
+        <h1>403 - Access Denied</h1>
+        <p class="subtitle" th:text="${error != null} ? ${error} : 'You do not have permission to access this page.'"></p>
+        <a th:href="@{/logout}" class="btn btn-primary" style="margin-top:1rem;">Go Back</a>
     </div>
+</div>
 </body>
 
 </html>

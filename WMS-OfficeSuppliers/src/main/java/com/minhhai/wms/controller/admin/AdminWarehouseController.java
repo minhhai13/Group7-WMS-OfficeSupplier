@@ -61,7 +61,7 @@ public class AdminWarehouseController {
                        BindingResult bindingResult,
                        Model model,
                        RedirectAttributes redirectAttributes) {
-        
+
         if (bindingResult.hasErrors()) {
             model.addAttribute("activePage", "admin-warehouses");
             return "admin/warehouse-form";

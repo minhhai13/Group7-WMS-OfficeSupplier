@@ -30,15 +30,18 @@ public class Transfer {
     @JoinColumn(name = "DestinationWarehouseID", nullable = false)
     private Warehouse destinationWarehouse;
 
+    @Column(name = "RejectReason", length = 500)
+    private String rejectReason;
+
     @Builder.Default
     @Column(
             name = "TransferStatus",
             length = 30,
-            columnDefinition = "nvarchar(30) default 'Pending' CHECK ([TransferStatus] IN ('Pending', 'Approved', 'In-Transit', 'Completed'))"
+            columnDefinition = "nvarchar(30) default 'Pending' CHECK ([TransferStatus] IN ('Draft', 'Pending', 'Approved', 'In-Transit', 'Completed', 'Rejected'))"
     )
     private String transferStatus = "Pending"; // Pending, Approved, In-Transit, Completed
 
-    @OneToMany(mappedBy = "transfer", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "transfer", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<TransferDetail> details;
 
     @AssertTrue(message = "Source warehouse must be different from destination warehouse")

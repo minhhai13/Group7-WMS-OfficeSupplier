@@ -9,80 +9,80 @@
 </head>
 
 <body>
-    <div class="app-layout">
-        <div th:replace="~{fragments/layout :: sidebar-purchasing}"></div>
-        <div class="main-content">
-            <div th:replace="~{fragments/layout :: topbar('PO Approvals')}"></div>
-            <div class="content-area">
-                <div th:replace="~{fragments/layout :: alerts}"></div>
+<div class="app-layout">
+    <div th:replace="~{fragments/layout :: sidebar-purchasing}"></div>
+    <div class="main-content">
+        <div th:replace="~{fragments/layout :: topbar('PO Approvals')}"></div>
+        <div class="content-area">
+            <div th:replace="~{fragments/layout :: alerts}"></div>
 
-                <div class="card">
-                    <div class="card-header">
-                        <h2>Purchase Order Approvals</h2>
-                    </div>
-                    <div class="card-body">
-                        <!-- Filter Bar -->
-                        <form th:action="@{/purchasing/approvals}" method="get" class="search-bar">
-                            <select name="status" class="form-control" style="max-width: 200px;">
-                                <option value="All" th:selected="${selectedStatus == 'All'}">All Statuses</option>
-                                <option value="Pending Approval" th:selected="${selectedStatus == 'Pending Approval'}">
-                                    Pending Approval</option>
-                                <option value="Approved" th:selected="${selectedStatus == 'Approved'}">Approved</option>
-                                <option value="Rejected" th:selected="${selectedStatus == 'Rejected'}">Rejected</option>
-                            </select>
-                            <select name="supplierId" class="form-control" style="max-width: 220px;">
-                                <option value="">All Suppliers</option>
-                                <option th:each="s : ${suppliers}" th:value="${s.partnerId}" th:text="${s.partnerName}"
+            <div class="card">
+                <div class="card-header">
+                    <h2>Purchase Order Approvals</h2>
+                </div>
+                <div class="card-body">
+                    <!-- Filter Bar -->
+                    <form th:action="@{/purchasing/approvals}" method="get" class="search-bar">
+                        <select name="status" class="form-control" style="max-width: 200px;">
+                            <option value="All" th:selected="${selectedStatus == 'All'}">All Statuses</option>
+                            <option value="Pending Approval" th:selected="${selectedStatus == 'Pending Approval'}">
+                                Pending Approval</option>
+                            <option value="Approved" th:selected="${selectedStatus == 'Approved'}">Approved</option>
+                            <option value="Rejected" th:selected="${selectedStatus == 'Rejected'}">Rejected</option>
+                        </select>
+                        <select name="supplierId" class="form-control" style="max-width: 220px;">
+                            <option value="">All Suppliers</option>
+                            <option th:each="s : ${suppliers}" th:value="${s.partnerId}" th:text="${s.partnerName}"
                                     th:selected="${selectedSupplierId != null && selectedSupplierId == s.partnerId}">
-                                </option>
-                            </select>
-                            <button type="submit" class="btn btn-outline">Filter</button>
-                            <a th:href="@{/purchasing/approvals}" class="btn btn-outline">Reset</a>
-                        </form>
+                            </option>
+                        </select>
+                        <button type="submit" class="btn btn-outline">Filter</button>
+                        <a th:href="@{/purchasing/approvals}" class="btn btn-outline">Reset</a>
+                    </form>
 
-                        <div th:if="${#lists.isEmpty(orders)}" class="empty-state">
-                            <p>No purchase orders found.</p>
-                        </div>
-                        <div th:unless="${#lists.isEmpty(orders)}" class="table-wrapper">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>#</th>
-                                        <th>PO Number</th>
-                                        <th>Supplier</th>
-                                        <th>Status</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr th:each="po, iter : ${orders}">
-                                        <td th:text="${iter.count}"></td>
-                                        <td><strong th:text="${po.poNumber}"></strong></td>
-                                        <td th:text="${po.supplierName} ?: '—'"></td>
-                                        <td>
+                    <div th:if="${#lists.isEmpty(orders)}" class="empty-state">
+                        <p>No purchase orders found.</p>
+                    </div>
+                    <div th:unless="${#lists.isEmpty(orders)}" class="table-wrapper">
+                        <table>
+                            <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>PO Number</th>
+                                <th>Supplier</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:each="po, iter : ${orders}">
+                                <td th:text="${iter.count}"></td>
+                                <td><strong th:text="${po.poNumber}"></strong></td>
+                                <td th:text="${po.supplierName} ?: '—'"></td>
+                                <td>
                                             <span th:if="${po.poStatus == 'Pending Approval'}"
-                                                class="badge badge-warning" th:text="${po.poStatus}"></span>
-                                            <span th:if="${po.poStatus == 'Approved'}" class="badge badge-success"
-                                                th:text="${po.poStatus}"></span>
-                                            <span th:if="${po.poStatus == 'Rejected'}" class="badge badge-danger"
-                                                th:text="${po.poStatus}"></span>
-                                            <span
-                                                th:if="${po.poStatus != 'Pending Approval' && po.poStatus != 'Approved' && po.poStatus != 'Rejected'}"
-                                                class="badge badge-secondary" th:text="${po.poStatus}"></span>
-                                        </td>
-                                        <td>
-                                            <a th:href="@{/purchasing/approvals/{id}/review(id=${po.poId})}"
-                                                class="btn btn-outline btn-sm">Review</a>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
+                                                  class="badge badge-warning" th:text="${po.poStatus}"></span>
+                                    <span th:if="${po.poStatus == 'Approved'}" class="badge badge-success"
+                                          th:text="${po.poStatus}"></span>
+                                    <span th:if="${po.poStatus == 'Rejected'}" class="badge badge-danger"
+                                          th:text="${po.poStatus}"></span>
+                                    <span
+                                            th:if="${po.poStatus != 'Pending Approval' && po.poStatus != 'Approved' && po.poStatus != 'Rejected'}"
+                                            class="badge badge-secondary" th:text="${po.poStatus}"></span>
+                                </td>
+                                <td>
+                                    <a th:href="@{/purchasing/approvals/{id}/review(id=${po.poId})}"
+                                       class="btn btn-outline btn-sm">Review</a>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+</div>
 </body>
 
 </html>

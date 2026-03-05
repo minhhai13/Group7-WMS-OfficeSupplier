@@ -32,6 +32,18 @@
         <li><a th:href="@{/wm/dashboard}" th:classappend="${activePage == 'wm-dashboard'} ? 'active'">🏠 Dashboard</a></li>
 
         <li class="nav-section">Report Center</li>
+        <li>
+            <a th:href="@{/transfer/requests}"
+               th:classappend="${activePage == 'transfer-requests'} ? 'active'">
+                📝 Transfer Request
+            </a>
+        </li>
+        <li>
+            <a th:href="@{/transfer/approvals}"
+               th:classappend="${activePage == 'transfer-approvals'} ? 'active'">
+                ✅ Approvals
+            </a>
+        </li>
         <li><a th:href="@{/wm/reports/inventory}" th:classappend="${activePage == 'report-inventory'} ? 'active'">📦 Physical Inventory</a></li>
         <li><a th:href="@{/wm/reports/inbound}" th:classappend="${activePage == 'report-inbound'} ? 'active'">📥 Inbound Movement</a></li>
         <li><a th:href="@{/wm/reports/outbound}" th:classappend="${activePage == 'report-outbound'} ? 'active'">📤 Outbound Movement</a></li>

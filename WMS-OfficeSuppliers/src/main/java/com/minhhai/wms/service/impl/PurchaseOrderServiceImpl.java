@@ -288,7 +288,7 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
 
         throw new IllegalArgumentException(
                 "Kho không đủ sức chứa cho mặt hàng '" + productName +
-                "' (Yêu cầu: " + incomingWeight + " kg). Vui lòng giải phóng không gian hoặc thêm bin mới.");
+                        "' (Yêu cầu: " + incomingWeight + " kg). Vui lòng giải phóng không gian hoặc thêm bin mới.");
     }
 
     /**

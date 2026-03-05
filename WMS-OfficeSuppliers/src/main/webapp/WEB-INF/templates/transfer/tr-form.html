@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <title th:text="${trDTO.trId != null} ? 'Edit Transfer Request - WMS' : 'New Transfer Request - WMS'">
+        TR Form - WMS
+    </title>
+    <link rel="stylesheet" th:href="@{/static/css/style.css}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+<div class="app-layout">
+
+    <!-- Sidebar -->
+    <div th:replace="~{fragments/layout :: sidebar-warehouse-manager}"></div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+
+        <!-- Topbar -->
+        <div th:replace="~{fragments/layout :: topbar(${trDTO.trId != null} ? 'Edit Transfer Request' : 'New Transfer Request')}"></div>
+
+        <!-- Content Area -->
+        <div class="content-area">
+
+            <div th:replace="~{fragments/layout :: alerts}"></div>
+
+            <!-- Reject Alert -->
+            <div th:if="${trDTO.trStatus == 'Rejected' && trDTO.rejectReason != null}"
+                 class="alert alert-danger"
+                 style="margin-bottom: 1.5rem;">
+                <strong>⚠️ This Transfer Request was rejected.</strong><br>
+                <strong>Reason:</strong>
+                <span th:text="${trDTO.rejectReason}"></span>
+            </div>
+
+            <!-- FORM -->
+            <form th:action="@{/transfer/requests/save}"
+                  method="post"
+                  th:object="${trDTO}"
+                  id="trForm">
+
+                <!-- FIX: thêm transferNumber -->
+                <input type="hidden" th:field="*{trId}">
+                <input type="hidden" th:field="*{transferNumber}">
+                <input type="hidden" th:field="*{destinationWarehouseId}">
+
+                <!-- Transfer Info -->
+                <div class="card" style="margin-bottom: 1.5rem;">
+                    <div class="card-header">
+                        <h2>Transfer Information</h2>
+                    </div>
+
+                    <div class="card-body">
+                        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.5rem;">
+
+                            <div class="form-group">
+                                <label>Source Warehouse <span style="color:red;">*</span></label>
+                                <select th:field="*{sourceWarehouseId}"
+                                        class="form-control"
+                                        th:disabled="${trDTO.trStatus != null && trDTO.trStatus != 'Draft' && trDTO.trStatus != 'Rejected'}">
+                                    <option value="">-- Select Source --</option>
+                                    <option th:each="w : ${sourceWarehouse}"
+                                            th:value="${w.warehouseId}"
+                                            th:text="${w.warehouseName}">
+                                    </option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Destination Warehouse</label>
+                                <input type="text"
+                                       class="form-control"
+                                       th:value="${trDTO.destinationWarehouseName}"
+                                       readonly disabled>
+                            </div>
+
+                            <div class="form-group">
+                                <label>TR Number</label>
+                                <input type="text"
+                                       class="form-control"
+                                       th:value="${trDTO.transferNumber != null ? trDTO.transferNumber : 'Auto-generated'}"
+                                       readonly disabled>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Product Lines -->
+                <div class="card" style="margin-bottom: 1.5rem;">
+                    <div class="card-header">
+                        <h2>Product Lines</h2>
+
+                        <button type="button"
+                                class="btn btn-primary btn-sm"
+                                onclick="addLine()"
+                                th:if="${trDTO.trStatus == null || trDTO.trStatus == 'Draft' || trDTO.trStatus == 'Rejected'}">
+                            + Add Product Line
+                        </button>
+                    </div>
+
+                    <div class="card-body">
+                        <div class="table-wrapper">
+                            <table id="linesTable">
+                                <thead>
+                                <tr>
+                                    <th style="width:5%;">#</th>
+                                    <th style="width:40%;">Product</th>
+                                    <th style="width:25%;">UoM</th>
+                                    <th style="width:20%;">Quantity</th>
+                                    <th style="width:10%;">Actions</th>
+                                </tr>
+                                </thead>
+
+                                <tbody id="linesBody">
+
+                                <tr th:each="detail, iter : ${trDTO.details}"
+                                    th:with="idx=${iter.index}">
+
+                                    <td class="line-number" th:text="${iter.count}"></td>
+
+                                    <td>
+                                        <select th:name="'details[' + ${idx} + '].productId'"
+                                                class="form-control product-select"
+                                                th:attr="data-index=${idx}"
+                                                onchange="onProductChange(this)"
+                                                th:disabled="${trDTO.trStatus != null && trDTO.trStatus != 'Draft' && trDTO.trStatus != 'Rejected'}">
+                                            <option value="">-- Select Product --</option>
+                                            <option th:each="p : ${products}"
+                                                    th:value="${p.productId}"
+                                                    th:text="${p.sku + ' - ' + p.productName}"
+                                                    th:selected="${detail.productId == p.productId}">
+                                            </option>
+                                        </select>
+
+                                        <input type="hidden"
+                                               th:name="'details[' + ${idx} + '].transferDetailId'"
+                                               th:value="${detail.transferDetailId}">
+                                    </td>
+
+                                    <td>
+                                        <select th:name="'details[' + ${idx} + '].uom'"
+                                                th:id="'uom-' + ${idx}"
+                                                class="form-control uom-select"
+                                                th:disabled="${trDTO.trStatus != null && trDTO.trStatus != 'Draft' && trDTO.trStatus != 'Rejected'}">
+                                            <option value="">-- Select UoM --</option>
+                                            <option th:if="${detail.uom != null}"
+                                                    th:value="${detail.uom}"
+                                                    th:text="${detail.uom}"
+                                                    selected>
+                                            </option>
+                                        </select>
+                                    </td>
+
+                                    <td>
+                                        <input type="number"
+                                               th:name="'details[' + ${idx} + '].transferQty'"
+                                               class="form-control"
+                                               th:value="${detail.transferQty}"
+                                               min="1"
+                                               th:readonly="${trDTO.trStatus != null && trDTO.trStatus != 'Draft' && trDTO.trStatus != 'Rejected'}">
+                                    </td>
+
+                                    <td>
+                                        <button type="button"
+                                                class="btn btn-danger btn-sm"
+                                                onclick="removeLine(this)"
+                                                th:if="${trDTO.trStatus == null || trDTO.trStatus == 'Draft' || trDTO.trStatus == 'Rejected'}">
+                                            ✕
+                                        </button>
+                                    </td>
+
+                                </tr>
+
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Buttons -->
+                <div class="card"
+                     th:if="${trDTO.trStatus == null || trDTO.trStatus == 'Draft' || trDTO.trStatus == 'Rejected'}">
+                    <div class="card-body" style="display:flex;gap:1rem;justify-content:flex-end;">
+                        <a th:href="@{/transfer/requests}" class="btn btn-outline">Cancel</a>
+                        <button type="submit" name="action" value="draft" class="btn btn-outline">
+                            Save Draft
+                        </button>
+                        <button type="submit" name="action" value="submit" class="btn btn-primary">
+                            Submit
+                        </button>
+                    </div>
+                </div>
+
+                <div class="card"
+                     th:if="${trDTO.trStatus != null && trDTO.trStatus != 'Draft' && trDTO.trStatus != 'Rejected'}">
+                    <div class="card-body" style="display:flex;justify-content:flex-end;">
+                        <a th:href="@{/transfer/requests}" class="btn btn-outline">Back to List</a>
+                    </div>
+                </div>
+
+            </form>
+
+        </div> <!-- content-area -->
+    </div> <!-- main-content -->
+</div> <!-- app-layout -->
+
+<script th:inline="javascript">
+    /*<![CDATA[*/
+
+    var products = /*[[${products}]]*/ [];
+    var contextPath = /*[[@{/}]]*/ '/';
+    var lineIndex = /*[[${trDTO.details != null ? trDTO.details.size() : 0}]]*/ 0;
+
+    if (contextPath.endsWith('/')) {
+        contextPath = contextPath.substring(0, contextPath.length - 1);
+    }
+
+    /* ===== Add new product line ===== */
+    function addLine() {
+
+        var tbody = document.getElementById('linesBody');
+        var idx = lineIndex++;
+
+        var tr = document.createElement('tr');
+
+        var productOptions = '<option value="">-- Select Product --</option>';
+
+        for (var i = 0; i < products.length; i++) {
+
+            var p = products[i];
+
+            productOptions +=
+                '<option value="' + p.productId + '">' +
+                p.sku + ' - ' + p.productName +
+                '</option>';
+        }
+
+        tr.innerHTML =
+            '<td class="line-number">' + (tbody.rows.length + 1) + '</td>' +
+
+            '<td>' +
+            '<select name="details[' + idx + '].productId" class="form-control product-select" data-index="' + idx + '" onchange="onProductChange(this)">' +
+            productOptions +
+            '</select>' +
+            '</td>' +
+
+            '<td>' +
+            '<select name="details[' + idx + '].uom" id="uom-' + idx + '" class="form-control uom-select">' +
+            '<option value="">-- Select UoM --</option>' +
+            '</select>' +
+            '</td>' +
+
+            '<td>' +
+            '<input type="number" name="details[' + idx + '].transferQty" class="form-control" min="1" placeholder="Qty">' +
+            '</td>' +
+
+            '<td>' +
+            '<button type="button" class="btn btn-danger btn-sm" onclick="removeLine(this)">✕</button>' +
+            '</td>';
+
+        tbody.appendChild(tr);
+
+        renumberLines();
+    }
+
+    /* ===== Remove product line ===== */
+    function removeLine(btn) {
+
+        var tr = btn.closest('tr');
+
+        tr.remove();
+
+        renumberLines();
+    }
+
+    /* ===== Renumber line numbers ===== */
+    function renumberLines() {
+
+        var rows = document.querySelectorAll('#linesBody tr');
+
+        for (var i = 0; i < rows.length; i++) {
+
+            rows[i].querySelector('.line-number').textContent = (i + 1);
+        }
+    }
+
+    /* ===== Load UoMs when product changes ===== */
+    function onProductChange(selectEl) {
+
+        var productId = selectEl.value;
+
+        var idx = selectEl.getAttribute('data-index');
+
+        var uomSelect = document.getElementById('uom-' + idx);
+
+        uomSelect.innerHTML = '<option value="">-- Select UoM --</option>';
+
+        if (!productId) return;
+
+        fetch(contextPath + '/api/transfer/products/' + productId + '/uoms')
+
+            .then(function (response) {
+
+                if (!response.ok) {
+
+                    throw new Error('Failed to load UoMs');
+                }
+
+                return response.json();
+            })
+
+            .then(function (uoms) {
+
+                for (var i = 0; i < uoms.length; i++) {
+
+                    var option = document.createElement('option');
+
+                    option.value = uoms[i].uom;
+
+                    option.textContent = uoms[i].label;
+
+                    uomSelect.appendChild(option);
+                }
+            })
+
+            .catch(function (err) {
+
+                console.error('Error loading UoMs:', err);
+            });
+    }
+
+    /* ===== Load UoMs for existing lines (edit mode) ===== */
+    document.addEventListener('DOMContentLoaded', function () {
+
+        var existingSelects = document.querySelectorAll('.product-select');
+
+        existingSelects.forEach(function (sel) {
+
+            if (sel.value) {
+
+                var idx = sel.getAttribute('data-index');
+
+                var uomSelect = document.getElementById('uom-' + idx);
+
+                var currentUom = uomSelect.value;
+
+                fetch(contextPath + '/api/transfer/products/' + sel.value + '/uoms')
+
+                    .then(function (response) {
+
+                        return response.json();
+                    })
+
+                    .then(function (uoms) {
+
+                        uomSelect.innerHTML = '<option value="">-- Select UoM --</option>';
+
+                        for (var i = 0; i < uoms.length; i++) {
+
+                            var option = document.createElement('option');
+
+                            option.value = uoms[i].uom;
+
+                            option.textContent = uoms[i].label;
+
+                            if (uoms[i].uom === currentUom) {
+
+                                option.selected = true;
+                            }
+
+                            uomSelect.appendChild(option);
+                        }
+                    })
+
+                    .catch(function (err) {
+
+                        console.error('Error loading UoMs:', err);
+                    });
+            }
+        });
+
+    });
+
+    /*]]>*/
+</script>
+
+</body>
+</html>

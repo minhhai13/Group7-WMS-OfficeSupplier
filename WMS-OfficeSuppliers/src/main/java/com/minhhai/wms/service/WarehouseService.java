@@ -21,4 +21,6 @@ public interface WarehouseService {
     Warehouse save(Warehouse warehouse);
 
     void toggleActive(Integer warehouseId);
+
+    List<Warehouse> findAllActiveExcluding(Integer warehouseId);
 }
