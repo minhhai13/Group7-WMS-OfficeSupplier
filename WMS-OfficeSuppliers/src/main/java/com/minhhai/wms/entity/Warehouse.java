@@ -63,10 +63,13 @@ public class Warehouse implements Serializable {
     private List<GoodsIssueNote> goodsIssueNotes;
 
     @OneToMany(mappedBy = "sourceWarehouse")
-    private List<Transfer> outgoingTransfers;
+    private List<TransferOrder> outgoingTransferOrders;
 
     @OneToMany(mappedBy = "destinationWarehouse")
-    private List<Transfer> incomingTransfers;
+    private List<TransferOrder> incomingTransferOrders;
+
+    @OneToMany(mappedBy = "warehouse")
+    private List<TransferNote> transferNotes;
 
     @OneToMany(mappedBy = "warehouse", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<StockBatch> stockBatches;

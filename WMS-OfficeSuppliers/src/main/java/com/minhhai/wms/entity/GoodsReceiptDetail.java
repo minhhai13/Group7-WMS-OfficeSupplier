@@ -23,8 +23,12 @@ public class GoodsReceiptDetail {
     private GoodsReceiptNote goodsReceiptNote;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "PODetailID", nullable = false)
+    @JoinColumn(name = "PODetailID")
     private PurchaseOrderDetail purchaseOrderDetail;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "TODetailID")
+    private TransferOrderDetail transferOrderDetail;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "ProductID", nullable = false)

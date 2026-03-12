@@ -107,13 +107,14 @@ public class SecurityFilter implements Filter {
                     !"Purchasing Manager".equals(role) &&
                     !"Sales Staff".equals(role) &&
                     !"Sales Manager".equals(role) &&
+                    !"Warehouse Manager".equals(role) &&
                     !"Storekeeper".equals(role)) {
 
                 httpResponse.sendRedirect(contextPath + "/403");
                 return;
             }
         } else if (relativePath.startsWith("/transfer/")) {
-            if (!"Warehouse Manager".equals(role)) {
+            if (!"Warehouse Manager".equals(role) && !"Storekeeper".equals(role)) {
                 httpResponse.sendRedirect(contextPath + "/403");
                 return;
             }

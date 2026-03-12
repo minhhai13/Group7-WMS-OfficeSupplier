@@ -60,8 +60,8 @@ public class Bin {
     private List<GoodsIssueDetail> issueDetails;
 
     @OneToMany(mappedBy = "fromBin")
-    private List<TransferDetail> outgoingTransferDetails;
+    private List<TransferNoteDetail> outgoingTransferNoteDetails;
 
     @OneToMany(mappedBy = "toBin")
-    private List<TransferDetail> incomingTransferDetails;
+    private List<TransferNoteDetail> incomingTransferNoteDetails;
 }

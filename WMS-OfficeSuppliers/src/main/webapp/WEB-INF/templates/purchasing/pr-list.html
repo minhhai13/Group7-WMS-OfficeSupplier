@@ -1,92 +1,97 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-
 <head>
     <meta charset="UTF-8">
     <title>Purchase Requests - WMS</title>
     <link rel="stylesheet" th:href="@{/static/css/style.css}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
-
 <body>
-    <div class="app-layout">
-        <div th:replace="~{fragments/layout :: sidebar-purchasing}"></div>
-        <div class="main-content">
-            <div th:replace="~{fragments/layout :: topbar('Purchase Requests')}"></div>
-            <div class="content-area">
-                <div th:replace="~{fragments/layout :: alerts}"></div>
+<div class="app-layout">
+    <div th:replace="~{fragments/layout :: sidebar-purchasing}"></div>
+    <div class="main-content">
+        <div th:replace="~{fragments/layout :: topbar('Purchase Requests')}"></div>
+        <div class="content-area">
+            <div th:replace="~{fragments/layout :: alerts}"></div>
+            <div class="card">
+                <div class="card-header">
+                    <h2>Purchase Requests</h2>
+                    <a th:href="@{/purchasing/requests/create-po}" class="btn btn-primary btn-sm">📦 Create PO from PR</a>
+                </div>
+                <div class="card-body">
+                    <form th:action="@{/purchasing/requests}" method="get" class="search-bar">
+                        <select name="status" class="form-control" style="max-width: 200px;">
+                            <option value="All" th:selected="${selectedStatus == 'All'}">All Statuses</option>
+                            <option value="Pending" th:selected="${selectedStatus == 'Pending'}">Pending</option>
+                            <option value="Approved" th:selected="${selectedStatus == 'Approved'}">Approved</option>
+                            <option value="Rejected" th:selected="${selectedStatus == 'Rejected'}">Rejected</option>
+                            <option value="Converted" th:selected="${selectedStatus == 'Converted'}">Converted</option>
+                            <option value="Completed" th:selected="${selectedStatus == 'Completed'}">Completed</option>
+                        </select>
+                        <button type="submit" class="btn btn-outline">Filter</button>
+                        <a th:href="@{/purchasing/requests}" class="btn btn-outline">Reset</a>
+                    </form>
 
-                <div class="card">
-                    <div class="card-header">
-                        <h2>Purchase Requests</h2>
-                        <a th:href="@{/purchasing/requests/create-po}" class="btn btn-primary btn-sm">📦 Create PO from
-                            PR</a>
+                    <div th:if="${prPage.isEmpty()}" class="empty-state">
+                        <p>No purchase requests found.</p>
                     </div>
-                    <div class="card-body">
-                        <!-- Filter Bar -->
-                        <form th:action="@{/purchasing/requests}" method="get" class="search-bar">
-                            <select name="status" class="form-control" style="max-width: 200px;">
-                                <option value="All" th:selected="${selectedStatus == 'All'}">All Statuses</option>
-                                <option value="Pending" th:selected="${selectedStatus == 'Pending'}">Pending</option>
-                                <option value="Approved" th:selected="${selectedStatus == 'Approved'}">Approved</option>
-                                <option value="Rejected" th:selected="${selectedStatus == 'Rejected'}">Rejected</option>
-                                <option value="Converted" th:selected="${selectedStatus == 'Converted'}">Converted
-                                </option>
-                                <option value="Completed" th:selected="${selectedStatus == 'Completed'}">Completed
-                                </option>
-                            </select>
-                            <button type="submit" class="btn btn-outline">Filter</button>
-                            <a th:href="@{/purchasing/requests}" class="btn btn-outline">Reset</a>
-                        </form>
-
-                        <div th:if="${#lists.isEmpty(prs)}" class="empty-state">
-                            <p>No purchase requests found.</p>
-                        </div>
-                        <div th:unless="${#lists.isEmpty(prs)}" class="table-wrapper">
+                    <div th:unless="${prPage.isEmpty()}">
+                        <div class="table-wrapper">
                             <table>
                                 <thead>
-                                    <tr>
-                                        <th>#</th>
-                                        <th>PR Number</th>
-                                        <th>Related SO</th>
-                                        <th>PO Number</th>
-                                        <th>Status</th>
-                                        <th>Products</th>
-                                    </tr>
+                                <tr>
+                                    <th>#</th>
+                                    <th>PR Number</th>
+                                    <th>Related SO</th>
+                                    <th>PO Number</th>
+                                    <th>Status</th>
+                                    <th>Products</th>
+                                </tr>
                                 </thead>
                                 <tbody>
-                                    <tr th:each="pr, iter : ${prs}">
-                                        <td th:text="${iter.count}"></td>
-                                        <td><strong th:text="${pr.prNumber}"></strong></td>
-                                        <td th:text="${pr.relatedSONumber} ?: '—'"></td>
-                                        <td th:text="${pr.poNumber} ?: '—'"></td>
-                                        <td>
-                                            <span th:if="${pr.status == 'Pending'}" class="badge badge-warning"
-                                                th:text="${pr.status}"></span>
-                                            <span th:if="${pr.status == 'Approved'}" class="badge badge-success"
-                                                th:text="${pr.status}"></span>
-                                            <span th:if="${pr.status == 'Rejected'}" class="badge badge-danger"
-                                                th:text="${pr.status}"></span>
-                                            <span th:if="${pr.status == 'Converted'}" class="badge badge-secondary"
-                                                th:text="${pr.status}"></span>
-                                            <span th:if="${pr.status == 'Completed'}" class="badge badge-success"
-                                                th:text="${pr.status}"></span>
-                                        </td>
-                                        <td>
-                                            <div th:each="d : ${pr.details}">
-                                                <small
-                                                    th:text="${d.productDisplayName + ' × ' + d.requestedQty + ' ' + d.uom}"></small>
-                                            </div>
-                                        </td>
-                                    </tr>
+                                <tr th:each="pr, iter : ${prPage.content}">
+                                    <td th:text="${(prPage.number * prPage.size) + iter.count}"></td>
+                                    <td><strong th:text="${pr.prNumber}"></strong></td>
+                                    <td th:text="${pr.relatedSONumber} ?: '—'"></td>
+                                    <td th:text="${pr.poNumber} ?: '—'"></td>
+                                    <td>
+                                        <span th:if="${pr.status == 'Pending'}" class="badge badge-warning" th:text="${pr.status}"></span>
+                                        <span th:if="${pr.status == 'Approved' || pr.status == 'Completed'}" class="badge badge-success" th:text="${pr.status}"></span>
+                                        <span th:if="${pr.status == 'Rejected'}" class="badge badge-danger" th:text="${pr.status}"></span>
+                                        <span th:if="${pr.status == 'Converted'}" class="badge badge-info" th:text="${pr.status}"></span>
+                                    </td>
+                                    <td>
+                                        <ul th:if="${pr.details != null}" style="list-style-type: none; padding: 0; margin: 0; font-size: 0.85rem;">
+                                            <li th:each="detail : ${pr.details}" th:text="${detail.productDisplayName + ' (' + detail.requestedQty + ' ' + detail.uom + ')'}"></li>
+                                        </ul>
+                                    </td>
+                                </tr>
                                 </tbody>
                             </table>
+                        </div>
+
+                        <div class="pagination-container" style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px;">
+                            <div class="page-info">
+                                Hiển thị trang <span th:text="${prPage.number + 1}"></span> / <span th:text="${prPage.totalPages}"></span>
+                                (Tổng cộng <span th:text="${prPage.totalElements}"></span> mục)
+                            </div>
+                            <div class="pagination" th:if="${prPage.totalPages > 1}" style="display: flex; gap: 5px;">
+                                <a th:class="${prPage.first ? 'btn btn-outline btn-sm disabled' : 'btn btn-outline btn-sm'}"
+                                   th:href="@{/purchasing/requests(page=${prPage.number}, status=${selectedStatus})}"
+                                   th:style="${prPage.first ? 'pointer-events:none; opacity:0.5;' : ''}">&laquo; Prev</a>
+                                <a th:each="i : ${#numbers.sequence(1, prPage.totalPages)}"
+                                   th:class="${prPage.number + 1 == i ? 'btn btn-primary btn-sm' : 'btn btn-outline btn-sm'}"
+                                   th:href="@{/purchasing/requests(page=${i}, status=${selectedStatus})}" th:text="${i}"></a>
+                                <a th:class="${prPage.last ? 'btn btn-outline btn-sm disabled' : 'btn btn-outline btn-sm'}"
+                                   th:href="@{/purchasing/requests(page=${prPage.number + 2}, status=${selectedStatus})}"
+                                   th:style="${prPage.last ? 'pointer-events:none; opacity:0.5;' : ''}">Next &raquo;</a>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+</div>
 </body>
-
 </html>

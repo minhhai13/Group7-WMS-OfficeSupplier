@@ -22,11 +22,11 @@ public class GoodsIssueNoteServiceImpl implements GoodsIssueNoteService {
 
     private final GoodsIssueNoteRepository ginRepository;
     private final SalesOrderRepository soRepository;
+    private final TransferOrderRepository toRepository;
     private final StockBatchRepository stockBatchRepository;
     private final StockMovementRepository stockMovementRepository;
     private final ProductUoMConversionRepository uomConversionRepository;
-
-    // ==================== Query ====================
+    private final BinRepository binRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -48,8 +48,6 @@ public class GoodsIssueNoteServiceImpl implements GoodsIssueNoteService {
         return mapToFullDTO(gin);
     }
 
-    // ==================== Post GIN ====================
-
     @Override
     public String postGIN(Integer ginId, List<GoodsIssueDetailDTO> issuedDetails) {
         GoodsIssueNote gin = ginRepository.findById(ginId)
@@ -59,10 +57,6 @@ public class GoodsIssueNoteServiceImpl implements GoodsIssueNoteService {
             throw new IllegalArgumentException("Chỉ có thể ghi sổ phiếu GIN ở trạng thái Draft.");
         }
 
-        SalesOrder so = gin.getSalesOrder();
-        Warehouse warehouse = gin.getWarehouse();
-
-        // Build a lookup map: giDetailId -> issuedQty from form
         Map<Integer, Integer> issuedQtyMap = new HashMap<>();
         for (GoodsIssueDetailDTO dto : issuedDetails) {
             if (dto.getGiDetailId() != null && dto.getIssuedQty() != null) {
@@ -70,229 +64,214 @@ public class GoodsIssueNoteServiceImpl implements GoodsIssueNoteService {
             }
         }
 
-        // Process each GIN detail line
+        if (gin.getSalesOrder() != null) {
+            return postGINForSO(gin, issuedQtyMap);
+        } else if (gin.getTransferOrder() != null) {
+            return postGINForTO(gin, issuedQtyMap);
+        }
+        throw new IllegalArgumentException("GIN không liên kết với đơn hàng hợp lệ.");
+    }
+
+    private String postGINForSO(GoodsIssueNote gin, Map<Integer, Integer> issuedQtyMap) {
+        SalesOrder so = gin.getSalesOrder();
+        Warehouse warehouse = gin.getWarehouse();
         int totalIssuedInput = 0;
         for (GoodsIssueDetail ginDetail : gin.getDetails()) {
             Integer inputIssuedQty = issuedQtyMap.getOrDefault(ginDetail.getGiDetailId(), 0);
             SalesOrderDetail soDetail = ginDetail.getSalesOrderDetail();
 
-            // Validate: issuedQty must be >= 0
-            if (inputIssuedQty < 0) {
-                throw new IllegalArgumentException("Số lượng thực xuất không được âm.");
-            }
-            // Validate: issuedQty <= remaining qty (orderedQty - already issued)
+            if (inputIssuedQty < 0) throw new IllegalArgumentException("Số lượng thực xuất không được âm.");
             int remainingQty = soDetail.getOrderedQty() - soDetail.getIssuedQty();
-            if (inputIssuedQty > remainingQty) {
-                throw new IllegalArgumentException(
-                        "Số lượng thực xuất không được lớn hơn số lượng còn thiếu ("
-                                + remainingQty + ") cho sản phẩm '" + ginDetail.getProduct().getProductName() + "'.");
-            }
-            totalIssuedInput += inputIssuedQty;
+            if (inputIssuedQty > remainingQty) throw new IllegalArgumentException("Số lượng xuất vượt mức cho " + ginDetail.getProduct().getProductName());
 
-            // Update GIN detail issuedQty
+            totalIssuedInput += inputIssuedQty;
             ginDetail.setIssuedQty(inputIssuedQty);
 
             if (inputIssuedQty > 0) {
                 Product product = ginDetail.getProduct();
+                int baseQty = BigDecimal.valueOf(inputIssuedQty).multiply(getConversionFactor(product, ginDetail.getUom())).intValue();
 
-                // Convert issuedQty to base UoM for stock
-                BigDecimal conversionFactor = getConversionFactor(product, ginDetail.getUom());
-                int baseQty = BigDecimal.valueOf(inputIssuedQty)
-                        .multiply(conversionFactor).intValue();
+                StockBatch stockBatch = stockBatchRepository.findByWarehouse_WarehouseIdAndProduct_ProductIdAndBin_BinIdAndBatchNumber(
+                        warehouse.getWarehouseId(), product.getProductId(), ginDetail.getBin().getBinId(), ginDetail.getBatchNumber())
+                        .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy lô hàng."));
 
-                // Find StockBatch by warehouse+product+bin+batchNumber
-                StockBatch stockBatch = stockBatchRepository
-                        .findByWarehouse_WarehouseIdAndProduct_ProductIdAndBin_BinIdAndBatchNumber(
-                                warehouse.getWarehouseId(),
-                                product.getProductId(),
-                                ginDetail.getBin().getBinId(),
-                                ginDetail.getBatchNumber())
-                        .orElseThrow(() -> new IllegalArgumentException(
-                                "Không tìm thấy lô hàng cho sản phẩm '" + product.getProductName()
-                                        + "' tại bin " + ginDetail.getBin().getBinLocation() + "."));
-
-                // Issue: decrease BOTH availableQty and reservedQty
                 stockBatch.setQtyAvailable(stockBatch.getQtyAvailable() - baseQty);
                 stockBatch.setQtyReserved(stockBatch.getQtyReserved() - baseQty);
                 stockBatchRepository.save(stockBatch);
 
-                // Log StockMovement: Issue / Physical
-                StockMovement movement = StockMovement.builder()
-                        .warehouse(warehouse)
-                        .product(product)
-                        .bin(ginDetail.getBin())
-                        .batchNumber(ginDetail.getBatchNumber())
-                        .movementType("Issue")
-                        .stockType("Physical")
-                        .quantity(baseQty)
-                        .uom(product.getBaseUoM())
-                        .balanceAfter(stockBatch.getQtyAvailable())
-                        .build();
-                stockMovementRepository.save(movement);
-                StockMovement reservedMovement = StockMovement.builder()
-                        .warehouse(warehouse)
-                        .product(product)
-                        .bin(ginDetail.getBin())
-                        .batchNumber(ginDetail.getBatchNumber())
-                        .movementType("Issue") // Vẫn dùng type Issue vì hành động là xuất hàng
-                        .stockType("Reserved")
-                        .quantity(baseQty)
-                        .uom(product.getBaseUoM())
-                        .balanceAfter(stockBatch.getQtyReserved()) // Số dư sau khi đã trừ ở dòng 114
-                        .build();
-                stockMovementRepository.save(reservedMovement);
-                // Update SO detail issuedQty (cumulative across all GINs)
+                stockMovementRepository.save(StockMovement.builder().warehouse(warehouse).product(product).bin(ginDetail.getBin()).batchNumber(ginDetail.getBatchNumber()).movementType("Issue").stockType("Physical").quantity(baseQty).uom(product.getBaseUoM()).balanceAfter(stockBatch.getQtyAvailable()).build());
+                stockMovementRepository.save(StockMovement.builder().warehouse(warehouse).product(product).bin(ginDetail.getBin()).batchNumber(ginDetail.getBatchNumber()).movementType("Issue").stockType("Reserved").quantity(baseQty).uom(product.getBaseUoM()).balanceAfter(stockBatch.getQtyReserved()).build());
+
                 soDetail.setIssuedQty(soDetail.getIssuedQty() + inputIssuedQty);
             }
         }
 
-        // Prevent posting with all issuedQty = 0 (infinite back-order loop)
-        if (totalIssuedInput == 0) {
-            throw new IllegalArgumentException("Vui lòng nhập số lượng thực xuất cho ít nhất một mặt hàng.");
-        }
+        if (totalIssuedInput == 0) throw new IllegalArgumentException("Vui lòng nhập số lượng thực xuất.");
 
-        // GIN → Posted
-        gin.setGiStatus("Posted");
-        ginRepository.save(gin);
-
-        // Check SO completion — compare all SO details
+        gin.setGiStatus("Posted"); ginRepository.save(gin);
         boolean allComplete = true;
-        for (SalesOrderDetail soDetail : so.getDetails()) {
-            if (soDetail.getIssuedQty() < soDetail.getOrderedQty()) {
-                allComplete = false;
+        for (SalesOrderDetail soDetail : so.getDetails()) if (soDetail.getIssuedQty() < soDetail.getOrderedQty()) allComplete = false;
+
+        if (allComplete) {
+            so.setSoStatus("Completed"); soRepository.save(so);
+            return "Phiếu GIN " + gin.getGinNumber() + " đã ghi sổ. Đơn hàng " + so.getSoNumber() + " hoàn thành.";
+        } else {
+            so.setSoStatus("Incomplete"); soRepository.save(so);
+            String backOrderGinNumber = createBackOrderGINForSO(so, gin);
+            return "Phiếu GIN " + gin.getGinNumber() + " đã ghi sổ. Phiếu bù " + backOrderGinNumber + " đã được tạo.";
+        }
+    }
+
+    private String postGINForTO(GoodsIssueNote gin, Map<Integer, Integer> issuedQtyMap) {
+        TransferOrder to = gin.getTransferOrder();
+        Warehouse sourceWarehouse = gin.getWarehouse();
+        Warehouse destWarehouse = to.getDestinationWarehouse();
+        int totalIssuedInput = 0;
+
+        for (GoodsIssueDetail ginDetail : gin.getDetails()) {
+            Integer inputIssuedQty = issuedQtyMap.getOrDefault(ginDetail.getGiDetailId(), 0);
+            TransferOrderDetail toDetail = ginDetail.getTransferOrderDetail();
+
+            if (inputIssuedQty < 0) throw new IllegalArgumentException("Số lượng thực xuất không được âm.");
+            int remainingQty = toDetail.getRequestedQty() - toDetail.getIssuedQty();
+            if (inputIssuedQty > remainingQty) throw new IllegalArgumentException("Số lượng xuất vượt mức.");
+
+            totalIssuedInput += inputIssuedQty;
+            ginDetail.setIssuedQty(inputIssuedQty);
+
+            if (inputIssuedQty > 0) {
+                Product product = ginDetail.getProduct();
+                int baseQty = BigDecimal.valueOf(inputIssuedQty).multiply(getConversionFactor(product, ginDetail.getUom())).intValue();
+
+                StockBatch sourceBatch = stockBatchRepository.findByWarehouse_WarehouseIdAndProduct_ProductIdAndBin_BinIdAndBatchNumber(
+                        sourceWarehouse.getWarehouseId(), product.getProductId(), ginDetail.getBin().getBinId(), ginDetail.getBatchNumber())
+                        .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy lô hàng."));
+
+                sourceBatch.setQtyAvailable(sourceBatch.getQtyAvailable() - baseQty);
+                sourceBatch.setQtyReserved(sourceBatch.getQtyReserved() - baseQty);
+                stockBatchRepository.save(sourceBatch);
+
+                stockMovementRepository.save(StockMovement.builder().warehouse(sourceWarehouse).product(product).bin(ginDetail.getBin()).batchNumber(ginDetail.getBatchNumber()).movementType("Transfer-Out").stockType("Physical").quantity(baseQty).uom(product.getBaseUoM()).balanceAfter(sourceBatch.getQtyAvailable()).build());
+                stockMovementRepository.save(StockMovement.builder().warehouse(sourceWarehouse).product(product).bin(ginDetail.getBin()).batchNumber(ginDetail.getBatchNumber()).movementType("Transfer-Out").stockType("Reserved").quantity(baseQty).uom(product.getBaseUoM()).balanceAfter(sourceBatch.getQtyReserved()).build());
+
+                BigDecimal incomingWeight = BigDecimal.valueOf(baseQty).multiply(product.getUnitWeight());
+                Bin destBin = allocateBin(destWarehouse.getWarehouseId(), incomingWeight, product.getProductName());
+
+                StockBatch destBatch = stockBatchRepository.findByWarehouse_WarehouseIdAndProduct_ProductIdAndBin_BinIdAndBatchNumber(
+                        destWarehouse.getWarehouseId(), product.getProductId(), destBin.getBinId(), ginDetail.getBatchNumber())
+                        .orElseGet(() -> StockBatch.builder().warehouse(destWarehouse).product(product).bin(destBin).batchNumber(ginDetail.getBatchNumber()).arrivalDateTime(java.time.LocalDateTime.now()).qtyAvailable(0).qtyReserved(0).qtyInTransit(0).uom(product.getBaseUoM()).build());
+
+                destBatch.setQtyInTransit(destBatch.getQtyInTransit() + baseQty);
+                stockBatchRepository.save(destBatch);
+
+                toDetail.setIssuedQty(toDetail.getIssuedQty() + inputIssuedQty);
             }
         }
 
-        String resultMessage;
+        if (totalIssuedInput == 0) throw new IllegalArgumentException("Vui lòng nhập số lượng thực xuất.");
+
+        gin.setGiStatus("Posted"); ginRepository.save(gin);
+        boolean allComplete = true;
+        for (TransferOrderDetail toD : to.getDetails()) if (toD.getIssuedQty() < toD.getRequestedQty()) allComplete = false;
+
         if (allComplete) {
-            so.setSoStatus("Completed");
-            soRepository.save(so);
-            resultMessage = "Phiếu GIN " + gin.getGinNumber() + " đã ghi sổ thành công. Đơn hàng " + so.getSoNumber() + " đã hoàn thành.";
+            to.setStatus("In-Transit"); toRepository.save(to);
+            return "Phiếu GIN " + gin.getGinNumber() + " đã ghi sổ. Lệnh chuyển kho " + to.getToNumber() + " đang In-Transit.";
         } else {
-            so.setSoStatus("Incomplete");
-            soRepository.save(so);
-
-            // Back-order: create new Draft GIN for remaining quantities
-            String backOrderGinNumber = createBackOrderGIN(so, gin);
-            resultMessage = "Phiếu GIN " + gin.getGinNumber() + " đã ghi sổ. Đơn hàng " + so.getSoNumber()
-                    + " chưa xuất đủ. Phiếu bù " + backOrderGinNumber + " đã được tạo tự động.";
+            to.setStatus("Incomplete"); toRepository.save(to);
+            String backOrder = createBackOrderGINForTO(to, gin);
+            return "Phiếu GIN " + gin.getGinNumber() + " đã ghi sổ. Phiếu bù " + backOrder + " đã được tạo.";
         }
-
-        return resultMessage;
     }
 
-    // ==================== Back-order Logic ====================
-
-    private String createBackOrderGIN(SalesOrder so, GoodsIssueNote postedGin) {
+    private String createBackOrderGINForSO(SalesOrder so, GoodsIssueNote postedGin) {
         String ginNumber = generateGINNumber();
         GoodsIssueNote newGin = new GoodsIssueNote();
-        newGin.setGinNumber(ginNumber);
-        newGin.setSalesOrder(so);
-        newGin.setWarehouse(so.getWarehouse());
-        newGin.setGiStatus("Draft");
-        newGin.setDetails(new ArrayList<>());
+        newGin.setGinNumber(ginNumber); newGin.setSalesOrder(so); newGin.setWarehouse(so.getWarehouse());
+        newGin.setGiStatus("Draft"); newGin.setDetails(new ArrayList<>());
 
         for (SalesOrderDetail soDetail : so.getDetails()) {
-            int remainingQty = soDetail.getOrderedQty() - soDetail.getIssuedQty();
-            if (remainingQty <= 0) continue;
-
-            // Find original GIN detail to reuse batch/bin info
-            GoodsIssueDetail originalDetail = findOriginalGINDetail(postedGin, soDetail);
-
-            GoodsIssueDetail newDetail = new GoodsIssueDetail();
-            newDetail.setGoodsIssueNote(newGin);
-            newDetail.setSalesOrderDetail(soDetail);
-            newDetail.setProduct(soDetail.getProduct());
-            newDetail.setIssuedQty(0); // Storekeeper fills in
-            newDetail.setUom(soDetail.getUom());
-            newDetail.setBatchNumber(originalDetail != null ? originalDetail.getBatchNumber() : "");
-            newDetail.setBin(originalDetail != null ? originalDetail.getBin() : null);
-
-            newGin.getDetails().add(newDetail);
+            if (soDetail.getOrderedQty() - soDetail.getIssuedQty() > 0) {
+                GoodsIssueDetail old = postedGin.getDetails().stream().filter(d -> d.getSalesOrderDetail().equals(soDetail)).findFirst().orElse(null);
+                GoodsIssueDetail newDetail = new GoodsIssueDetail();
+                newDetail.setGoodsIssueNote(newGin); newDetail.setSalesOrderDetail(soDetail); newDetail.setProduct(soDetail.getProduct());
+                newDetail.setIssuedQty(0); newDetail.setUom(soDetail.getUom());
+                newDetail.setBatchNumber(old != null ? old.getBatchNumber() : ""); newDetail.setBin(old != null ? old.getBin() : null);
+                newGin.getDetails().add(newDetail);
+            }
         }
-
         ginRepository.save(newGin);
         return ginNumber;
     }
 
-    private GoodsIssueDetail findOriginalGINDetail(GoodsIssueNote gin, SalesOrderDetail soDetail) {
-        if (gin.getDetails() == null) return null;
-        for (GoodsIssueDetail d : gin.getDetails()) {
-            if (d.getSalesOrderDetail().getSoDetailId().equals(soDetail.getSoDetailId())) {
-                return d;
+    private String createBackOrderGINForTO(TransferOrder to, GoodsIssueNote postedGin) {
+        String ginNumber = generateGINNumber();
+        GoodsIssueNote newGin = new GoodsIssueNote();
+        newGin.setGinNumber(ginNumber); newGin.setTransferOrder(to); newGin.setWarehouse(to.getSourceWarehouse());
+        newGin.setGiStatus("Draft"); newGin.setDetails(new ArrayList<>());
+
+        for (TransferOrderDetail toDetail : to.getDetails()) {
+            if (toDetail.getRequestedQty() - toDetail.getIssuedQty() > 0) {
+                GoodsIssueDetail old = postedGin.getDetails().stream().filter(d -> d.getTransferOrderDetail().equals(toDetail)).findFirst().orElse(null);
+                GoodsIssueDetail newDetail = new GoodsIssueDetail();
+                newDetail.setGoodsIssueNote(newGin); newDetail.setTransferOrderDetail(toDetail); newDetail.setProduct(toDetail.getProduct());
+                newDetail.setIssuedQty(0); newDetail.setUom(toDetail.getUom());
+                newDetail.setBatchNumber(old != null ? old.getBatchNumber() : ""); newDetail.setBin(old != null ? old.getBin() : null);
+                newGin.getDetails().add(newDetail);
             }
         }
-        return null;
+        ginRepository.save(newGin);
+        return ginNumber;
     }
 
-    // ==================== GIN Number Generation ====================
+    private Bin allocateBin(Integer warehouseId, BigDecimal incomingWeight, String productName) {
+        List<Bin> activeBins = binRepository.findByWarehouseWarehouseIdAndIsActive(warehouseId, true);
+        for (Bin bin : activeBins) {
+            BigDecimal currentWeight = BigDecimal.ZERO;
+            for (StockBatch batch : stockBatchRepository.findByBinBinId(bin.getBinId())) {
+                currentWeight = currentWeight.add(batch.getProduct().getUnitWeight().multiply(BigDecimal.valueOf(batch.getQtyAvailable() + batch.getQtyInTransit())));
+            }
+            if (bin.getMaxWeight().subtract(currentWeight).compareTo(incomingWeight) >= 0) return bin;
+        }
+        throw new IllegalArgumentException("Kho không đủ sức chứa cho mặt hàng '" + productName + "'.");
+    }
 
     private String generateGINNumber() {
         String dateStr = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         String prefix = "GIN-" + dateStr + "-";
         String maxNumber = ginRepository.findMaxGinNumber(prefix);
-        int nextNum = 1;
-        if (maxNumber != null) {
-            String suffix = maxNumber.substring(prefix.length());
-            nextNum = Integer.parseInt(suffix) + 1;
-        }
-        return prefix + String.format("%03d", nextNum);
+        return prefix + String.format("%03d", maxNumber != null ? Integer.parseInt(maxNumber.substring(prefix.length())) + 1 : 1);
     }
-
-    // ==================== UoM Conversion ====================
 
     private BigDecimal getConversionFactor(Product product, String uom) {
-        if (uom.equals(product.getBaseUoM())) {
-            return BigDecimal.ONE;
-        }
-        List<ProductUoMConversion> conversions = uomConversionRepository.findByProduct_ProductId(product.getProductId());
-        for (ProductUoMConversion conv : conversions) {
-            if (conv.getFromUoM().equals(uom)) {
-                return BigDecimal.valueOf(conv.getConversionFactor());
-            }
-        }
-        return BigDecimal.ONE;
+        if (uom.equals(product.getBaseUoM())) return BigDecimal.ONE;
+        return uomConversionRepository.findByProduct_ProductId(product.getProductId()).stream()
+                .filter(c -> c.getFromUoM().equals(uom)).findFirst().map(c -> BigDecimal.valueOf(c.getConversionFactor())).orElse(BigDecimal.ONE);
     }
 
-    // ==================== Mapping ====================
-
     private GoodsIssueNoteDTO mapToListDTO(GoodsIssueNote gin) {
-        SalesOrder so = gin.getSalesOrder();
+        String orderNumber = gin.getSalesOrder() != null ? gin.getSalesOrder().getSoNumber() : gin.getTransferOrder().getToNumber();
+        String customerName = gin.getSalesOrder() != null && gin.getSalesOrder().getCustomer() != null ? gin.getSalesOrder().getCustomer().getPartnerName() : (gin.getTransferOrder() != null ? "TO " + gin.getTransferOrder().getDestinationWarehouse().getWarehouseName() : null);
         return GoodsIssueNoteDTO.builder()
-                .ginId(gin.getGinId())
-                .ginNumber(gin.getGinNumber())
-                .soNumber(so.getSoNumber())
-                .customerName(so.getCustomer() != null ? so.getCustomer().getPartnerName() : null)
-                .warehouseName(gin.getWarehouse() != null ? gin.getWarehouse().getWarehouseName() : null)
-                .giStatus(gin.getGiStatus())
-                .build();
+                .ginId(gin.getGinId()).ginNumber(gin.getGinNumber()).soNumber(orderNumber).customerName(customerName)
+                .warehouseName(gin.getWarehouse() != null ? gin.getWarehouse().getWarehouseName() : null).giStatus(gin.getGiStatus()).build();
     }
 
     private GoodsIssueNoteDTO mapToFullDTO(GoodsIssueNote gin) {
         GoodsIssueNoteDTO dto = mapToListDTO(gin);
-        if (gin.getDetails() != null) {
-            List<GoodsIssueDetailDTO> detailDTOs = gin.getDetails().stream()
-                    .map(this::mapDetailToDTO)
-                    .collect(Collectors.toList());
-            dto.setDetails(detailDTOs);
-        }
+        if (gin.getDetails() != null) dto.setDetails(gin.getDetails().stream().map(this::mapDetailToDTO).collect(Collectors.toList()));
         return dto;
     }
 
     private GoodsIssueDetailDTO mapDetailToDTO(GoodsIssueDetail detail) {
-        SalesOrderDetail soDetail = detail.getSalesOrderDetail();
-        String displayName = "";
-        if (detail.getProduct() != null) {
-            displayName = detail.getProduct().getSku() + " - " + detail.getProduct().getProductName();
-        }
+        String displayName = detail.getProduct() != null ? detail.getProduct().getSku() + " - " + detail.getProduct().getProductName() : "";
+        Integer orderedQty = null;
+        if (detail.getSalesOrderDetail() != null) orderedQty = detail.getSalesOrderDetail().getOrderedQty() - detail.getSalesOrderDetail().getIssuedQty();
+        else if (detail.getTransferOrderDetail() != null) orderedQty = detail.getTransferOrderDetail().getRequestedQty() - detail.getTransferOrderDetail().getIssuedQty();
+        
         return GoodsIssueDetailDTO.builder()
-                .giDetailId(detail.getGiDetailId())
-                .productDisplayName(displayName)
-                .uom(detail.getUom())
-                .orderedQty(soDetail != null ? soDetail.getOrderedQty() - soDetail.getIssuedQty() : null)
-                .issuedQty(detail.getIssuedQty())
-                .batchNumber(detail.getBatchNumber())
-                .binLocation(detail.getBin() != null ? detail.getBin().getBinLocation() : null)
-                .build();
+                .giDetailId(detail.getGiDetailId()).productDisplayName(displayName).uom(detail.getUom())
+                .orderedQty(orderedQty).issuedQty(detail.getIssuedQty()).batchNumber(detail.getBatchNumber())
+                .binLocation(detail.getBin() != null ? detail.getBin().getBinLocation() : null).build();
     }
 }

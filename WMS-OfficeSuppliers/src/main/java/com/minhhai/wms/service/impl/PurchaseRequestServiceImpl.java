@@ -6,6 +6,8 @@ import com.minhhai.wms.entity.*;
 import com.minhhai.wms.repository.*;
 import com.minhhai.wms.service.PurchaseRequestService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,18 +27,20 @@ public class PurchaseRequestServiceImpl implements PurchaseRequestService {
 
     // ==================== Query ====================
 
+    // ==================== Query ====================
+
     @Override
     @Transactional(readOnly = true)
-    public List<PurchaseRequestDTO> getPRsByWarehouse(Integer warehouseId, String status) {
-        List<PurchaseRequest> prs;
+    public Page<PurchaseRequestDTO> getPRsByWarehouse(Integer warehouseId, String status, Pageable pageable) {
+        Page<PurchaseRequest> prs;
         if (status != null && !status.isBlank() && !"All".equals(status)) {
-            prs = prRepository.findByWarehouse_WarehouseIdAndStatus(warehouseId, status);
+            // Sẽ tự động gọi hàm số (2) trong Repository -> trả về Page
+            prs = prRepository.findByWarehouse_WarehouseIdAndStatus(warehouseId, status, pageable);
         } else {
-            prs = prRepository.findByWarehouse_WarehouseId(warehouseId);
+            prs = prRepository.findByWarehouse_WarehouseId(warehouseId, pageable);
         }
-        return prs.stream().map(this::mapToDTO).collect(Collectors.toList());
+        return prs.map(this::mapToDTO);
     }
-
     @Override
     @Transactional(readOnly = true)
     public List<PurchaseRequestDTO> getApprovedPRsForConversion(Integer warehouseId) {

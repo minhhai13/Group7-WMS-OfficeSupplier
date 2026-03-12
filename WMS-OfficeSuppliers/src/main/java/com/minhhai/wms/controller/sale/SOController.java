@@ -11,6 +11,10 @@ import com.minhhai.wms.service.SalesOrderService;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -28,21 +32,23 @@ public class SOController {
     private final PartnerService partnerService;
     private final ProductService productService;
 
-    // ==================== List ====================
 
     @GetMapping
     public String list(@RequestParam(name = "status", required = false) String status,
                        @RequestParam(name = "customerId", required = false) Integer customerId,
+                       @RequestParam(name = "page", defaultValue = "1") int page,
+                       @RequestParam(name = "size", defaultValue = "10") int size,
                        Model model, HttpSession session) {
 
         User user = (User) session.getAttribute("loggedInUser");
         Integer warehouseId = user.getWarehouse().getWarehouseId();
 
-        List<SaleOrderDTO> orders = soService.getSOsByWarehouse(warehouseId, status, customerId);
+        Pageable pageable = PageRequest.of(page - 1, size, Sort.by(Sort.Direction.DESC, "soId"));
+        Page<SaleOrderDTO> orderPage = soService.getSOsByWarehouse(warehouseId, status, customerId, pageable);
         List<Partner> customers = partnerService.findByType("Customer");
 
         model.addAttribute("activePage", "sales-orders");
-        model.addAttribute("orders", orders);
+        model.addAttribute("orderPage", orderPage);
         model.addAttribute("customers", customers);
         model.addAttribute("selectedStatus", status);
         model.addAttribute("selectedCustomerId", customerId);

@@ -7,6 +7,10 @@ import com.minhhai.wms.service.PartnerService;
 import com.minhhai.wms.service.PurchaseRequestService;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -26,15 +30,18 @@ public class PRController {
 
     @GetMapping
     public String list(@RequestParam(name = "status", required = false, defaultValue = "All") String status,
+                       @RequestParam(name = "page", defaultValue = "1") int page,
+                       @RequestParam(name = "size", defaultValue = "10") int size,
                        Model model, HttpSession session) {
 
         User user = (User) session.getAttribute("loggedInUser");
         Integer warehouseId = user.getWarehouse().getWarehouseId();
 
-        List<PurchaseRequestDTO> prs = prService.getPRsByWarehouse(warehouseId, status);
+        Pageable pageable = PageRequest.of(page - 1, size, Sort.by(Sort.Direction.DESC, "prId"));
+        Page<PurchaseRequestDTO> prPage = prService.getPRsByWarehouse(warehouseId, status, pageable);
 
         model.addAttribute("activePage", "purchasing-requests");
-        model.addAttribute("prs", prs);
+        model.addAttribute("prPage", prPage);
         model.addAttribute("selectedStatus", status);
         return "purchasing/pr-list";
     }
@@ -74,4 +81,5 @@ public class PRController {
         }
         return "redirect:/purchasing/requests";
     }
+
 }

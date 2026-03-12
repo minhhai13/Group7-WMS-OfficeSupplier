@@ -7,6 +7,8 @@ import com.minhhai.wms.entity.*;
 import com.minhhai.wms.repository.*;
 import com.minhhai.wms.service.SalesOrderService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,21 +37,21 @@ public class SalesOrderServiceImpl implements SalesOrderService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<SaleOrderDTO> getSOsByWarehouse(Integer warehouseId, String status, Integer customerId) {
-        List<SalesOrder> orders;
+    public Page<SaleOrderDTO> getSOsByWarehouse(Integer warehouseId, String status, Integer customerId, Pageable pageable) {
+        Page<SalesOrder> orders;
         boolean hasStatus = status != null && !status.isBlank();
         boolean hasCustomer = customerId != null;
 
         if (hasStatus && hasCustomer) {
-            orders = soRepository.findByWarehouse_WarehouseIdAndSoStatusAndCustomer_PartnerId(warehouseId, status, customerId);
+            orders = soRepository.findByWarehouse_WarehouseIdAndSoStatusAndCustomer_PartnerId(warehouseId, status, customerId, pageable);
         } else if (hasStatus) {
-            orders = soRepository.findByWarehouse_WarehouseIdAndSoStatus(warehouseId, status);
+            orders = soRepository.findByWarehouse_WarehouseIdAndSoStatus(warehouseId, status, pageable);
         } else if (hasCustomer) {
-            orders = soRepository.findByWarehouse_WarehouseIdAndCustomer_PartnerId(warehouseId, customerId);
+            orders = soRepository.findByWarehouse_WarehouseIdAndCustomer_PartnerId(warehouseId, customerId, pageable);
         } else {
-            orders = soRepository.findByWarehouse_WarehouseId(warehouseId);
+            orders = soRepository.findByWarehouse_WarehouseId(warehouseId, pageable);
         }
-        return orders.stream().map(this::mapToDTO).collect(Collectors.toList());
+        return orders.map(this::mapToDTO);
     }
 
     @Override

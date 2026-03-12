@@ -92,6 +92,8 @@
                 Goods Receipt</a></li>
         <li><a th:href="@{/storekeeper/gin}" th:classappend="${activePage == 'storekeeper-gin'} ? 'active'">📤
                 Goods Issue</a></li>
+        <li><a th:href="@{/transfer/internal}" th:classappend="${activePage == 'transfer-internal'} ? 'active'">🔄
+            Internal Transfer</a></li>
     </ul>
     <div class="sidebar-footer">
         <a th:href="@{/logout}">🚪 Logout</a>
@@ -114,13 +116,18 @@
 
         <li class="nav-section">Stock Transfer</li>
         <li>
+            <a th:href="@{/transfer/internal}" th:classappend="${activePage == 'transfer-internal'} ? 'active'">
+                🔄 Internal Transfer
+            </a>
+        </li>
+        <li>
             <a th:href="@{/transfer/requests}" th:classappend="${activePage == 'transfer-requests'} ? 'active'">
-                📤 Transfer Requests
+                📤 Transfer Orders
             </a>
         </li>
         <li>
             <a th:href="@{/transfer/approvals}" th:classappend="${activePage == 'transfer-approvals'} ? 'active'">
-                ✅ TR Approvals
+                ✅ TO Approvals
             </a>
         </li>
     </ul>

@@ -1,9 +1,6 @@
 package com.minhhai.wms.dto;
 
-import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 import lombok.*;
 
 import java.math.BigDecimal;
@@ -25,13 +22,15 @@ public class ProductDTO {
     @Size(max = 200, message = "Product name must be less than 200 characters")
     private String productName;
 
-    @DecimalMin(value = "0.0", message = "Unit weight must be positive")
+    @NotNull(message = "Product unit weight is required")
+    @DecimalMin(value = "0.01", message = "Unit weight must be positive")
     private BigDecimal unitWeight;
 
     @NotBlank(message = "Base UoM is required")
     @Size(max = 10, message = "Base UoM must be less than 10 characters")
     private String baseUoM;
 
+    @NotNull(message = "Product min stock is required")
     @Min(value = 0, message = "Minimum stock level must be 0 or greater")
     private Integer minStockLevel;
     

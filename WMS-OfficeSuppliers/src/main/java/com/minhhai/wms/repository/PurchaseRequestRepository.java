@@ -1,6 +1,8 @@
 package com.minhhai.wms.repository;
 
 import com.minhhai.wms.entity.PurchaseRequest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -16,7 +18,9 @@ public interface PurchaseRequestRepository extends JpaRepository<PurchaseRequest
 
     List<PurchaseRequest> findByPurchaseOrder_PoId(Integer poId);
 
-    List<PurchaseRequest> findByWarehouse_WarehouseId(Integer warehouseId);
+    Page<PurchaseRequest> findByWarehouse_WarehouseId(Integer warehouseId, Pageable pageable);
+
+    Page<PurchaseRequest> findByWarehouse_WarehouseIdAndStatus(Integer warehouseId, String status, Pageable pageable);
 
     List<PurchaseRequest> findByWarehouse_WarehouseIdAndStatus(Integer warehouseId, String status);
 

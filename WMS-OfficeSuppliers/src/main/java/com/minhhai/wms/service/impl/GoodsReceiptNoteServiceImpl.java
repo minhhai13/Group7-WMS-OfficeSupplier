@@ -24,6 +24,7 @@ public class GoodsReceiptNoteServiceImpl implements GoodsReceiptNoteService {
     private final GoodsReceiptNoteRepository grnRepository;
     private final GoodsReceiptDetailRepository grnDetailRepository;
     private final PurchaseOrderRepository poRepository;
+    private final TransferOrderRepository toRepository;
     private final StockBatchRepository stockBatchRepository;
     private final StockMovementRepository stockMovementRepository;
     private final ProductUoMConversionRepository uomConversionRepository;
@@ -31,11 +32,11 @@ public class GoodsReceiptNoteServiceImpl implements GoodsReceiptNoteService {
     private final PurchaseRequestRepository prRepository;
     private final SalesOrderService soService;
 
-    // Manual constructor to apply @Lazy on SalesOrderService (breaks circular dependency)
     public GoodsReceiptNoteServiceImpl(
             GoodsReceiptNoteRepository grnRepository,
             GoodsReceiptDetailRepository grnDetailRepository,
             PurchaseOrderRepository poRepository,
+            TransferOrderRepository toRepository,
             StockBatchRepository stockBatchRepository,
             StockMovementRepository stockMovementRepository,
             ProductUoMConversionRepository uomConversionRepository,
@@ -45,6 +46,7 @@ public class GoodsReceiptNoteServiceImpl implements GoodsReceiptNoteService {
         this.grnRepository = grnRepository;
         this.grnDetailRepository = grnDetailRepository;
         this.poRepository = poRepository;
+        this.toRepository = toRepository;
         this.stockBatchRepository = stockBatchRepository;
         this.stockMovementRepository = stockMovementRepository;
         this.uomConversionRepository = uomConversionRepository;
@@ -52,8 +54,6 @@ public class GoodsReceiptNoteServiceImpl implements GoodsReceiptNoteService {
         this.prRepository = prRepository;
         this.soService = soService;
     }
-
-    // ==================== Query ====================
 
     @Override
     @Transactional(readOnly = true)
@@ -75,8 +75,6 @@ public class GoodsReceiptNoteServiceImpl implements GoodsReceiptNoteService {
         return mapToFullDTO(grn);
     }
 
-    // ==================== Post GRN ====================
-
     @Override
     public String postGRN(Integer grnId, List<GoodsReceiptDetailDTO> receivedDetails) {
         GoodsReceiptNote grn = grnRepository.findById(grnId)
@@ -86,10 +84,6 @@ public class GoodsReceiptNoteServiceImpl implements GoodsReceiptNoteService {
             throw new IllegalArgumentException("Chỉ có thể ghi sổ phiếu GRN ở trạng thái Draft.");
         }
 
-        PurchaseOrder po = grn.getPurchaseOrder();
-        Warehouse warehouse = grn.getWarehouse();
-
-        // Build a lookup map: grDetailId -> receivedQty from form
         Map<Integer, Integer> receivedQtyMap = new HashMap<>();
         for (GoodsReceiptDetailDTO dto : receivedDetails) {
             if (dto.getGrDetailId() != null && dto.getReceivedQty() != null) {
@@ -97,330 +91,265 @@ public class GoodsReceiptNoteServiceImpl implements GoodsReceiptNoteService {
             }
         }
 
-        // Process each GRN detail line
+        if (grn.getPurchaseOrder() != null) {
+            return postGRNForPO(grn, receivedQtyMap);
+        } else if (grn.getTransferOrder() != null) {
+            return postGRNForTO(grn, receivedQtyMap);
+        }
+        throw new IllegalArgumentException("GRN không liên kết với đơn hàng hợp lệ.");
+    }
+
+    private String postGRNForPO(GoodsReceiptNote grn, Map<Integer, Integer> receivedQtyMap) {
+        PurchaseOrder po = grn.getPurchaseOrder();
+        Warehouse warehouse = grn.getWarehouse();
         int totalInputQty = 0;
+
         for (GoodsReceiptDetail grnDetail : grn.getDetails()) {
             Integer inputReceivedQty = receivedQtyMap.getOrDefault(grnDetail.getGrDetailId(), 0);
             PurchaseOrderDetail poDetail = grnDetail.getPurchaseOrderDetail();
 
-            // Validate: receivedQty must be >= 0
-            if (inputReceivedQty < 0) {
-                throw new IllegalArgumentException("Số lượng thực nhận không được âm.");
-            }
-            // Validate: receivedQty <= remaining qty (orderedQty - already received)
+            if (inputReceivedQty < 0) throw new IllegalArgumentException("Số lượng thực nhận không được âm.");
             int remainingQty = poDetail.getOrderedQty() - poDetail.getReceivedQty();
-            if (inputReceivedQty > remainingQty) {
-                throw new IllegalArgumentException(
-                        "Số lượng thực nhận không được lớn hơn số lượng còn thiếu ("
-                        + remainingQty + ") cho sản phẩm '" + poDetail.getProduct().getProductName() + "'.");
-            }
-            totalInputQty += inputReceivedQty;
+            if (inputReceivedQty > remainingQty) throw new IllegalArgumentException("Số lượng thực nhận vượt quá số lượng thiếu.");
 
-            // Update GRN detail receivedQty
+            totalInputQty += inputReceivedQty;
             grnDetail.setReceivedQty(inputReceivedQty);
 
             if (inputReceivedQty > 0) {
                 Product product = grnDetail.getProduct();
+                int baseQty = BigDecimal.valueOf(inputReceivedQty).multiply(getConversionFactor(product, grnDetail.getUom())).intValue();
 
-                // Convert receivedQty to base UoM for stock
-                BigDecimal conversionFactor = getConversionFactor(product, grnDetail.getUom());
-                int baseQty = BigDecimal.valueOf(inputReceivedQty)
-                        .multiply(conversionFactor).intValue();
+                StockBatch stockBatch = stockBatchRepository.findByWarehouse_WarehouseIdAndProduct_ProductIdAndBin_BinIdAndBatchNumber(
+                        warehouse.getWarehouseId(), product.getProductId(), grnDetail.getBin().getBinId(), grnDetail.getBatchNumber())
+                        .orElseGet(() -> StockBatch.builder().warehouse(warehouse).product(product).bin(grnDetail.getBin())
+                                .batchNumber(grnDetail.getBatchNumber()).arrivalDateTime(LocalDateTime.now())
+                                .qtyAvailable(0).qtyReserved(0).qtyInTransit(0).uom(product.getBaseUoM()).build());
 
-                // Upsert StockBatch
-                Optional<StockBatch> existingBatch = stockBatchRepository
-                        .findByWarehouse_WarehouseIdAndProduct_ProductIdAndBin_BinIdAndBatchNumber(
-                                warehouse.getWarehouseId(),
-                                product.getProductId(),
-                                grnDetail.getBin().getBinId(),
-                                grnDetail.getBatchNumber());
+                stockBatch.setQtyAvailable(stockBatch.getQtyAvailable() + baseQty);
+                stockBatchRepository.save(stockBatch);
 
-                StockBatch stockBatch;
-                if (existingBatch.isPresent()) {
-                    stockBatch = existingBatch.get();
-                    stockBatch.setQtyAvailable(stockBatch.getQtyAvailable() + baseQty);
-                } else {
-                    stockBatch = StockBatch.builder()
-                            .warehouse(warehouse)
-                            .product(product)
-                            .bin(grnDetail.getBin())
-                            .batchNumber(grnDetail.getBatchNumber())
-                            .arrivalDateTime(LocalDateTime.now())
-                            .qtyAvailable(baseQty)
-                            .qtyReserved(0)
-                            .qtyInTransit(0)
-                            .uom(product.getBaseUoM())
-                            .build();
-                }
-                stockBatch = stockBatchRepository.save(stockBatch);
-
-                // Create StockMovement log
-                StockMovement movement = StockMovement.builder()
-                        .warehouse(warehouse)
-                        .product(product)
-                        .bin(grnDetail.getBin())
-                        .batchNumber(grnDetail.getBatchNumber())
-                        .movementType("Receipt")
-                        .stockType("Physical")
-                        .quantity(baseQty)
-                        .uom(product.getBaseUoM())
-                        .balanceAfter(stockBatch.getQtyAvailable())
-                        .build();
-                stockMovementRepository.save(movement);
-
-                // Update PO detail receivedQty (cumulative across all GRNs)
+                stockMovementRepository.save(StockMovement.builder().warehouse(warehouse).product(product).bin(grnDetail.getBin()).batchNumber(grnDetail.getBatchNumber()).movementType("Receipt").stockType("Physical").quantity(baseQty).uom(product.getBaseUoM()).balanceAfter(stockBatch.getQtyAvailable()).build());
                 poDetail.setReceivedQty(poDetail.getReceivedQty() + inputReceivedQty);
             }
         }
 
-        // Bug fix #1: Prevent posting with all receivedQty = 0 (infinite back-order loop)
-        if (totalInputQty == 0) {
-            throw new IllegalArgumentException("Vui lòng nhập số lượng thực nhận cho ít nhất một mặt hàng.");
-        }
+        if (totalInputQty == 0) throw new IllegalArgumentException("Vui lòng nhập số lượng thực nhận.");
+        grn.setGrStatus("Posted"); grnRepository.save(grn);
 
-        // GRN → Posted
-        grn.setGrStatus("Posted");
-        grnRepository.save(grn);
-
-        // Check PO completion — compare all PO details
         boolean allComplete = true;
-        boolean anyShortage = false;
-        for (PurchaseOrderDetail poDetail : po.getDetails()) {
-            if (poDetail.getReceivedQty() < poDetail.getOrderedQty()) {
-                allComplete = false;
-                anyShortage = true;
+        for (PurchaseOrderDetail poDetail : po.getDetails()) if (poDetail.getReceivedQty() < poDetail.getOrderedQty()) allComplete = false;
+
+        if (allComplete) {
+            po.setPoStatus("Completed"); poRepository.save(po);
+            return handlePOCompletionLoopback(po, grn);
+        } else {
+            po.setPoStatus("Incomplete"); poRepository.save(po);
+            String backOrderGrnNumber = createBackOrderGRN(po, grn);
+            return "Phiếu GRN " + grn.getGrnNumber() + " đã ghi sổ. Phiếu bù " + backOrderGrnNumber + " đã được tạo tự động.";
+        }
+    }
+
+    private String postGRNForTO(GoodsReceiptNote grn, Map<Integer, Integer> receivedQtyMap) {
+        TransferOrder to = grn.getTransferOrder();
+        Warehouse warehouse = grn.getWarehouse();
+        int totalInputQty = 0;
+
+        for (GoodsReceiptDetail grnDetail : grn.getDetails()) {
+            Integer inputReceivedQty = receivedQtyMap.getOrDefault(grnDetail.getGrDetailId(), 0);
+            TransferOrderDetail toDetail = grnDetail.getTransferOrderDetail();
+
+            if (inputReceivedQty < 0) throw new IllegalArgumentException("Số lượng thực nhận không được âm.");
+            int remainingQty = toDetail.getIssuedQty() - toDetail.getReceivedQty();
+            if (inputReceivedQty > remainingQty) throw new IllegalArgumentException("Số lượng nhận không được vượt quá xuất.");
+
+            totalInputQty += inputReceivedQty;
+            grnDetail.setReceivedQty(inputReceivedQty);
+
+            if (inputReceivedQty > 0) {
+                Product product = grnDetail.getProduct();
+                int baseQty = BigDecimal.valueOf(inputReceivedQty).multiply(getConversionFactor(product, grnDetail.getUom())).intValue();
+
+                List<StockBatch> transitBatches = stockBatchRepository.findByWarehouse_WarehouseIdAndProduct_ProductIdOrderByArrivalDateTimeAsc(warehouse.getWarehouseId(), product.getProductId());
+                StockBatch transitBatch = transitBatches.stream()
+                        .filter(b -> b.getBatchNumber().equals(grnDetail.getBatchNumber()) && b.getQtyInTransit() >= baseQty)
+                        .findFirst()
+                        .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy hàng đang đi đường cho lô " + grnDetail.getBatchNumber()));
+
+                transitBatch.setQtyInTransit(transitBatch.getQtyInTransit() - baseQty);
+                stockBatchRepository.save(transitBatch);
+
+                StockBatch targetBatch;
+                if (transitBatch.getBin().getBinId().equals(grnDetail.getBin().getBinId())) {
+                    targetBatch = transitBatch;
+                } else {
+                    targetBatch = stockBatchRepository.findByWarehouse_WarehouseIdAndProduct_ProductIdAndBin_BinIdAndBatchNumber(
+                        warehouse.getWarehouseId(), product.getProductId(), grnDetail.getBin().getBinId(), grnDetail.getBatchNumber())
+                        .orElseGet(() -> StockBatch.builder()
+                            .warehouse(warehouse).product(product).bin(grnDetail.getBin())
+                            .batchNumber(grnDetail.getBatchNumber()).arrivalDateTime(LocalDateTime.now())
+                            .qtyAvailable(0).qtyReserved(0).qtyInTransit(0).uom(product.getBaseUoM()).build());
+                }
+
+                targetBatch.setQtyAvailable(targetBatch.getQtyAvailable() + baseQty);
+                stockBatchRepository.save(targetBatch);
+
+                stockMovementRepository.save(StockMovement.builder().warehouse(warehouse).product(product).bin(grnDetail.getBin()).batchNumber(grnDetail.getBatchNumber()).movementType("Transfer-In").stockType("Physical").quantity(baseQty).uom(product.getBaseUoM()).balanceAfter(targetBatch.getQtyAvailable()).build());
+                toDetail.setReceivedQty(toDetail.getReceivedQty() + inputReceivedQty);
             }
         }
 
-        String resultMessage;
+        if (totalInputQty == 0) throw new IllegalArgumentException("Vui lòng nhập số lượng thực nhận.");
+        grn.setGrStatus("Posted"); grnRepository.save(grn);
+
+        boolean allComplete = true;
+        for (TransferOrderDetail toD : to.getDetails()) if (toD.getReceivedQty() < toD.getRequestedQty()) allComplete = false;
+
         if (allComplete) {
-            po.setPoStatus("Completed");
-            poRepository.save(po);
-
-            // === LOOPBACK: PO Completed → PR Completed → SO auto-Approved ===
-            resultMessage = handlePOCompletionLoopback(po, grn);
+            to.setStatus("Completed"); toRepository.save(to);
+            return "Phiếu GRN " + grn.getGrnNumber() + " đã ghi sổ. Lệnh chuyển kho " + to.getToNumber() + " đã hoàn thành.";
         } else {
-            po.setPoStatus("Incomplete");
-            poRepository.save(po);
-
-            // Back-order: create new Draft GRN for remaining quantities
-            String backOrderGrnNumber = createBackOrderGRN(po, grn);
-            resultMessage = "Phiếu GRN " + grn.getGrnNumber() + " đã ghi sổ. Đơn hàng " + po.getPoNumber()
-                    + " chưa nhận đủ. Phiếu bù " + backOrderGrnNumber + " đã được tạo tự động.";
+            toRepository.save(to);
+            String backOrder = createBackOrderGRNForTO(to, grn);
+            return "Phiếu GRN " + grn.getGrnNumber() + " đã ghi sổ. Phiếu bù " + backOrder + " đã được tạo tự động.";
         }
-
-        return resultMessage;
     }
-
-    // ==================== LOOPBACK: PO Completed → PR Completed → SO auto-Approved ====================
 
     private String handlePOCompletionLoopback(PurchaseOrder po, GoodsReceiptNote grn) {
         StringBuilder message = new StringBuilder();
-        message.append("Phiếu GRN ").append(grn.getGrnNumber())
-                .append(" đã ghi sổ. Đơn hàng ").append(po.getPoNumber()).append(" đã hoàn thành.");
+        message.append("Phiếu GRN ").append(grn.getGrnNumber()).append(" đã ghi sổ. Đơn hàng ").append(po.getPoNumber()).append(" hoàn thành.");
 
-        // Find all PRs linked to this PO
         List<PurchaseRequest> linkedPRs = prRepository.findByPurchaseOrder_PoId(po.getPoId());
-
-        // === PASS 1: Update ALL PRs to Completed, collect unique affected SOs ===
         Set<SalesOrder> affectedSOs = new HashSet<>();
         for (PurchaseRequest pr : linkedPRs) {
-            if (!"Completed".equals(pr.getStatus())) {
-                pr.setStatus("Completed");
-                prRepository.save(pr);
-            }
-            if (pr.getRelatedSalesOrder() != null) {
-                affectedSOs.add(pr.getRelatedSalesOrder());
-            }
+            if (!"Completed".equals(pr.getStatus())) { pr.setStatus("Completed"); prRepository.save(pr); }
+            if (pr.getRelatedSalesOrder() != null) affectedSOs.add(pr.getRelatedSalesOrder());
         }
 
-        // === PASS 2: For each unique SO, check if ALL its PRs are Completed ===
         for (SalesOrder so : affectedSOs) {
             if (!"Waiting for Stock".equals(so.getSoStatus())) continue;
-
-            List<PurchaseRequest> allSOPRs = prRepository
-                    .findByRelatedSalesOrder_SoIdAndStatusIn(so.getSoId(),
-                            List.of("Pending", "Approved", "Converted", "Completed"));
-            boolean allPRsCompleted = allSOPRs.stream()
-                    .allMatch(p -> "Completed".equals(p.getStatus()));
-
+            List<PurchaseRequest> allSOPRs = prRepository.findByRelatedSalesOrder_SoIdAndStatusIn(so.getSoId(), List.of("Pending", "Approved", "Converted", "Completed"));
+            boolean allPRsCompleted = allSOPRs.stream().allMatch(p -> "Completed".equals(p.getStatus()));
             if (allPRsCompleted) {
                 try {
                     String ginNumber = soService.approveSO(so.getSoId(), null);
-                    message.append(" | SO ").append(so.getSoNumber())
-                            .append(" đã tự động duyệt + giữ hàng. GIN ").append(ginNumber).append(" đã tạo.");
+                    message.append(" | SO ").append(so.getSoNumber()).append(" duyệt + giữ hàng thành công (GIN ").append(ginNumber).append(").");
                 } catch (IllegalArgumentException e) {
-                    message.append(" | SO ").append(so.getSoNumber())
-                            .append(" không thể tự động duyệt: ").append(e.getMessage());
+                    message.append(" | SO ").append(so.getSoNumber()).append(" lỗi: ").append(e.getMessage());
                 }
             }
         }
-
         return message.toString();
     }
-
-    // ==================== Back-order Logic ====================
 
     private String createBackOrderGRN(PurchaseOrder po, GoodsReceiptNote postedGrn) {
         String grnNumber = generateGRNNumber();
         GoodsReceiptNote newGrn = new GoodsReceiptNote();
-        newGrn.setGrnNumber(grnNumber);
-        newGrn.setPurchaseOrder(po);
-        newGrn.setWarehouse(po.getWarehouse());
-        newGrn.setGrStatus("Draft");
-        newGrn.setDetails(new ArrayList<>());
+        newGrn.setGrnNumber(grnNumber); newGrn.setPurchaseOrder(po); newGrn.setWarehouse(po.getWarehouse());
+        newGrn.setGrStatus("Draft"); newGrn.setDetails(new ArrayList<>());
 
         for (PurchaseOrderDetail poDetail : po.getDetails()) {
             int remainingQty = poDetail.getOrderedQty() - poDetail.getReceivedQty();
             if (remainingQty <= 0) continue;
-
             Product product = poDetail.getProduct();
-
-            // Keep the same BatchNumber from the original GRN
             String batchNumber = findOriginalBatchNumber(postedGrn, poDetail);
-
-            // Re-allocate Bin based on current actual capacity
             BigDecimal conversionFactor = getConversionFactor(product, poDetail.getUom());
-            BigDecimal incomingWeight = BigDecimal.valueOf(remainingQty)
-                    .multiply(conversionFactor)
-                    .multiply(product.getUnitWeight());
+            BigDecimal incomingWeight = BigDecimal.valueOf(remainingQty).multiply(conversionFactor).multiply(product.getUnitWeight());
             Bin allocatedBin = allocateBin(po.getWarehouse().getWarehouseId(), incomingWeight, product.getProductName());
 
             GoodsReceiptDetail newDetail = new GoodsReceiptDetail();
-            newDetail.setGoodsReceiptNote(newGrn);
-            newDetail.setPurchaseOrderDetail(poDetail);
-            newDetail.setProduct(product);
-            newDetail.setReceivedQty(0);
-            newDetail.setUom(poDetail.getUom());
-            newDetail.setBatchNumber(batchNumber);
-            newDetail.setBin(allocatedBin);
-
+            newDetail.setGoodsReceiptNote(newGrn); newDetail.setPurchaseOrderDetail(poDetail); newDetail.setProduct(product);
+            newDetail.setReceivedQty(0); newDetail.setUom(poDetail.getUom());
+            newDetail.setBatchNumber(batchNumber); newDetail.setBin(allocatedBin);
             newGrn.getDetails().add(newDetail);
         }
+        grnRepository.save(newGrn);
+        return grnNumber;
+    }
 
+    private String createBackOrderGRNForTO(TransferOrder to, GoodsReceiptNote postedGrn) {
+        String grnNumber = generateGRNNumber();
+        GoodsReceiptNote newGrn = new GoodsReceiptNote();
+        newGrn.setGrnNumber(grnNumber); newGrn.setTransferOrder(to); newGrn.setWarehouse(to.getDestinationWarehouse());
+        newGrn.setGrStatus("Draft"); newGrn.setDetails(new ArrayList<>());
+
+        for (TransferOrderDetail toDetail : to.getDetails()) {
+            int remainingQty = toDetail.getIssuedQty() - toDetail.getReceivedQty();
+            if (remainingQty <= 0) continue;
+            Product product = toDetail.getProduct();
+            GoodsReceiptDetail old = postedGrn.getDetails().stream().filter(d -> d.getTransferOrderDetail().equals(toDetail)).findFirst().orElse(null);
+            
+            BigDecimal conversionFactor = getConversionFactor(product, toDetail.getUom());
+            BigDecimal incomingWeight = BigDecimal.valueOf(remainingQty).multiply(conversionFactor).multiply(product.getUnitWeight());
+            Bin allocatedBin = allocateBin(to.getDestinationWarehouse().getWarehouseId(), incomingWeight, product.getProductName());
+
+            GoodsReceiptDetail newDetail = new GoodsReceiptDetail();
+            newDetail.setGoodsReceiptNote(newGrn); newDetail.setTransferOrderDetail(toDetail); newDetail.setProduct(product);
+            newDetail.setReceivedQty(0); newDetail.setUom(toDetail.getUom());
+            newDetail.setBatchNumber(old != null ? old.getBatchNumber() : ""); newDetail.setBin(allocatedBin);
+            newGrn.getDetails().add(newDetail);
+        }
         grnRepository.save(newGrn);
         return grnNumber;
     }
 
     private String findOriginalBatchNumber(GoodsReceiptNote grn, PurchaseOrderDetail poDetail) {
         for (GoodsReceiptDetail d : grn.getDetails()) {
-            if (d.getPurchaseOrderDetail().getPoDetailId().equals(poDetail.getPoDetailId())) {
+            if (d.getPurchaseOrderDetail() != null && d.getPurchaseOrderDetail().getPoDetailId().equals(poDetail.getPoDetailId())) {
                 return d.getBatchNumber();
             }
         }
-        // Fallback: generate new one
         String dateStr = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         return "BATCH-" + dateStr + "-" + grn.getPurchaseOrder().getPoNumber() + "-P" + poDetail.getProduct().getProductId();
     }
 
-    // ==================== Shared Helpers (same logic as PurchaseOrderServiceImpl) ====================
-
     private BigDecimal getConversionFactor(Product product, String uom) {
-        if (uom.equals(product.getBaseUoM())) {
-            return BigDecimal.ONE;
-        }
-        List<ProductUoMConversion> conversions = uomConversionRepository.findByProduct_ProductId(product.getProductId());
-        for (ProductUoMConversion conv : conversions) {
-            if (conv.getFromUoM().equals(uom)) {
-                return BigDecimal.valueOf(conv.getConversionFactor());
-            }
-        }
-        return BigDecimal.ONE;
+        if (uom.equals(product.getBaseUoM())) return BigDecimal.ONE;
+        return uomConversionRepository.findByProduct_ProductId(product.getProductId()).stream()
+                .filter(conv -> conv.getFromUoM().equals(uom)).findFirst().map(conv -> BigDecimal.valueOf(conv.getConversionFactor())).orElse(BigDecimal.ONE);
     }
 
     private Bin allocateBin(Integer warehouseId, BigDecimal incomingWeight, String productName) {
         List<Bin> activeBins = binRepository.findByWarehouseWarehouseIdAndIsActive(warehouseId, true);
         for (Bin bin : activeBins) {
-            BigDecimal currentWeight = calculateCurrentBinWeight(bin);
-            BigDecimal remainingCapacity = bin.getMaxWeight().subtract(currentWeight);
-            if (remainingCapacity.compareTo(incomingWeight) >= 0) {
-                return bin;
+            BigDecimal currentWeight = BigDecimal.ZERO;
+            for (StockBatch batch : stockBatchRepository.findByBinBinId(bin.getBinId())) {
+                currentWeight = currentWeight.add(batch.getProduct().getUnitWeight().multiply(BigDecimal.valueOf(batch.getQtyAvailable() + batch.getQtyInTransit())));
             }
+            if (bin.getMaxWeight().subtract(currentWeight).compareTo(incomingWeight) >= 0) return bin;
         }
-        throw new IllegalArgumentException(
-                "Kho không đủ sức chứa cho mặt hàng '" + productName +
-                "' (Yêu cầu: " + incomingWeight + " kg). Vui lòng giải phóng không gian hoặc thêm bin mới.");
+        throw new IllegalArgumentException("Kho không đủ sức chứa cho mặt hàng '" + productName + "'.");
     }
-
-    private BigDecimal calculateCurrentBinWeight(Bin bin) {
-        BigDecimal totalWeight = BigDecimal.ZERO;
-
-        // 1. Actual stock
-        List<StockBatch> batches = stockBatchRepository.findByBinBinId(bin.getBinId());
-        for (StockBatch batch : batches) {
-            BigDecimal batchWeight = batch.getProduct().getUnitWeight()
-                    .multiply(BigDecimal.valueOf(batch.getQtyAvailable()));
-            totalWeight = totalWeight.add(batchWeight);
-        }
-
-        // 2. Virtual: Draft GRN allocations
-        List<GoodsReceiptDetail> draftDetails = grnDetailRepository.findDraftGrnDetailsByBinId(bin.getBinId());
-        for (GoodsReceiptDetail grnDetail : draftDetails) {
-            Product product = grnDetail.getProduct();
-            PurchaseOrderDetail poDetail = grnDetail.getPurchaseOrderDetail();
-            BigDecimal conversionFactor = getConversionFactor(product, grnDetail.getUom());
-            BigDecimal virtualWeight = BigDecimal.valueOf(poDetail.getOrderedQty() - poDetail.getReceivedQty())
-                    .multiply(conversionFactor)
-                    .multiply(product.getUnitWeight());
-            totalWeight = totalWeight.add(virtualWeight);
-        }
-
-        return totalWeight;
-    }
-
-    // ==================== GRN Number Generation ====================
 
     private String generateGRNNumber() {
         String dateStr = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         String prefix = "GRN-" + dateStr + "-";
         String maxNumber = grnRepository.findMaxGrnNumber(prefix);
-        int nextNum = 1;
-        if (maxNumber != null) {
-            String suffix = maxNumber.substring(prefix.length());
-            nextNum = Integer.parseInt(suffix) + 1;
-        }
-        return prefix + String.format("%03d", nextNum);
+        return prefix + String.format("%03d", maxNumber != null ? Integer.parseInt(maxNumber.substring(prefix.length())) + 1 : 1);
     }
 
-    // ==================== Mapping ====================
-
     private GoodsReceiptNoteDTO mapToListDTO(GoodsReceiptNote grn) {
-        PurchaseOrder po = grn.getPurchaseOrder();
+        String orderNumber = grn.getPurchaseOrder() != null ? grn.getPurchaseOrder().getPoNumber() : grn.getTransferOrder().getToNumber();
+        String supplierName = grn.getPurchaseOrder() != null && grn.getPurchaseOrder().getSupplier() != null ? grn.getPurchaseOrder().getSupplier().getPartnerName() : (grn.getTransferOrder() != null ? "Warehouse " + grn.getTransferOrder().getSourceWarehouse().getWarehouseName() : null);
         return GoodsReceiptNoteDTO.builder()
-                .grnId(grn.getGrnId())
-                .grnNumber(grn.getGrnNumber())
-                .poNumber(po.getPoNumber())
-                .supplierName(po.getSupplier() != null ? po.getSupplier().getPartnerName() : null)
-                .warehouseName(grn.getWarehouse() != null ? grn.getWarehouse().getWarehouseName() : null)
-                .grStatus(grn.getGrStatus())
-                .build();
+                .grnId(grn.getGrnId()).grnNumber(grn.getGrnNumber()).poNumber(orderNumber).supplierName(supplierName)
+                .warehouseName(grn.getWarehouse() != null ? grn.getWarehouse().getWarehouseName() : null).grStatus(grn.getGrStatus()).build();
     }
 
     private GoodsReceiptNoteDTO mapToFullDTO(GoodsReceiptNote grn) {
         GoodsReceiptNoteDTO dto = mapToListDTO(grn);
-        if (grn.getDetails() != null) {
-            List<GoodsReceiptDetailDTO> detailDTOs = grn.getDetails().stream()
-                    .map(this::mapDetailToDTO)
-                    .collect(Collectors.toList());
-            dto.setDetails(detailDTOs);
-        }
+        if (grn.getDetails() != null) dto.setDetails(grn.getDetails().stream().map(this::mapDetailToDTO).collect(Collectors.toList()));
         return dto;
     }
 
     private GoodsReceiptDetailDTO mapDetailToDTO(GoodsReceiptDetail detail) {
-        PurchaseOrderDetail poDetail = detail.getPurchaseOrderDetail();
-        String displayName = "";
-        if (detail.getProduct() != null) {
-            displayName = detail.getProduct().getSku() + " - " + detail.getProduct().getProductName();
-        }
+        String displayName = detail.getProduct() != null ? detail.getProduct().getSku() + " - " + detail.getProduct().getProductName() : "";
+        Integer orderedQty = null;
+        if (detail.getPurchaseOrderDetail() != null) orderedQty = detail.getPurchaseOrderDetail().getOrderedQty() - detail.getPurchaseOrderDetail().getReceivedQty();
+        else if (detail.getTransferOrderDetail() != null) orderedQty = detail.getTransferOrderDetail().getIssuedQty() - detail.getTransferOrderDetail().getReceivedQty();
+
         return GoodsReceiptDetailDTO.builder()
-                .grDetailId(detail.getGrDetailId())
-                .productDisplayName(displayName)
-                .uom(detail.getUom())
-                .orderedQty(poDetail != null ? poDetail.getOrderedQty() - poDetail.getReceivedQty() : null)
-                .receivedQty(detail.getReceivedQty())
-                .batchNumber(detail.getBatchNumber())
-                .binLocation(detail.getBin() != null ? detail.getBin().getBinLocation() : null)
-                .build();
+                .grDetailId(detail.getGrDetailId()).productDisplayName(displayName).uom(detail.getUom())
+                .orderedQty(orderedQty).receivedQty(detail.getReceivedQty()).batchNumber(detail.getBatchNumber())
+                .binLocation(detail.getBin() != null ? detail.getBin().getBinLocation() : null).build();
     }
 }

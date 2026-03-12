@@ -7,6 +7,10 @@ import com.minhhai.wms.service.PartnerService;
 import com.minhhai.wms.service.SalesOrderService;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -24,20 +28,27 @@ public class SOApprovalController {
 
     // ==================== List ====================
 
+
+
+
     @GetMapping
     public String list(@RequestParam(name = "status", required = false, defaultValue = "Pending Approval") String status,
                        @RequestParam(name = "customerId", required = false) Integer customerId,
+                       @RequestParam(name = "page", defaultValue = "1") int page,
+                       @RequestParam(name = "size", defaultValue = "10") int size,
                        Model model, HttpSession session) {
 
         User user = (User) session.getAttribute("loggedInUser");
         Integer warehouseId = user.getWarehouse().getWarehouseId();
 
         String filterStatus = "All".equals(status) ? null : status;
-        List<SaleOrderDTO> orders = soService.getSOsByWarehouse(warehouseId, filterStatus, customerId);
+        Pageable pageable = PageRequest.of(page - 1, size, Sort.by(Sort.Direction.DESC, "soId"));
+        Page<SaleOrderDTO> orderPage = soService.getSOsByWarehouse(warehouseId, filterStatus, customerId, pageable);
+
         List<Partner> customers = partnerService.findByType("Customer");
 
         model.addAttribute("activePage", "sales-approvals");
-        model.addAttribute("orders", orders);
+        model.addAttribute("orderPage", orderPage);
         model.addAttribute("customers", customers);
         model.addAttribute("selectedStatus", status);
         model.addAttribute("selectedCustomerId", customerId);

@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Tạo phiếu chuyển kho nội bộ - WMS</title>
+    <link rel="stylesheet" th:href="@{/static/css/style.css}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        .detail-row td {
+            vertical-align: middle;
+        }
+
+        .step-hint {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            margin-top: 3px;
+        }
+
+        select:disabled,
+        input:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .qty-info {
+            font-size: 0.75rem;
+            color: #64748b;
+            margin-top: 3px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app-layout">
+        <th:block th:switch="${loggedInUserRole}">
+            <div th:case="'Warehouse Manager'" th:replace="~{fragments/layout :: sidebar-report}"></div>
+            <div th:case="'Storekeeper'" th:replace="~{fragments/layout :: sidebar-storekeeper}"></div>
+            <div th:case="*" th:replace="~{fragments/layout :: sidebar-storekeeper}"></div>
+        </th:block>
+        <div class="main-content">
+            <div th:replace="~{fragments/layout :: topbar('Tạo phiếu chuyển kho nội bộ')}"></div>
+            <div class="content-area">
+                <div th:replace="~{fragments/layout :: alerts}"></div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Tạo phiếu chuyển kho nội bộ</h2>
+                    </div>
+                    <div class="card-body">
+                        <form id="tnForm" th:action="@{/transfer/internal/save}" th:object="${tnDTO}" method="post"
+                            onsubmit="enableAllBeforeSubmit()">
+
+                            <div class="form-group" style="max-width: 320px; margin-bottom: 1.5rem;">
+                                <label class="form-label">Kho thực hiện</label>
+                                <input type="text" th:value="${tnDTO.warehouseName}" class="form-control" readonly>
+                                <input type="hidden" th:field="*{warehouseId}" id="warehouseId">
+                            </div>
+
+                            <h3
+                                style="margin-bottom: 0.5rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.5rem;">
+                                Danh sách hàng hóa chuyển bin
+                            </h3>
+                            <p class="step-hint" style="margin-bottom: 1rem; font-size: 0.8rem; color: #64748b;">
+                                📌 Quy trình: Chọn <strong>Bin đi</strong> → chọn <strong>Sản phẩm/Lô</strong> → nhập
+                                <strong>Số lượng</strong> → chọn <strong>Bin đến</strong>
+                            </p>
+
+                            <div class="table-wrapper" style="overflow-x: auto;">
+                                <table id="detailsTable">
+                                    <thead>
+                                        <tr>
+                                            <th style="min-width: 170px;">Từ Bin</th>
+                                            <th style="min-width: 220px;">Sản phẩm / Lô</th>
+                                            <th style="min-width: 100px;">Số lượng</th>
+                                            <th style="min-width: 90px;">ĐVT</th>
+                                            <th style="min-width: 170px;">Đến Bin</th>
+                                            <th style="min-width: 50px;"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="rowsBody">
+                                        <!-- Row 0: rendered once by Thymeleaf -->
+                                        <tr class="detail-row" data-index="0">
+                                            <td>
+                                                <select name="details[0].fromBinId" class="form-control from-bin-select"
+                                                    required onchange="onFromBinChange(this, 0)">
+                                                    <option value="">-- Chọn Bin đi --</option>
+                                                    <option th:each="b : ${bins}" th:value="${b.binId}"
+                                                        th:text="${b.binLocation}"></option>
+                                                </select>
+                                            </td>
+                                            <td>
+                                                <select name="details[0].batchKey" class="form-control batch-select"
+                                                    disabled onchange="onBatchChange(this, 0)">
+                                                    <option value="">-- Chọn SP/Lô --</option>
+                                                </select>
+                                                <!-- hidden fields populated by JS -->
+                                                <input type="hidden" name="details[0].productId"
+                                                    class="hidden-productId">
+                                                <input type="hidden" name="details[0].batchNumber"
+                                                    class="hidden-batchNumber">
+                                                <div class="qty-info hidden-qty-info" style="display:none;"></div>
+                                            </td>
+                                            <td>
+                                                <input type="number" name="details[0].quantity"
+                                                    class="form-control qty-input" min="1" required disabled>
+                                            </td>
+                                            <td>
+                                                <input type="text" name="details[0].uom" class="form-control uom-input"
+                                                    readonly placeholder="Auto">
+                                            </td>
+                                            <td>
+                                                <select name="details[0].toBinId" class="form-control to-bin-select"
+                                                    required disabled>
+                                                    <option value="">-- Chọn Bin đến --</option>
+                                                </select>
+                                            </td>
+                                            <td></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div style="margin-top: 1rem;">
+                                <button type="button" class="btn btn-outline btn-sm" onclick="addRow()">+ Thêm
+                                    dòng</button>
+                            </div>
+
+                            <div style="display: flex; gap: 0.75rem; margin-top: 1.5rem;">
+                                <button type="submit" class="btn btn-primary">Lưu và Duyệt phiếu</button>
+                                <a th:href="@{/transfer/internal}" class="btn btn-outline">Hủy bỏ</a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden templates for JS cloning -->
+    <select id="tpl-fromBin" style="display:none;">
+        <option value="">-- Chọn Bin đi --</option>
+        <option th:each="b : ${bins}" th:value="${b.binId}" th:text="${b.binLocation}"></option>
+    </select>
+
+    <script th:inline="javascript">
+        const WAREHOUSE_ID = /*[[${tnDTO.warehouseId}]]*/ null;
+
+        // ======================================================
+        // Step 1: From Bin changed → load product-batches
+        // ======================================================
+        async function onFromBinChange(select, index) {
+            const binId = select.value;
+            const row = select.closest('tr');
+
+            const batchSel = row.querySelector('.batch-select');
+            const qtyInput = row.querySelector('.qty-input');
+            const uomInput = row.querySelector('.uom-input');
+            const toBinSel = row.querySelector('.to-bin-select');
+            const hidProd = row.querySelector('.hidden-productId');
+            const hidBatch = row.querySelector('.hidden-batchNumber');
+            const qtyInfo = row.querySelector('.hidden-qty-info');
+
+            // Reset downstream
+            resetSelect(batchSel, '-- Chọn SP/Lô --', true);
+            qtyInput.value = '';
+            qtyInput.disabled = true;
+            uomInput.value = '';
+            resetSelect(toBinSel, '-- Chọn Bin đến --', true);
+            hidProd.value = '';
+            hidBatch.value = '';
+            qtyInfo.style.display = 'none';
+            qtyInfo.textContent = '';
+
+            if (!binId) return;
+
+            try {
+                const res = await fetch(`/api/transfer/bins/${binId}/stock-batches`);
+                if (!res.ok) throw new Error('Network error');
+                const batches = await res.json();
+
+                batchSel.innerHTML = '<option value="">-- Chọn SP/Lô --</option>';
+                if (batches.length === 0) {
+                    batchSel.innerHTML = '<option value="" disabled>Không có hàng trong bin này</option>';
+                } else {
+                    batches.forEach(b => {
+                        const opt = document.createElement('option');
+                        opt.value = JSON.stringify({ productId: b.productId, batchNumber: b.batchNumber, uom: b.uom, qtyAvailable: b.qtyAvailable });
+                        opt.textContent = `${b.productName} | Lô: ${b.batchNumber} | Tồn: ${b.qtyAvailable} ${b.uom}`;
+                        batchSel.appendChild(opt);
+                    });
+                    batchSel.disabled = false;
+                }
+            } catch (e) {
+                batchSel.innerHTML = '<option value="" disabled>Lỗi tải dữ liệu</option>';
+            }
+        }
+
+        // ======================================================
+        // Step 2: Product/Batch selected → fill UoM, enable qty & to-bin
+        // ======================================================
+        async function onBatchChange(select, index) {
+            const row = select.closest('tr');
+            const qtyInput = row.querySelector('.qty-input');
+            const uomInput = row.querySelector('.uom-input');
+            const toBinSel = row.querySelector('.to-bin-select');
+            const hidProd = row.querySelector('.hidden-productId');
+            const hidBatch = row.querySelector('.hidden-batchNumber');
+            const qtyInfo = row.querySelector('.hidden-qty-info');
+            const fromBinId = row.querySelector('.from-bin-select').value;
+
+            // Reset qty and toBin
+            qtyInput.value = '';
+            qtyInput.disabled = true;
+            uomInput.value = '';
+            resetSelect(toBinSel, '-- Chọn Bin đến --', true);
+            qtyInfo.style.display = 'none';
+
+            if (!select.value) return;
+
+            let data;
+            try { data = JSON.parse(select.value); } catch (e) { return; }
+
+            // Fill hidden fields and UoM
+            hidProd.value = data.productId;
+            hidBatch.value = data.batchNumber;
+            uomInput.value = data.uom;
+            qtyInput.max = data.qtyAvailable;
+            qtyInput.disabled = false;
+            qtyInput.placeholder = `Tối đa ${data.qtyAvailable}`;
+
+            qtyInfo.textContent = `Tồn kho khả dụng: ${data.qtyAvailable} ${data.uom}`;
+            qtyInfo.style.display = 'block';
+
+            // Load valid To Bins (all active bins in warehouse, excluding from bin)
+            try {
+                const res = await fetch(`/api/transfer/warehouses/${WAREHOUSE_ID}/bins?excludeBinId=${fromBinId}`);
+                if (!res.ok) throw new Error();
+                const bins = await res.json();
+
+                toBinSel.innerHTML = '<option value="">-- Chọn Bin đến --</option>';
+                bins.forEach(b => {
+                    const opt = document.createElement('option');
+                    opt.value = b.binId;
+                    opt.textContent = b.binLocation;
+                    toBinSel.appendChild(opt);
+                });
+                toBinSel.disabled = bins.length === 0;
+                if (bins.length === 0) {
+                    toBinSel.innerHTML = '<option value="" disabled>Không có bin hợp lệ</option>';
+                }
+            } catch (e) {
+                toBinSel.innerHTML = '<option value="" disabled>Lỗi tải dữ liệu</option>';
+            }
+        }
+
+        // ======================================================
+        // Add Row
+        // ======================================================
+        let rowCount = 1;
+
+        function addRow() {
+            const i = rowCount++;
+            const tbody = document.getElementById('rowsBody');
+            const tr = document.createElement('tr');
+            tr.className = 'detail-row';
+            tr.dataset.index = i;
+
+            // Clone from-bin options
+            const fromBinSel = document.getElementById('tpl-fromBin').cloneNode(true);
+            fromBinSel.removeAttribute('id');
+            fromBinSel.removeAttribute('style');
+            fromBinSel.name = `details[${i}].fromBinId`;
+            fromBinSel.className = 'form-control from-bin-select';
+            fromBinSel.required = true;
+            fromBinSel.onchange = function () { onFromBinChange(this, i); };
+
+            const batchSel = document.createElement('select');
+            batchSel.name = `details[${i}].batchKey`;
+            batchSel.className = 'form-control batch-select';
+            batchSel.disabled = true;
+            batchSel.onchange = function () { onBatchChange(this, i); };
+            batchSel.innerHTML = '<option value="">-- Chọn SP/Lô --</option>';
+
+            const hidProd = document.createElement('input');
+            hidProd.type = 'hidden'; hidProd.name = `details[${i}].productId`;
+            hidProd.className = 'hidden-productId';
+
+            const hidBatch = document.createElement('input');
+            hidBatch.type = 'hidden'; hidBatch.name = `details[${i}].batchNumber`;
+            hidBatch.className = 'hidden-batchNumber';
+
+            const qtyInfo = document.createElement('div');
+            qtyInfo.className = 'qty-info hidden-qty-info';
+            qtyInfo.style.display = 'none';
+
+            const qtyInput = document.createElement('input');
+            qtyInput.type = 'number'; qtyInput.name = `details[${i}].quantity`;
+            qtyInput.className = 'form-control qty-input';
+            qtyInput.min = '1'; qtyInput.required = true; qtyInput.disabled = true;
+
+            const uomInput = document.createElement('input');
+            uomInput.type = 'text'; uomInput.name = `details[${i}].uom`;
+            uomInput.className = 'form-control uom-input';
+            uomInput.readOnly = true; uomInput.placeholder = 'Auto';
+
+            const toBinSel = document.createElement('select');
+            toBinSel.name = `details[${i}].toBinId`;
+            toBinSel.className = 'form-control to-bin-select';
+            toBinSel.required = true; toBinSel.disabled = true;
+            toBinSel.innerHTML = '<option value="">-- Chọn Bin đến --</option>';
+
+            const removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.className = 'btn btn-outline btn-sm';
+            removeBtn.style.color = '#ef4444';
+            removeBtn.textContent = '✕';
+            removeBtn.onclick = function () { tr.remove(); };
+
+            const cell = (el1, el2, el3) => {
+                const td = document.createElement('td');
+                td.appendChild(el1);
+                if (el2) td.appendChild(el2);
+                if (el3) td.appendChild(el3);
+                return td;
+            };
+
+            tr.appendChild(cell(fromBinSel));
+            tr.appendChild(cell(batchSel, hidProd, hidBatch));
+            tr.appendChild(cell(qtyInput, qtyInfo));
+            tr.appendChild(cell(uomInput));
+            tr.appendChild(cell(toBinSel));
+            tr.appendChild(cell(removeBtn));
+
+            tbody.appendChild(tr);
+        }
+
+        function resetSelect(sel, placeholder, disabled) {
+            sel.innerHTML = `<option value="">${placeholder}</option>`;
+            sel.disabled = disabled;
+        }
+
+        function enableAllBeforeSubmit() {
+            // Enable all disabled selects and inputs so browser includes them in POST body
+            document.querySelectorAll('#tnForm select, #tnForm input').forEach(el => {
+                el.disabled = false;
+            });
+        }
+    </script>
+</body>
+
+</html>

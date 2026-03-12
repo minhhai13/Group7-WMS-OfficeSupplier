@@ -22,8 +22,12 @@ public class GoodsIssueNote {
     private String ginNumber;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "SOID", nullable = false)
+    @JoinColumn(name = "SOID")
     private SalesOrder salesOrder;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "TransferOrderID")
+    private TransferOrder transferOrder;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "WarehouseID", nullable = false)

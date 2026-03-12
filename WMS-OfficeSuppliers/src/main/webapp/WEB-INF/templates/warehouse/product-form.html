@@ -38,7 +38,7 @@
                                 <div class="form-group">
                                     <label for="productName">Product Name *</label>
                                     <input type="text" id="productName" class="form-control" th:field="*{productName}"
-                                        required maxlength="100" placeholder="Enter product name"
+                                        required maxlength="200" placeholder="Enter product name"
                                         th:classappend="${#fields.hasErrors('productName')} ? 'is-invalid'">
                                     <div class="invalid-feedback" th:if="${#fields.hasErrors('productName')}"
                                         th:errors="*{productName}">Name error</div>
@@ -57,7 +57,7 @@
                                 <div class="form-group">
                                     <label for="baseUoM">Base UoM *</label>
                                     <input type="text" id="baseUoM" class="form-control" th:field="*{baseUoM}" required
-                                        maxlength="20" placeholder="e.g. Piece"
+                                        maxlength="10" placeholder="e.g. Piece"
                                         th:classappend="${#fields.hasErrors('baseUoM')} ? 'is-invalid'">
                                     <div class="invalid-feedback" th:if="${#fields.hasErrors('baseUoM')}"
                                         th:errors="*{baseUoM}">UoM error</div>

@@ -6,6 +6,8 @@ import com.minhhai.wms.entity.*;
 import com.minhhai.wms.repository.*;
 import com.minhhai.wms.service.PurchaseOrderService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,25 +35,24 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<PurchaseOrderDTO> getPOsByWarehouse(Integer warehouseId, String status, Integer supplierId) {
-        List<PurchaseOrder> orders;
+    public Page<PurchaseOrderDTO> getPOsByWarehouse(Integer warehouseId, String status, Integer supplierId, Pageable pageable) {
+        Page<PurchaseOrder> orders;
 
         boolean hasStatus = status != null && !status.isBlank();
         boolean hasSupplier = supplierId != null;
 
         if (hasStatus && hasSupplier) {
-            orders = poRepository.findByWarehouse_WarehouseIdAndPoStatusAndSupplier_PartnerId(warehouseId, status, supplierId);
+            orders = poRepository.findByWarehouse_WarehouseIdAndPoStatusAndSupplier_PartnerId(warehouseId, status, supplierId, pageable);
         } else if (hasStatus) {
-            orders = poRepository.findByWarehouse_WarehouseIdAndPoStatus(warehouseId, status);
+            orders = poRepository.findByWarehouse_WarehouseIdAndPoStatus(warehouseId, status, pageable);
         } else if (hasSupplier) {
-            orders = poRepository.findByWarehouse_WarehouseIdAndSupplier_PartnerId(warehouseId, supplierId);
+            orders = poRepository.findByWarehouse_WarehouseIdAndSupplier_PartnerId(warehouseId, supplierId, pageable);
         } else {
-            orders = poRepository.findByWarehouse_WarehouseId(warehouseId);
+            orders = poRepository.findByWarehouse_WarehouseId(warehouseId, pageable);
         }
 
-        return orders.stream().map(this::mapToDTO).collect(Collectors.toList());
+        return orders.map(this::mapToDTO); // Page hỗ trợ sẵn hàm map()
     }
-
     @Override
     @Transactional(readOnly = true)
     public PurchaseOrderDTO getPOById(Integer poId) {

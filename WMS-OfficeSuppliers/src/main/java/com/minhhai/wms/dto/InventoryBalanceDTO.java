@@ -20,4 +20,5 @@ public class InventoryBalanceDTO {
     private int inboundQty;    // Sum(Receipt) in [startDate, endDate]
     private int outboundQty;   // Sum(Issue)   in [startDate, endDate]
     private int closingStock;  // openingStock + inboundQty - outboundQty
+    private Integer minStockLevel;
 }

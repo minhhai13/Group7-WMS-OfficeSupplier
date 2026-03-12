@@ -22,7 +22,7 @@ public class Product {
     private Integer productId;
 
     @NotBlank(message = "SKU is required")
-    @Column(name = "SKU", length = 50, nullable = false, unique = true, updatable = false)
+    @Column(name = "SKU", length = 50, nullable = false, unique = true)
     private String sku;
 
     @NotBlank(message = "Product name is required")
@@ -69,7 +69,10 @@ public class Product {
     private List<GoodsIssueDetail> goodsIssueDetails;
 
     @OneToMany(mappedBy = "product")
-    private List<TransferDetail> transferDetails;
+    private List<TransferOrderDetail> transferOrderDetails;
+
+    @OneToMany(mappedBy = "product")
+    private List<TransferNoteDetail> transferNoteDetails;
 
     @OneToMany(mappedBy = "product")
     private List<StockBatch> stockBatches;

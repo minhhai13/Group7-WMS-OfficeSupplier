@@ -3,14 +3,15 @@ package com.minhhai.wms.service;
 import com.minhhai.wms.dto.SaleOrderDTO;
 import com.minhhai.wms.dto.StockCheckResult;
 import com.minhhai.wms.entity.User;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 import java.util.Map;
 
 public interface SalesOrderService {
 
-    List<SaleOrderDTO> getSOsByWarehouse(Integer warehouseId, String status, Integer customerId);
-
+    Page<SaleOrderDTO> getSOsByWarehouse(Integer warehouseId, String status, Integer customerId, Pageable pageable);
     SaleOrderDTO getSOById(Integer soId);
 
     SaleOrderDTO saveDraft(SaleOrderDTO dto, User currentUser);

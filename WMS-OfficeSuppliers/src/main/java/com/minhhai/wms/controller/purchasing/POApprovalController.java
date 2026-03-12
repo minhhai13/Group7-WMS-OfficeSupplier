@@ -7,6 +7,10 @@ import com.minhhai.wms.service.PartnerService;
 import com.minhhai.wms.service.PurchaseOrderService;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -22,23 +26,25 @@ public class POApprovalController {
     private final PurchaseOrderService poService;
     private final PartnerService partnerService;
 
-    // ==================== List ====================
 
     @GetMapping
     public String list(@RequestParam(name = "status", required = false, defaultValue = "Pending Approval") String status,
                        @RequestParam(name = "supplierId", required = false) Integer supplierId,
+                       @RequestParam(name = "page", defaultValue = "1") int page,
+                       @RequestParam(name = "size", defaultValue = "10") int size,
                        Model model, HttpSession session) {
 
         User user = (User) session.getAttribute("loggedInUser");
         Integer warehouseId = user.getWarehouse().getWarehouseId();
 
-        // Pass empty string to get all statuses when explicitly selected "All"
         String filterStatus = "All".equals(status) ? null : status;
-        List<PurchaseOrderDTO> orders = poService.getPOsByWarehouse(warehouseId, filterStatus, supplierId);
+        Pageable pageable = PageRequest.of(page - 1, size, Sort.by(Sort.Direction.DESC, "poId"));
+        Page<PurchaseOrderDTO> orderPage = poService.getPOsByWarehouse(warehouseId, filterStatus, supplierId, pageable);
+
         List<Partner> suppliers = partnerService.findByType("Supplier");
 
         model.addAttribute("activePage", "purchasing-approvals");
-        model.addAttribute("orders", orders);
+        model.addAttribute("orderPage", orderPage);
         model.addAttribute("suppliers", suppliers);
         model.addAttribute("selectedStatus", status);
         model.addAttribute("selectedSupplierId", supplierId);
