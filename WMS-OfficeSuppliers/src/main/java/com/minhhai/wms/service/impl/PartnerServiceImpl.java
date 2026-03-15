@@ -4,6 +4,9 @@ import com.minhhai.wms.entity.Partner;
 import com.minhhai.wms.repository.PartnerRepository;
 import com.minhhai.wms.service.PartnerService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -86,5 +89,23 @@ public class PartnerServiceImpl implements PartnerService {
                 .orElseThrow(() -> new RuntimeException("Partner not found: " + partnerId));
         partner.setIsActive(!partner.getIsActive());
         partnerRepository.save(partner);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<Partner> findPaginated(String keyword, String partnerType, int page, int size) {
+        PageRequest pageable = PageRequest.of(page, size, Sort.by("partnerName").ascending());
+        boolean hasKeyword = keyword != null && !keyword.isBlank();
+        boolean hasType = partnerType != null && !partnerType.isBlank();
+
+        if (hasKeyword && hasType) {
+            return partnerRepository.searchByNameAndTypePageable(keyword.trim(), partnerType, pageable);
+        } else if (hasKeyword) {
+            return partnerRepository.searchByNamePageable(keyword.trim(), pageable);
+        } else if (hasType) {
+            return partnerRepository.findByPartnerType(partnerType, pageable);
+        } else {
+            return partnerRepository.findAll(pageable);
+        }
     }
 }

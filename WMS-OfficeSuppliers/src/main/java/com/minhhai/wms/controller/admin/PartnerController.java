@@ -5,13 +5,12 @@ import com.minhhai.wms.entity.Partner;
 import com.minhhai.wms.service.PartnerService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
-
-import java.util.List;
 
 @Controller
 @RequestMapping("/warehouse/partners")
@@ -20,13 +19,28 @@ public class PartnerController {
 
     private final PartnerService partnerService;
 
+    private static final int PAGE_SIZE = 10;
+
     @GetMapping
     public String list(@RequestParam(name = "type", required = false) String type,
                        @RequestParam(name = "keyword", required = false) String keyword,
+                       @RequestParam(name = "page", defaultValue = "0") int page,
                        Model model) {
-        List<Partner> partners = partnerService.search(keyword, type);
+        if (page < 0) page = 0;
+
+        Page<Partner> partnerPage = partnerService.findPaginated(keyword, type, page, PAGE_SIZE);
+
+        if (page > 0 && page >= partnerPage.getTotalPages()) {
+            page = Math.max(0, partnerPage.getTotalPages() - 1);
+            partnerPage = partnerService.findPaginated(keyword, type, page, PAGE_SIZE);
+        }
+
         model.addAttribute("activePage", "warehouse-partners");
-        model.addAttribute("partners", partners);
+        model.addAttribute("partnerPage", partnerPage);
+        model.addAttribute("partners", partnerPage.getContent());
+        model.addAttribute("currentPage", page);
+        model.addAttribute("totalPages", partnerPage.getTotalPages());
+        model.addAttribute("totalElements", partnerPage.getTotalElements());
         model.addAttribute("selectedType", type);
         model.addAttribute("keyword", keyword);
         return "warehouse/partner-list";
@@ -59,7 +73,7 @@ public class PartnerController {
                        BindingResult bindingResult,
                        Model model,
                        RedirectAttributes redirectAttributes) {
-        
+
         if (bindingResult.hasErrors()) {
             model.addAttribute("activePage", "warehouse-partners");
             return "warehouse/partner-form";
@@ -93,6 +107,4 @@ public class PartnerController {
                 .isActive(partner.getIsActive())
                 .build();
     }
-
-
 }

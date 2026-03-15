@@ -2,6 +2,7 @@ package com.minhhai.wms.service;
 
 import com.minhhai.wms.dto.BinDTO;
 import com.minhhai.wms.entity.Bin;
+import org.springframework.data.domain.Page;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -30,4 +31,6 @@ public interface BinService {
      * Returns bin.maxWeight - getCurrentWeight
      */
     BigDecimal getAvailableCapacity(Integer binId);
+
+    Page<Bin> findPaginated(Integer warehouseId, String keyword, int page, int size);
 }

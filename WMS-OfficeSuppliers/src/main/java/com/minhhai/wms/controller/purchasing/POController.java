@@ -10,10 +10,6 @@ import com.minhhai.wms.service.PurchaseOrderService;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -31,24 +27,21 @@ public class POController {
     private final PartnerService partnerService;
     private final ProductService productService;
 
+    // ==================== List ====================
 
     @GetMapping
     public String list(@RequestParam(name = "status", required = false) String status,
                        @RequestParam(name = "supplierId", required = false) Integer supplierId,
-                       @RequestParam(name = "page", defaultValue = "1") int page,
-                       @RequestParam(name = "size", defaultValue = "10") int size,
                        Model model, HttpSession session) {
 
         User user = (User) session.getAttribute("loggedInUser");
         Integer warehouseId = user.getWarehouse().getWarehouseId();
 
-        // Spring Data JPA page index bắt đầu từ 0
-        Pageable pageable = PageRequest.of(page - 1, size, Sort.by(Sort.Direction.DESC, "poId"));
-        Page<PurchaseOrderDTO> orderPage = poService.getPOsByWarehouse(warehouseId, status, supplierId, pageable);
+        List<PurchaseOrderDTO> orders = poService.getPOsByWarehouse(warehouseId, status, supplierId);
         List<Partner> suppliers = partnerService.findByType("Supplier");
 
         model.addAttribute("activePage", "purchasing-orders");
-        model.addAttribute("orderPage", orderPage); // Truyền nguyên object Page sang View
+        model.addAttribute("orders", orders);
         model.addAttribute("suppliers", suppliers);
         model.addAttribute("selectedStatus", status);
         model.addAttribute("selectedSupplierId", supplierId);

@@ -23,6 +23,7 @@
                 </div>
 
                 <div class="card-body">
+                    <!-- Search -->
                     <div>
                         <form th:action="@{/admin/warehouses}" method="get" class="search-bar">
                             <input type="text" name="keyword" class="form-control"
@@ -31,9 +32,20 @@
                             <a th:if="${keyword != null}" th:href="@{/admin/warehouses}" class="btn btn-outline">Clear</a>
                         </form>
                     </div>
+
+                    <!-- Result info -->
+                    <div th:if="${totalElements != null}" style="margin-bottom: 0.5rem; color: var(--text-secondary); font-size: 0.875rem;">
+                        Showing
+                        <strong th:text="${currentPage * 10 + 1}"></strong>–<strong th:text="${(currentPage * 10 + #lists.size(warehouses))}"></strong>
+                        of <strong th:text="${totalElements}"></strong> warehouses
+                    </div>
+
+                    <!-- Empty state -->
                     <div th:if="${#lists.isEmpty(warehouses)}" class="empty-state">
                         <p>No warehouses found. Create your first warehouse.</p>
                     </div>
+
+                    <!-- Table -->
                     <div th:unless="${#lists.isEmpty(warehouses)}" class="table-wrapper">
                         <table>
                             <thead>
@@ -48,7 +60,7 @@
                             </thead>
                             <tbody>
                             <tr th:each="wh, iter : ${warehouses}">
-                                <td th:text="${iter.count}"></td>
+                                <td th:text="${currentPage * 10 + iter.count}"></td>
                                 <td><strong th:text="${wh.warehouseCode}"></strong></td>
                                 <td th:text="${wh.warehouseName}"></td>
                                 <td th:text="${wh.address}"></td>
@@ -72,6 +84,30 @@
                             </tbody>
                         </table>
                     </div>
+
+                    <!-- Pagination -->
+                    <div th:if="${totalPages > 1}" class="pagination-wrapper">
+                        <a th:if="${currentPage > 0}"
+                           th:href="@{/admin/warehouses(page=${currentPage - 1}, keyword=${keyword})}"
+                           class="btn btn-outline btn-sm">&laquo; Prev</a>
+                        <span th:unless="${currentPage > 0}" class="btn btn-outline btn-sm disabled">&laquo; Prev</span>
+
+                        <span th:each="i : ${#numbers.sequence(0, totalPages - 1)}">
+                            <a th:if="${i != currentPage}"
+                               th:href="@{/admin/warehouses(page=${i}, keyword=${keyword})}"
+                               th:text="${i + 1}"
+                               class="btn btn-outline btn-sm"></a>
+                            <strong th:if="${i == currentPage}"
+                                    th:text="${i + 1}"
+                                    class="btn btn-primary btn-sm" style="pointer-events:none;"></strong>
+                        </span>
+
+                        <a th:if="${currentPage < totalPages - 1}"
+                           th:href="@{/admin/warehouses(page=${currentPage + 1}, keyword=${keyword})}"
+                           class="btn btn-outline btn-sm">Next &raquo;</a>
+                        <span th:unless="${currentPage < totalPages - 1}" class="btn btn-outline btn-sm disabled">Next &raquo;</span>
+                    </div>
+
                 </div>
             </div>
         </div>

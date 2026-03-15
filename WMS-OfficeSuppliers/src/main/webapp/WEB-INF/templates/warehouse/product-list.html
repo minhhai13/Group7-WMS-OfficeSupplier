@@ -9,77 +9,115 @@
 </head>
 
 <body>
-    <div class="app-layout">
-        <div th:replace="~{fragments/layout :: sidebar-warehouse}"></div>
-        <div class="main-content">
-            <div th:replace="~{fragments/layout :: topbar('Product Management(Global change)')}"></div>
-            <div class="content-area">
-                <div th:replace="~{fragments/layout :: alerts}"></div>
+<div class="app-layout">
+    <div th:replace="~{fragments/layout :: sidebar-warehouse}"></div>
+    <div class="main-content">
+        <div th:replace="~{fragments/layout :: topbar('Product Management(Global change)')}"></div>
+        <div class="content-area">
+            <div th:replace="~{fragments/layout :: alerts}"></div>
 
-                <div class="card">
-                    <div class="card-header">
-                        <h2>Products <span class="badge badge-info" style="font-size: 0.7rem; vertical-align: middle;">GLOBAL</span></h2>
-                        <a th:href="@{/warehouse/products/new}" class="btn btn-primary btn-sm">+ New Product</a>
-                    </div>
-                    <div class="card-body">
-                        <form th:action="@{/warehouse/products}" method="get" class="search-bar">
-                            <input type="text" name="keyword" class="form-control"
-                                placeholder="Search by SKU or name..." th:value="${keyword}">
-                            <button type="submit" class="btn btn-outline">Search</button>
-                            <a th:if="${keyword != null}" th:href="@{/warehouse/products}"
-                                class="btn btn-outline">Clear</a>
-                        </form>
+            <div class="card">
+                <div class="card-header">
+                    <h2>Products <span class="badge badge-info"
+                                       style="font-size: 0.7rem; vertical-align: middle;">GLOBAL</span></h2>
+                    <a th:href="@{/warehouse/products/new}" class="btn btn-primary btn-sm">+ New Product</a>
+                </div>
+                <div class="card-body">
+                    <!-- Search -->
+                    <form th:action="@{/warehouse/products}" method="get" class="search-bar">
+                        <input type="text" name="keyword" class="form-control"
+                               placeholder="Search by SKU or name..." th:value="${keyword}">
+                        <button type="submit" class="btn btn-outline">Search</button>
+                        <a th:if="${keyword != null}" th:href="@{/warehouse/products}"
+                           class="btn btn-outline">Clear</a>
+                    </form>
 
-                        <div th:if="${#lists.isEmpty(products)}" class="empty-state">
-                            <p>No products found.</p>
-                        </div>
-                        <div th:unless="${#lists.isEmpty(products)}" class="table-wrapper">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>#</th>
-                                        <th>SKU</th>
-                                        <th>Product Name</th>
-                                        <th>Unit Weight</th>
-                                        <th>Base UoM</th>
-                                        <th>Min Stock</th>
-                                        <th>Status</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr th:each="p, iter : ${products}">
-                                        <td th:text="${iter.count}"></td>
-                                        <td><strong th:text="${p.sku}"></strong></td>
-                                        <td th:text="${p.productName}"></td>
-                                        <td th:text="${p.unitWeight != null} ? ${p.unitWeight} + ' kg' : '—'"></td>
-                                        <td><span class="badge badge-secondary" th:text="${p.baseUoM}"></span></td>
-                                        <td th:text="${p.minStockLevel}"></td>
-                                        <td>
-                                            <span th:if="${p.isActive}" class="badge badge-success">Active</span>
-                                            <span th:unless="${p.isActive}" class="badge badge-danger">Inactive</span>
-                                        </td>
-                                        <td>
-                                            <div class="btn-group">
-                                                <a th:href="@{/warehouse/products/{id}/edit(id=${p.productId})}"
-                                                    class="btn btn-outline btn-sm">Edit</a>
-                                                <form th:action="@{/warehouse/products/{id}/toggle(id=${p.productId})}"
-                                                    method="post" style="display:inline;">
-                                                    <button type="submit"
-                                                        th:class="${p.isActive} ? 'btn btn-warning btn-sm' : 'btn btn-success btn-sm'"
-                                                        th:text="${p.isActive} ? 'Deactivate' : 'Activate'"></button>
-                                                </form>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
+                    <!-- Result info -->
+                    <div th:if="${totalElements != null}"
+                         style="margin-bottom: 0.5rem; color: var(--text-secondary); font-size: 0.875rem;">
+                        Showing
+                        <strong th:text="${currentPage * 10 + 1}"></strong>–<strong
+                            th:text="${(currentPage * 10 + #lists.size(products))}"></strong>
+                        of <strong th:text="${totalElements}"></strong> products
                     </div>
+
+                    <!-- Empty state -->
+                    <div th:if="${#lists.isEmpty(products)}" class="empty-state">
+                        <p>No products found.</p>
+                    </div>
+
+                    <!-- Table -->
+                    <div th:unless="${#lists.isEmpty(products)}" class="table-wrapper">
+                        <table>
+                            <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>SKU</th>
+                                <th>Product Name</th>
+                                <th>Unit Weight</th>
+                                <th>Base UoM</th>
+                                <th>Min Stock</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:each="p, iter : ${products}">
+                                <td th:text="${currentPage * 10 + iter.count}"></td>
+                                <td><strong th:text="${p.sku}"></strong></td>
+                                <td th:text="${p.productName}"></td>
+                                <td th:text="${p.unitWeight != null} ? ${p.unitWeight} + ' kg' : '—'"></td>
+                                <td><span class="badge badge-secondary" th:text="${p.baseUoM}"></span></td>
+                                <td th:text="${p.minStockLevel}"></td>
+                                <td>
+                                    <span th:if="${p.isActive}" class="badge badge-success">Active</span>
+                                    <span th:unless="${p.isActive}" class="badge badge-danger">Inactive</span>
+                                </td>
+                                <td>
+                                    <div class="btn-group">
+                                        <a th:href="@{/warehouse/products/{id}/edit(id=${p.productId})}"
+                                           class="btn btn-outline btn-sm">Edit</a>
+                                        <form th:action="@{/warehouse/products/{id}/toggle(id=${p.productId})}"
+                                              method="post" style="display:inline;">
+                                            <button type="submit"
+                                                    th:class="${p.isActive} ? 'btn btn-warning btn-sm' : 'btn btn-success btn-sm'"
+                                                    th:text="${p.isActive} ? 'Deactivate' : 'Activate'"></button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    <div th:if="${totalPages > 1}" class="pagination-wrapper">
+                        <a th:if="${currentPage > 0}"
+                           th:href="@{/warehouse/products(page=${currentPage - 1}, keyword=${keyword})}"
+                           class="btn btn-outline btn-sm">&laquo; Prev</a>
+                        <span th:unless="${currentPage > 0}" class="btn btn-outline btn-sm disabled">&laquo;
+                                Prev</span>
+
+                        <span th:each="i : ${#numbers.sequence(0, totalPages - 1)}">
+                                <a th:if="${i != currentPage}"
+                                   th:href="@{/warehouse/products(page=${i}, keyword=${keyword})}" th:text="${i + 1}"
+                                   class="btn btn-outline btn-sm"></a>
+                                <strong th:if="${i == currentPage}" th:text="${i + 1}" class="btn btn-primary btn-sm"
+                                        style="pointer-events:none;"></strong>
+                            </span>
+
+                        <a th:if="${currentPage < totalPages - 1}"
+                           th:href="@{/warehouse/products(page=${currentPage + 1}, keyword=${keyword})}"
+                           class="btn btn-outline btn-sm">Next &raquo;</a>
+                        <span th:unless="${currentPage < totalPages - 1}"
+                              class="btn btn-outline btn-sm disabled">Next &raquo;</span>
+                    </div>
+
                 </div>
             </div>
         </div>
     </div>
+</div>
 </body>
 
 </html>

@@ -6,13 +6,12 @@ import com.minhhai.wms.service.UserService;
 import com.minhhai.wms.service.WarehouseService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
-
-import java.util.List;
 
 @Controller
 @RequestMapping("/admin/users")
@@ -22,6 +21,8 @@ public class AdminUserController {
     private final UserService userService;
     private final WarehouseService warehouseService;
 
+    private static final int PAGE_SIZE = 10;
+
     private static final String[] ROLES = {
             "System Admin", "Warehouse Admin", "Warehouse Manager",
             "Purchasing Manager", "Purchasing Staff",
@@ -30,16 +31,26 @@ public class AdminUserController {
 
     @GetMapping
     public String list(@RequestParam(name = "keyword", required = false) String keyword,
+                       @RequestParam(name = "page", defaultValue = "0") int page,
                        Model model) {
-        List<User> users;
-        if (keyword != null && !keyword.isBlank()) {
-            users = userService.search(keyword);
-            model.addAttribute("keyword", keyword);
-        } else {
-            users = userService.findAll();
+        // Prevent negative page
+        if (page < 0) page = 0;
+
+        Page<User> userPage = userService.findPaginated(keyword, page, PAGE_SIZE);
+
+        // If page > totalPages (e.g. after a delete shrinks results), go to last page
+        if (page > 0 && page >= userPage.getTotalPages()) {
+            page = Math.max(0, userPage.getTotalPages() - 1);
+            userPage = userService.findPaginated(keyword, page, PAGE_SIZE);
         }
+
         model.addAttribute("activePage", "admin-users");
-        model.addAttribute("users", users);
+        model.addAttribute("userPage", userPage);
+        model.addAttribute("users", userPage.getContent());
+        model.addAttribute("currentPage", page);
+        model.addAttribute("totalPages", userPage.getTotalPages());
+        model.addAttribute("totalElements", userPage.getTotalElements());
+        model.addAttribute("keyword", keyword);
         return "admin/user-list";
     }
 
@@ -74,8 +85,7 @@ public class AdminUserController {
                        BindingResult bindingResult,
                        Model model,
                        RedirectAttributes redirectAttributes) {
-        
-        // Return to form if validation fails
+
         if (bindingResult.hasErrors()) {
             model.addAttribute("activePage", "admin-users");
             model.addAttribute("roles", ROLES);
@@ -88,7 +98,6 @@ public class AdminUserController {
             redirectAttributes.addFlashAttribute("success", "User saved successfully.");
         } catch (IllegalArgumentException e) {
             String msg = e.getMessage().toLowerCase();
-
             if (msg.contains("username")) {
                 bindingResult.rejectValue("username", "error.user", e.getMessage());
             } else if (msg.contains("password")) {

@@ -5,13 +5,12 @@ import com.minhhai.wms.entity.Warehouse;
 import com.minhhai.wms.service.WarehouseService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
-
-import java.util.List;
 
 @Controller
 @RequestMapping("/admin/warehouses")
@@ -20,17 +19,28 @@ public class AdminWarehouseController {
 
     private final WarehouseService warehouseService;
 
+    private static final int PAGE_SIZE = 10;
+
     @GetMapping
-    public String list(@RequestParam(name = "keyword", required = false) String keyword, Model model) {
-        List<Warehouse> warehouses;
-        if (keyword != null && !keyword.isBlank()) {
-            warehouses = warehouseService.search(keyword);
-            model.addAttribute("keyword", keyword);
-        } else {
-            warehouses = warehouseService.findAll();
+    public String list(@RequestParam(name = "keyword", required = false) String keyword,
+                       @RequestParam(name = "page", defaultValue = "0") int page,
+                       Model model) {
+        if (page < 0) page = 0;
+
+        Page<Warehouse> warehousePage = warehouseService.findPaginated(keyword, page, PAGE_SIZE);
+
+        if (page > 0 && page >= warehousePage.getTotalPages()) {
+            page = Math.max(0, warehousePage.getTotalPages() - 1);
+            warehousePage = warehouseService.findPaginated(keyword, page, PAGE_SIZE);
         }
+
         model.addAttribute("activePage", "admin-warehouses");
-        model.addAttribute("warehouses", warehouses);
+        model.addAttribute("warehousePage", warehousePage);
+        model.addAttribute("warehouses", warehousePage.getContent());
+        model.addAttribute("currentPage", page);
+        model.addAttribute("totalPages", warehousePage.getTotalPages());
+        model.addAttribute("totalElements", warehousePage.getTotalElements());
+        model.addAttribute("keyword", keyword);
         return "admin/warehouse-list";
     }
 
@@ -61,7 +71,7 @@ public class AdminWarehouseController {
                        BindingResult bindingResult,
                        Model model,
                        RedirectAttributes redirectAttributes) {
-        
+
         if (bindingResult.hasErrors()) {
             model.addAttribute("activePage", "admin-warehouses");
             return "admin/warehouse-form";
@@ -108,6 +118,4 @@ public class AdminWarehouseController {
                 .isActive(warehouse.getIsActive())
                 .build();
     }
-
-
 }

@@ -1,6 +1,8 @@
 package com.minhhai.wms.repository;
 
 import com.minhhai.wms.entity.User;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -24,6 +26,9 @@ public interface UserRepository extends JpaRepository<User, Integer> {
             "OR LOWER(u.username) LIKE LOWER(CONCAT('%', :keyword, '%'))")
     List<User> searchByKeyword(@Param("keyword") String keyword);
 
+    @Query("SELECT u FROM User u WHERE LOWER(u.fullName) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+            "OR LOWER(u.username) LIKE LOWER(CONCAT('%', :keyword, '%'))")
+    Page<User> searchByKeywordPageable(@Param("keyword") String keyword, Pageable pageable);
+
     long countByRoleAndIsActiveTrue(String role);
 }
-
