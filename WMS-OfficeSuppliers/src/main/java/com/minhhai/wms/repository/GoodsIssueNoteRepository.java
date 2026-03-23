@@ -17,4 +17,11 @@ public interface GoodsIssueNoteRepository extends JpaRepository<GoodsIssueNote, 
 
     @Query("SELECT MAX(g.ginNumber) FROM GoodsIssueNote g WHERE g.ginNumber LIKE :prefix%")
     String findMaxGinNumber(@Param("prefix") String prefix);
+
+    /**
+     * DB-level existence check used in approveSO idempotency guard.
+     * More reliable than checking so.getGoodsIssueNotes() which may be stale
+     * in the Hibernate 1st-level cache within the same transaction.
+     */
+    boolean existsBySalesOrder_SoId(Integer soId);
 }

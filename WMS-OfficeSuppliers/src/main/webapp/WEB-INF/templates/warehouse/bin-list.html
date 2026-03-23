@@ -9,114 +9,78 @@
 </head>
 
 <body>
-<div class="app-layout">
-    <div th:replace="~{fragments/layout :: sidebar-warehouse}"></div>
-    <div class="main-content">
-        <div th:replace="~{fragments/layout :: topbar('Bin Management - ' + ${currentWarehouseName})}"></div>
-        <div class="content-area">
-            <div th:replace="~{fragments/layout :: alerts}"></div>
+    <div class="app-layout">
+        <div th:replace="~{fragments/layout :: sidebar-warehouse}"></div>
+        <div class="main-content">
+            <div th:replace="~{fragments/layout :: topbar('Bin Management - ' + ${currentWarehouseName})}"></div>
+            <div class="content-area">
+                <div th:replace="~{fragments/layout :: alerts}"></div>
 
-            <div class="card">
-                <div class="card-header">
-                    <h2>Bins - <span style="color: var(--primary);" th:text="${currentWarehouseName}"></span></h2>
-                    <a th:href="@{/warehouse/bins/new}" class="btn btn-primary btn-sm">+ New Bin</a>
-                </div>
-                <div class="card-body">
-                    <!-- Search -->
-                    <div>
-                        <form th:action="@{/warehouse/bins}" method="get" class="search-bar">
-                            <input type="text" name="keyword" class="form-control"
-                                   placeholder="Search by code(e.g. W01...)" th:value="${keyword}">
-                            <button type="submit" class="btn btn-outline">Search</button>
-                            <a th:if="${keyword != null}" th:href="@{/warehouse/bins}" class="btn btn-outline">Clear</a>
-                        </form>
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Bins - <span style="color: var(--primary);" th:text="${currentWarehouseName}"></span></h2>
+                        <a th:href="@{/warehouse/bins/new}" class="btn btn-primary btn-sm">+ New Bin</a>
                     </div>
-
-                    <!-- Result info -->
-                    <div th:if="${totalElements != null}" style="margin-bottom: 0.5rem; color: var(--text-secondary); font-size: 0.875rem;">
-                        Showing
-                        <strong th:text="${currentPage * 10 + 1}"></strong>–<strong th:text="${(currentPage * 10 + #lists.size(bins))}"></strong>
-                        of <strong th:text="${totalElements}"></strong> bins
-                    </div>
-
-                    <!-- Empty state -->
-                    <div th:if="${#lists.isEmpty(bins)}" class="empty-state">
-                        <p>No bins found. Create your first bin.</p>
-                    </div>
-
-                    <!-- Table -->
-                    <div th:unless="${#lists.isEmpty(bins)}" class="table-wrapper">
-                        <table>
-                            <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>Location</th>
-                                <th>Max Weight (kg)</th>
-                                <th>Current Weight (kg)</th>
-                                <th>Available (kg)</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            <tr th:each="bin, iter : ${bins}">
-                                <td th:text="${currentPage * 10 + iter.count}"></td>
-                                <td><strong th:text="${bin.binLocation}"></strong></td>
-                                <td th:text="${bin.maxWeight}"></td>
-                                <td th:text="${currentWeights[bin.binId]}"></td>
-                                <td>
+                    <div class="card-body">
+                        <div>
+                            <form th:action="@{/warehouse/bins}" method="get" class="search-bar">
+                                <input type="text" name="keyword" class="form-control"
+                                       placeholder="Search by code(e.g. W01...)" th:value="${keyword}">
+                                <button type="submit" class="btn btn-outline">Search</button>
+                                <a th:if="${keyword != null}" th:href="@{/warehouse/bins}" class="btn btn-outline">Clear</a>
+                            </form>
+                        </div>
+                        <div th:if="${#lists.isEmpty(bins)}" class="empty-state">
+                            <p>No bins found. Create your first bin.</p>
+                        </div>
+                        <div th:unless="${#lists.isEmpty(bins)}" class="table-wrapper">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Location</th>
+                                        <th>Max Weight (kg)</th>
+                                        <th>Current Weight (kg)</th>
+                                        <th>Available (kg)</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr th:each="bin, iter : ${bins}">
+                                        <td th:text="${iter.count}"></td>
+                                        <td><strong th:text="${bin.binLocation}"></strong></td>
+                                        <td th:text="${bin.maxWeight}"></td>
+                                        <td th:text="${currentWeights[bin.binId]}"></td>
+                                        <td>
                                             <span th:text="${availableCapacities[bin.binId]}"
-                                                  th:class="${availableCapacities[bin.binId].compareTo(T(java.math.BigDecimal).ZERO) == 0} ? 'badge badge-danger' : ''"></span>
-                                </td>
-                                <td>
-                                    <span th:if="${bin.isActive}" class="badge badge-success">Active</span>
-                                    <span th:unless="${bin.isActive}" class="badge badge-danger">Inactive</span>
-                                </td>
-                                <td>
-                                    <div class="btn-group">
-                                        <a th:href="@{/warehouse/bins/{id}/edit(id=${bin.binId})}"
-                                           class="btn btn-outline btn-sm">Edit</a>
-                                        <form th:action="@{/warehouse/bins/{id}/toggle(id=${bin.binId})}"
-                                              method="post" style="display:inline;">
-                                            <button type="submit"
-                                                    th:class="${bin.isActive} ? 'btn btn-warning btn-sm' : 'btn btn-success btn-sm'"
-                                                    th:text="${bin.isActive} ? 'Deactivate' : 'Activate'"></button>
-                                        </form>
-                                    </div>
-                                </td>
-                            </tr>
-                            </tbody>
-                        </table>
+                                                th:class="${availableCapacities[bin.binId].compareTo(T(java.math.BigDecimal).ZERO) == 0} ? 'badge badge-danger' : ''"></span>
+                                        </td>
+                                        <td>
+                                            <span th:if="${bin.isActive}" class="badge badge-success">Active</span>
+                                            <span th:unless="${bin.isActive}" class="badge badge-danger">Inactive</span>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group">
+                                                <a th:href="@{/warehouse/bins/{id}/edit(id=${bin.binId})}"
+                                                    class="btn btn-outline btn-sm">Edit</a>
+                                                <form th:action="@{/warehouse/bins/{id}/toggle(id=${bin.binId})}"
+                                                    method="post" style="display:inline;">
+                                                    <button type="submit"
+                                                        th:class="${bin.isActive} ? 'btn btn-warning btn-sm' : 'btn btn-success btn-sm'"
+                                                        th:text="${bin.isActive} ? 'Deactivate' : 'Activate'"></button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
-
-                    <!-- Pagination -->
-                    <div th:if="${totalPages > 1}" class="pagination-wrapper">
-                        <a th:if="${currentPage > 0}"
-                           th:href="@{/warehouse/bins(page=${currentPage - 1}, keyword=${keyword})}"
-                           class="btn btn-outline btn-sm">&laquo; Prev</a>
-                        <span th:unless="${currentPage > 0}" class="btn btn-outline btn-sm disabled">&laquo; Prev</span>
-
-                        <span th:each="i : ${#numbers.sequence(0, totalPages - 1)}">
-                                <a th:if="${i != currentPage}"
-                                   th:href="@{/warehouse/bins(page=${i}, keyword=${keyword})}"
-                                   th:text="${i + 1}"
-                                   class="btn btn-outline btn-sm"></a>
-                                <strong th:if="${i == currentPage}"
-                                        th:text="${i + 1}"
-                                        class="btn btn-primary btn-sm" style="pointer-events:none;"></strong>
-                            </span>
-
-                        <a th:if="${currentPage < totalPages - 1}"
-                           th:href="@{/warehouse/bins(page=${currentPage + 1}, keyword=${keyword})}"
-                           class="btn btn-outline btn-sm">Next &raquo;</a>
-                        <span th:unless="${currentPage < totalPages - 1}" class="btn btn-outline btn-sm disabled">Next &raquo;</span>
-                    </div>
-
                 </div>
             </div>
         </div>
     </div>
-</div>
 </body>
 
 </html>

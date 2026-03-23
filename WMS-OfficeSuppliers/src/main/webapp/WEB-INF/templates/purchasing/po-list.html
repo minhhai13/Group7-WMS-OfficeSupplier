@@ -87,7 +87,7 @@
                                                 th:text="${po.poStatus}"></span>
                                             <span th:if="${po.poStatus == 'Rejected'}" class="badge badge-danger"
                                                 th:text="${po.poStatus}" style="cursor: help;"
-                                                th:title="${po.rejectReason != null ? 'Lý do: ' + po.rejectReason : 'Không có lý do cụ thể'}"></span>
+                                                th:title="${po.rejectReason != null ? 'Reason: ' + po.rejectReason : 'No specific reason'}"></span>
 
                                             <div th:if="${po.poStatus == 'Rejected' && po.rejectReason != null}"
                                                 style="font-size: 0.75rem; color: #dc3545; margin-top: 4px;">

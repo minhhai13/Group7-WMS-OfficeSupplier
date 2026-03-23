@@ -6,6 +6,7 @@ import com.minhhai.wms.repository.StockBatchRepository;
 import com.minhhai.wms.service.BinService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -24,9 +25,10 @@ public class TransferApiController {
      * GET /api/transfer/bins/{binId}/stock-batches
      * Trả về danh sách product-batch có hàng (qtyAvailable > 0) trong một bin.
      */
+    @Transactional(readOnly = true)
     @GetMapping("/bins/{binId}/stock-batches")
     public ResponseEntity<List<Map<String, Object>>> getStockBatchesByBin(@PathVariable Integer binId) {
-        List<StockBatch> batches = stockBatchRepository.findByBinBinId(binId)
+        List<StockBatch> batches = stockBatchRepository.findByBinBinIdEager(binId)
                 .stream()
                 .filter(sb -> sb.getQtyAvailable() != null && sb.getQtyAvailable() > 0)
                 .collect(Collectors.toList());
@@ -48,6 +50,7 @@ public class TransferApiController {
      * Trả về tất cả các bin còn active trong kho (làm To Bin).
      * Có thể loại trừ fromBinId nếu truyền query param exclude.
      */
+    @Transactional(readOnly = true)
     @GetMapping("/warehouses/{warehouseId}/bins")
     public ResponseEntity<List<Map<String, Object>>> getBinsByWarehouse(
             @PathVariable Integer warehouseId,

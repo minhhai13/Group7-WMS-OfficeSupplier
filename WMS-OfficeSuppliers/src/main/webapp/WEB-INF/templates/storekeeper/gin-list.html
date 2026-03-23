@@ -41,8 +41,9 @@
                                     <tr>
                                         <th>#</th>
                                         <th>GIN Number</th>
-                                        <th>SO Number</th>
-                                        <th>Customer</th>
+                                        <th>Order Reference</th>
+                                        <th>Customer / Destination</th>
+                                        <th>Warehouse</th>
                                         <th>Status</th>
                                         <th>Actions</th>
                                     </tr>
@@ -53,6 +54,7 @@
                                         <td><strong th:text="${gin.ginNumber}"></strong></td>
                                         <td th:text="${gin.soNumber}"></td>
                                         <td th:text="${gin.customerName} ?: '—'"></td>
+                                        <td th:text="${gin.warehouseName} ?: '—'"></td>
                                         <td>
                                             <span th:if="${gin.giStatus == 'Draft'}" class="badge badge-warning"
                                                 th:text="${gin.giStatus}"></span>

@@ -22,15 +22,15 @@
                 <!-- Shortage Warning Panel (shown when ATP check fails) -->
                 <div th:if="${shortages != null && !shortages.isEmpty()}" class="alert alert-danger"
                     style="margin-bottom: 1.5rem;">
-                    <strong>⚠️ Kho không đủ hàng cho các sản phẩm sau:</strong>
+                    <strong>⚠️ Insufficient stock for the following products:</strong>
                     <table
                         style="width:100%; margin-top: 0.5rem; background: rgba(255,255,255,0.9); border-radius: 4px;">
                         <thead>
                             <tr style="font-weight:600; border-bottom: 1px solid #ddd;">
-                                <td style="padding:6px 8px;">Sản phẩm</td>
-                                <td style="padding:6px 8px;">Cần</td>
-                                <td style="padding:6px 8px;">Có sẵn (ATP)</td>
-                                <td style="padding:6px 8px;">Thiếu</td>
+                                <td style="padding:6px 8px;">Product</td>
+                                <td style="padding:6px 8px;">Required</td>
+                                <td style="padding:6px 8px;">Available (ATP)</td>
+                                <td style="padding:6px 8px;">Shortage</td>
                             </tr>
                         </thead>
                         <tbody>
@@ -43,8 +43,7 @@
                             </tr>
                         </tbody>
                     </table>
-                    <p style="margin-top: 0.75rem; margin-bottom: 0;">Nhấn <strong>"Gửi kèm PR"</strong> để tự động tạo
-                        Purchase Request cho lượng thiếu, hoặc chỉnh sửa đơn hàng.</p>
+                    <p style="margin-top: 0.75rem; margin-bottom: 0;">Click <strong>"Submit with PR"</strong> to automatically generate a Purchase Request for the shortage, or edit the order.</p>
                 </div>
 
                 <form th:action="@{/sales/orders/save}" method="post" th:object="${soDTO}" id="soForm">
@@ -185,8 +184,8 @@
                             <!-- Submit with PR button (shown when there are shortages) -->
                             <button type="submit" name="action" value="submitWithPR" class="btn btn-primary"
                                 th:if="${shortages != null && !shortages.isEmpty()}"
-                                onclick="return confirm('Xác nhận gửi đơn hàng kèm Purchase Request cho lượng thiếu?');">📋
-                                Gửi kèm PR</button>
+                                onclick="return confirm('Confirm submitting order with a Purchase Request for the shortage?');">📋
+                                Submit with PR</button>
                         </div>
                     </div>
                     <div class="card"

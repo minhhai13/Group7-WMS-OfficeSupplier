@@ -19,7 +19,7 @@ public class SaleOrderDTO {
 
     private String soNumber;
 
-    @NotNull(message = "Vui lòng chọn khách hàng")
+    @NotNull(message = "Choose customer")
     private Integer customerId;
 
     private String customerName;
@@ -38,7 +38,7 @@ public class SaleOrderDTO {
     private String prStatus;
 
     @Valid
-    @NotEmpty(message = "Đơn hàng phải có ít nhất một dòng sản phẩm")
+    @NotEmpty(message = "Order must have at least one product")
     @Builder.Default
     private List<SaleOrderDetailDTO> details = new ArrayList<>();
 }

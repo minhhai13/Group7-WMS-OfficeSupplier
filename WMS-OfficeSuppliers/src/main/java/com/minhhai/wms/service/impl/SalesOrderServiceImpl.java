@@ -226,9 +226,12 @@ public class SalesOrderServiceImpl implements SalesOrderService {
             return null; // Already processed, safe to skip
         }
 
-        // Also guard: if a GIN already exists for this SO, don't create another one
-        if (so.getGoodsIssueNotes() != null && !so.getGoodsIssueNotes().isEmpty()) {
-            return null; // GIN already exists, skip
+        // FIX: Use DB-level check instead of so.getGoodsIssueNotes() (Hibernate 1st-level cache).
+        // Within the same transaction, the in-memory list may be stale — a GIN inserted
+        // earlier in the loopback may not be reflected in so.getGoodsIssueNotes() yet.
+        // existsBySalesOrder_SoId() issues an actual SELECT EXISTS, bypassing the cache.
+        if (ginRepository.existsBySalesOrder_SoId(soId)) {
+            return null; // GIN already exists in DB, skip to prevent duplicate
         }
 
         // Only allow approval from valid source states

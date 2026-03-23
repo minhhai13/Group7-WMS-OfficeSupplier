@@ -26,22 +26,16 @@ import java.util.stream.Collectors;
 public class TransferOrderServiceImpl implements TransferOrderService {
 
     private final TransferOrderRepository transferOrderRepository;
+    private final ProductUoMConversionRepository uomConversionRepository;
+    private final GoodsIssueNoteRepository ginRepository;
     private final WarehouseRepository warehouseRepository;
     private final ProductRepository productRepository;
     private final StockBatchRepository stockBatchRepository;
-    private final ProductUoMConversionRepository uomConversionRepository;
     private final StockMovementRepository stockMovementRepository;
 
+    //list dto
     @Override
-    @Transactional(readOnly = true)
-    public TransferOrderDTO getTOById(Integer id) {
-        TransferOrder transfer = transferOrderRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("TransferOrder not found: " + id));
-        return mapToDTO(transfer);
-    }
-
-    @Override
-    public List<TransferOrderDTO> getOutgoingTransferOrders(Integer warehouseId, String status, Integer sourceWarehouseId) {
+    public List<TransferOrderDTO> getOutgoingWHTransferOrders(Integer warehouseId, Integer sourceWarehouseId, String status) {
         List<TransferOrder> transfers;
         boolean hasStatus = status != null && !status.isBlank();
         boolean hasSourceWarehouse = sourceWarehouseId != null;
@@ -58,8 +52,9 @@ public class TransferOrderServiceImpl implements TransferOrderService {
         return transfers.stream().map(this::mapToDTO).collect(Collectors.toList());
     }
 
+
     @Override
-    public List<TransferOrderDTO> getIncomingWarehouseTransferOrders(Integer warehouseId, String status, Integer destWarehouseId) {
+    public List<TransferOrderDTO> getIncomingWHTransferOrders(Integer destWarehouseId, Integer warehouseId, String status) {
         List<TransferOrder> transfers;
         boolean hasStatus = status != null && !status.isBlank();
         boolean hasDestWarehouse = destWarehouseId != null;
@@ -77,7 +72,75 @@ public class TransferOrderServiceImpl implements TransferOrderService {
     }
 
     @Override
-    public void approveTO(Integer id, User user) {
+    public TransferOrderDTO getTRById(Integer id) {
+        TransferOrder transfer = transferOrderRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("TransferOrder not found: " + id));
+        return mapToDTO(transfer);
+    }
+
+    //Transfer Request: 'Draft', 'Pending', 'Rejected'
+    //Transfer Order: 'Approved', 'In-Transit', 'Completed'
+    //save + submit + delete TR
+    @Override
+    public void saveDraftTR(TransferOrderDTO trDTO, User user) {
+        TransferOrder tr = mapToEntity(trDTO, user);
+        tr.setStatus("Draft");
+        tr = transferOrderRepository.save(tr);
+        mapToDTO(tr);
+    }
+
+    @Override
+    public TransferOrderDTO submitTR(TransferOrderDTO trDTO, User user) {
+
+        //trước khi submit cần validate:
+        //check if user's warehouse matches destination warehouse of the TR
+        if (!user.getWarehouse().getWarehouseId().equals(trDTO.getDestinationWarehouseId())) {
+            throw new IllegalArgumentException("You can only submit transfer requests if you're from Dest Warehouse.");
+        }
+
+        //b1: check if tr has at least 1 detail
+        List<TransferOrderDetailDTO> allDetails = trDTO.getDetails();
+        if (allDetails == null || allDetails.isEmpty()) {
+            throw new IllegalArgumentException("At least one product line is required to submit.");
+        }
+        //b2: validate details
+        for (int i = 0; i < allDetails.size(); i++) {
+            TransferOrderDetailDTO d = allDetails.get(i);
+
+            if (d.getProductId() == null) {
+                throw new IllegalArgumentException("Product is required on line " + (i + 1) + ".");
+            }
+            if (d.getUom() == null || d.getUom().isBlank()) {
+                throw new IllegalArgumentException("UoM is required on line " + (i + 1) + ".");
+            }
+            if (d.getRequestedQty() == null || d.getRequestedQty() <= 0) {
+                throw new IllegalArgumentException("Quantity must be greater than 0 on line " + (i + 1) + ".");
+            }
+        }
+        //b3: tr.setStatus("Pending");
+        TransferOrder transfer = mapToEntity(trDTO, user);
+        transfer.setStatus("Pending");
+        //b4: save
+        transfer = transferOrderRepository.save(transfer);
+        return mapToDTO(transfer);
+    }
+
+    @Override
+    public void deleteTR(Integer id, User user) {
+        TransferOrder transfer = transferOrderRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("TransferOrder not found: " + id));
+        if (!"Draft".equals(transfer.getStatus())) {
+            throw new IllegalArgumentException("Only Draft Transfers can be deleted.");
+        }
+        if (!user.getWarehouse().getWarehouseId()
+                .equals(transfer.getDestinationWarehouse().getWarehouseId())) {
+            throw new IllegalArgumentException("You can only delete transfer requests if you're from Dest Warehouse.");
+        }
+        transferOrderRepository.delete(transfer);
+    }
+    //approved + reject tr
+    @Override
+    public void approveTR(Integer id, User user) {
         TransferOrder transfer = transferOrderRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("TransferOrder not found: " + id));
 
@@ -92,12 +155,15 @@ public class TransferOrderServiceImpl implements TransferOrderService {
 
         Warehouse sourceWarehouse = transfer.getSourceWarehouse();
 
+        // Track per-batch allocations to build GIN detail lines
+        List<GINAllocation> ginAllocations = new ArrayList<>();
+
         for (TransferOrderDetail detail : transfer.getDetails()) {
             Product product = detail.getProduct();
             BigDecimal conversionFactor = getConversionFactor(product, detail.getUom());
             int baseQtyNeeded = BigDecimal.valueOf(detail.getRequestedQty())
                     .multiply(conversionFactor)
-                    .intValue();
+                    .intValueExact();
             int remaining = baseQtyNeeded;
 
             List<StockBatch> batches = stockBatchRepository
@@ -128,6 +194,7 @@ public class TransferOrderServiceImpl implements TransferOrderService {
                         .build();
 
                 stockMovementRepository.save(movement);
+                ginAllocations.add(new GINAllocation(detail, product, batch, reserveQty, detail.getUom()));
                 remaining -= reserveQty;
             }
 
@@ -142,67 +209,47 @@ public class TransferOrderServiceImpl implements TransferOrderService {
 
         transfer.setStatus("Approved");
         transferOrderRepository.save(transfer);
+
+        // ── Auto-create Draft GIN for source warehouse ──────────────────────
+        GoodsIssueNote gin = new GoodsIssueNote();
+        gin.setGinNumber(generateGINNumber());
+        gin.setTransferOrder(transfer);
+        gin.setWarehouse(sourceWarehouse);
+        gin.setGiStatus("Draft");
+        gin.setDetails(new ArrayList<>());
+
+        for (GINAllocation alloc : ginAllocations) {
+            GoodsIssueDetail ginDetail = new GoodsIssueDetail();
+            ginDetail.setGoodsIssueNote(gin);
+            ginDetail.setTransferOrderDetail(alloc.toDetail());
+            ginDetail.setProduct(alloc.product());
+            ginDetail.setIssuedQty(0);
+            ginDetail.setUom(alloc.uom());
+            ginDetail.setBatchNumber(alloc.batch().getBatchNumber());
+            ginDetail.setBin(alloc.batch().getBin());
+            ginDetail.setPlannedQty(alloc.reservedQty());
+            gin.getDetails().add(ginDetail);
+        }
+
+        ginRepository.save(gin);
     }
 
     @Override
-    public void rejectTO(Integer id, String reason) {
+    public void rejectTR(Integer id, User user, String reason) {
         TransferOrder transfer = transferOrderRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("TransferOrder not found: " + id));
 
         if (!"Pending".equals(transfer.getStatus())) {
             throw new IllegalArgumentException("Only Transfers with 'Pending' status can be rejected.");
         }
+        if (!user.getWarehouse().getWarehouseId()
+                .equals(transfer.getSourceWarehouse().getWarehouseId())) {
+            throw new IllegalArgumentException("Only source warehouse can reject this transfer.");
+        }
 
         transfer.setStatus("Rejected");
         transfer.setRejectReason(reason);
         transferOrderRepository.save(transfer);
-    }
-
-    @Override
-    public TransferOrderDTO submitTO(TransferOrderDTO toDTO, User user) {
-        List<TransferOrderDetailDTO> allDetails = toDTO.getDetails();
-
-        if (allDetails == null || allDetails.isEmpty()) {
-            throw new IllegalArgumentException("At least one product line is required to submit.");
-        }
-
-        for (int i = 0; i < allDetails.size(); i++) {
-            TransferOrderDetailDTO d = allDetails.get(i);
-
-            if (d.getProductId() == null) {
-                throw new IllegalArgumentException("Product is required on line " + (i + 1) + ".");
-            }
-            if (d.getUom() == null || d.getUom().isBlank()) {
-                throw new IllegalArgumentException("UoM is required on line " + (i + 1) + ".");
-            }
-            if (d.getRequestedQty() == null || d.getRequestedQty() <= 0) {
-                throw new IllegalArgumentException("Quantity must be greater than 0 on line " + (i + 1) + ".");
-            }
-        }
-
-        TransferOrder transfer = mapToEntity(toDTO, user);
-        transfer.setStatus("Pending");
-        transfer = transferOrderRepository.save(transfer);
-
-        return mapToDTO(transfer);
-    }
-
-    @Override
-    public void saveDraftTO(TransferOrderDTO toDTO, User user) {
-        TransferOrder tr = mapToEntity(toDTO, user);
-        tr.setStatus("Draft");
-        tr = transferOrderRepository.save(tr);
-        mapToDTO(tr);
-    }
-
-    @Override
-    public void deleteTO(Integer id, User user) {
-        TransferOrder transfer = transferOrderRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("TransferOrder not found: " + id));
-        if (!"Draft".equals(transfer.getStatus())) {
-            throw new IllegalArgumentException("Only Draft Transfers can be deleted.");
-        }
-        transferOrderRepository.delete(transfer);
     }
 
     private TransferOrderDTO mapToDTO(TransferOrder transfer) {
@@ -286,7 +333,7 @@ public class TransferOrderServiceImpl implements TransferOrderService {
 
         return transfer;
     }
-
+    //helper
     private BigDecimal getConversionFactor(Product product, String uom) {
         if (uom.equals(product.getBaseUoM())) {
             return BigDecimal.ONE;
@@ -302,7 +349,6 @@ public class TransferOrderServiceImpl implements TransferOrderService {
                         new IllegalArgumentException("No UOM conversion found for "
                                 + uom + " of product " + product.getProductName()));
     }
-
     private List<TransferOrderDetailDTO> filterEmptyDetails(@Valid @NotEmpty(message = "Đơn hàng phải có ít nhất một dòng sản phẩm") List<TransferOrderDetailDTO> details) {
         if (details == null) return new ArrayList<>();
         return details.stream()
@@ -324,25 +370,18 @@ public class TransferOrderServiceImpl implements TransferOrderService {
         return prefix + String.format("%03d", nextNum);
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public List<Map<String, String>> getAvailableUoMs(Integer productId) {
-        Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new IllegalArgumentException("Product not found: " + productId));
-        List<Map<String, String>> uomList = new ArrayList<>();
-        Map<String, String> baseEntry = new LinkedHashMap<>();
-        baseEntry.put("uom", product.getBaseUoM());
-        baseEntry.put("label", product.getBaseUoM() + " (Base)");
-        uomList.add(baseEntry);
-        List<ProductUoMConversion> conversions = uomConversionRepository.findByProduct_ProductId(productId);
-        for (ProductUoMConversion conv : conversions) {
-            if (!conv.getFromUoM().equals(product.getBaseUoM())) {
-                Map<String, String> entry = new LinkedHashMap<>();
-                entry.put("uom", conv.getFromUoM());
-                entry.put("label", conv.getFromUoM() + " (1 " + conv.getFromUoM() + " = " + conv.getConversionFactor() + " " + conv.getToUoM() + ")");
-                uomList.add(entry);
-            }
+    private String generateGINNumber() {
+        String dateStr = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        String prefix = "GIN-" + dateStr + "-";
+        String maxNumber = ginRepository.findMaxGinNumber(prefix);
+        int nextNum = 1;
+        if (maxNumber != null) {
+            String suffix = maxNumber.substring(prefix.length());
+            nextNum = Integer.parseInt(suffix) + 1;
         }
-        return uomList;
+        return prefix + String.format("%03d", nextNum);
     }
+
+    // private record for GIN batch allocation tracking
+    private record GINAllocation(TransferOrderDetail toDetail, Product product, StockBatch batch, int reservedQty, String uom) {}
 }

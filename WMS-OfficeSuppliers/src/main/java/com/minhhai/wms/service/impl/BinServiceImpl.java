@@ -7,9 +7,6 @@ import com.minhhai.wms.repository.BinRepository;
 import com.minhhai.wms.repository.StockBatchRepository;
 import com.minhhai.wms.service.BinService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -130,15 +127,5 @@ public class BinServiceImpl implements BinService {
         BigDecimal currentWeight = getCurrentWeight(binId);
         BigDecimal available = maxWeight.subtract(currentWeight);
         return available.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : available;
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public Page<Bin> findPaginated(Integer warehouseId, String keyword, int page, int size) {
-        PageRequest pageable = PageRequest.of(page, size, Sort.by("binLocation").ascending());
-        if (keyword != null && !keyword.isBlank()) {
-            return binRepository.searchInWarehousePageable(warehouseId, keyword.trim(), pageable);
-        }
-        return binRepository.findByWarehouseWarehouseId(warehouseId, pageable);
     }
 }

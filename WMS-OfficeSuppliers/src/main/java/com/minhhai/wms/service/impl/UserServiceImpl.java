@@ -1,6 +1,5 @@
 package com.minhhai.wms.service.impl;
 
-import com.minhhai.wms.dto.UserDTO;
 import com.minhhai.wms.entity.User;
 import com.minhhai.wms.entity.Warehouse;
 import com.minhhai.wms.repository.UserRepository;
@@ -8,9 +7,6 @@ import com.minhhai.wms.repository.WarehouseRepository;
 import com.minhhai.wms.service.UserService;
 import com.minhhai.wms.util.PasswordUtil;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -43,7 +39,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public User save(UserDTO userDTO) {
+    public User save(com.minhhai.wms.dto.UserDTO userDTO) {
         // Uniqueness check
         if (userDTO.getUserId() == null) {
             if (userRepository.existsByUsername(userDTO.getUsername())) {
@@ -134,15 +130,5 @@ public class UserServiceImpl implements UserService {
             return findAll();
         }
         return userRepository.searchByKeyword(keyword.trim());
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public Page<User> findPaginated(String keyword, int page, int size) {
-        PageRequest pageable = PageRequest.of(page, size, Sort.by("fullName").ascending());
-        if (keyword != null && !keyword.isBlank()) {
-            return userRepository.searchByKeywordPageable(keyword.trim(), pageable);
-        }
-        return userRepository.findAll(pageable);
     }
 }

@@ -5,12 +5,13 @@ import com.minhhai.wms.entity.Product;
 import com.minhhai.wms.service.ProductService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+import java.util.List;
 
 @Controller
 @RequestMapping("/warehouse/products")
@@ -19,28 +20,17 @@ public class ProductController {
 
     private final ProductService productService;
 
-    private static final int PAGE_SIZE = 10;
-
     @GetMapping
-    public String list(@RequestParam(name = "keyword", required = false) String keyword,
-                       @RequestParam(name = "page", defaultValue = "0") int page,
-                       Model model) {
-        if (page < 0) page = 0;
-
-        Page<Product> productPage = productService.findPaginated(keyword, page, PAGE_SIZE);
-
-        if (page > 0 && page >= productPage.getTotalPages()) {
-            page = Math.max(0, productPage.getTotalPages() - 1);
-            productPage = productService.findPaginated(keyword, page, PAGE_SIZE);
+    public String list(@RequestParam(name = "keyword", required = false) String keyword, Model model) {
+        List<Product> products;
+        if (keyword != null && !keyword.isBlank()) {
+            products = productService.search(keyword);
+            model.addAttribute("keyword", keyword);
+        } else {
+            products = productService.findAll();
         }
-
         model.addAttribute("activePage", "warehouse-products");
-        model.addAttribute("productPage", productPage);
-        model.addAttribute("products", productPage.getContent());
-        model.addAttribute("currentPage", page);
-        model.addAttribute("totalPages", productPage.getTotalPages());
-        model.addAttribute("totalElements", productPage.getTotalElements());
-        model.addAttribute("keyword", keyword);
+        model.addAttribute("products", products);
         return "warehouse/product-list";
     }
 
@@ -71,7 +61,7 @@ public class ProductController {
                        BindingResult bindingResult,
                        Model model,
                        RedirectAttributes redirectAttributes) {
-
+        
         if (bindingResult.hasErrors()) {
             model.addAttribute("activePage", "warehouse-products");
             return "warehouse/product-form";
@@ -93,7 +83,7 @@ public class ProductController {
             redirectAttributes.addFlashAttribute("error", "Error: " + e.getMessage());
             return "redirect:/warehouse/products";
         }
-
+        
         return "redirect:/warehouse/products";
     }
 
@@ -115,4 +105,6 @@ public class ProductController {
                 .isActive(product.getIsActive())
                 .build();
     }
+
+
 }

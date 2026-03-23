@@ -14,6 +14,9 @@ public interface StockBatchRepository extends JpaRepository<StockBatch, Integer>
 
     List<StockBatch> findByBinBinId(Integer binId);
 
+    @Query("SELECT sb FROM StockBatch sb JOIN FETCH sb.product WHERE sb.bin.binId = :binId")
+    List<StockBatch> findByBinBinIdEager(@Param("binId") Integer binId);
+
     List<StockBatch> findByWarehouseWarehouseId(Integer warehouseId);
 
     List<StockBatch> findByProductProductId(Integer productId);

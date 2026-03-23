@@ -9,126 +9,92 @@
 </head>
 
 <body>
-<div class="app-layout">
-    <div th:replace="~{fragments/layout :: sidebar-warehouse}"></div>
-    <div class="main-content">
-        <div th:replace="~{fragments/layout :: topbar('Partner Management(Global change)')}"></div>
-        <div class="content-area">
-            <div th:replace="~{fragments/layout :: alerts}"></div>
+    <div class="app-layout">
+        <div th:replace="~{fragments/layout :: sidebar-warehouse}"></div>
+        <div class="main-content">
+            <div th:replace="~{fragments/layout :: topbar('Partner Management(Global change)')}"></div>
+            <div class="content-area">
+                <div th:replace="~{fragments/layout :: alerts}"></div>
 
-            <div class="card">
-                <div class="card-header">
-                    <h2>Partners <span class="badge badge-info" style="font-size: 0.7rem; vertical-align: middle;">GLOBAL</span></h2>
-                    <a th:href="@{/warehouse/partners/new}" class="btn btn-primary btn-sm">+ New Partner</a>
-                </div>
-                <div class="card-body">
-                    <!-- Type Filter Tabs -->
-                    <div class="filter-tabs">
-                        <a th:href="@{/warehouse/partners}" class="filter-tab"
-                           th:classappend="${selectedType == null} ? 'active'">All</a>
-                        <a th:href="@{/warehouse/partners(type='Supplier')}" class="filter-tab"
-                           th:classappend="${selectedType == 'Supplier'} ? 'active'">Suppliers</a>
-                        <a th:href="@{/warehouse/partners(type='Customer')}" class="filter-tab"
-                           th:classappend="${selectedType == 'Customer'} ? 'active'">Customers</a>
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Partners <span class="badge badge-info" style="font-size: 0.7rem; vertical-align: middle;">GLOBAL</span></h2>
+                        <a th:href="@{/warehouse/partners/new}" class="btn btn-primary btn-sm">+ New Partner</a>
                     </div>
+                    <div class="card-body">
+                        <!-- Type Filter Tabs -->
+                        <div class="filter-tabs">
+                            <a th:href="@{/warehouse/partners}" class="filter-tab"
+                                th:classappend="${selectedType == null} ? 'active'">All</a>
+                            <a th:href="@{/warehouse/partners(type='Supplier')}" class="filter-tab"
+                                th:classappend="${selectedType == 'Supplier'} ? 'active'">Suppliers</a>
+                            <a th:href="@{/warehouse/partners(type='Customer')}" class="filter-tab"
+                                th:classappend="${selectedType == 'Customer'} ? 'active'">Customers</a>
+                        </div>
 
-                    <!-- Search (preserves type filter) -->
-                    <form th:action="@{/warehouse/partners}" method="get" class="search-bar">
-                        <input type="hidden" name="type" th:value="${selectedType}">
-                        <input type="text" name="keyword" class="form-control" placeholder="Search by name..."
-                               th:value="${keyword}">
-                        <button type="submit" class="btn btn-outline">Search</button>
-                        <a th:href="@{/warehouse/partners(type=${selectedType})}" class="btn btn-outline"
-                           th:if="${keyword != null}">Clear</a>
-                    </form>
+                        <!-- Search -->
+                        <form th:action="@{/warehouse/partners}" method="get" class="search-bar">
+                            <input type="hidden" name="type" th:value="${selectedType}">
+                            <input type="text" name="keyword" class="form-control" placeholder="Search by name..."
+                                th:value="${keyword}">
+                            <button type="submit" class="btn btn-outline">Search</button>
+                            <a th:href="@{/warehouse/partners(type=${selectedType})}" class="btn btn-outline"
+                                th:if="${keyword != null}">Clear</a>
+                        </form>
 
-                    <!-- Result info -->
-                    <div th:if="${totalElements != null}" style="margin-bottom: 0.5rem; color: var(--text-secondary); font-size: 0.875rem;">
-                        Showing
-                        <strong th:text="${currentPage * 10 + 1}"></strong>–<strong th:text="${(currentPage * 10 + #lists.size(partners))}"></strong>
-                        of <strong th:text="${totalElements}"></strong> partners
-                    </div>
-
-                    <!-- Empty state -->
-                    <div th:if="${#lists.isEmpty(partners)}" class="empty-state">
-                        <p>No partners found.</p>
-                    </div>
-
-                    <!-- Table -->
-                    <div th:unless="${#lists.isEmpty(partners)}" class="table-wrapper">
-                        <table>
-                            <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>Name</th>
-                                <th>Type</th>
-                                <th>Contact Person</th>
-                                <th>Phone</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            <tr th:each="p, iter : ${partners}">
-                                <td th:text="${currentPage * 10 + iter.count}"></td>
-                                <td><strong th:text="${p.partnerName}"></strong></td>
-                                <td>
+                        <div th:if="${#lists.isEmpty(partners)}" class="empty-state">
+                            <p>No partners found.</p>
+                        </div>
+                        <div th:unless="${#lists.isEmpty(partners)}" class="table-wrapper">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Name</th>
+                                        <th>Type</th>
+                                        <th>Contact Person</th>
+                                        <th>Phone</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr th:each="p, iter : ${partners}">
+                                        <td th:text="${iter.count}"></td>
+                                        <td><strong th:text="${p.partnerName}"></strong></td>
+                                        <td>
                                             <span th:if="${p.partnerType == 'Supplier'}" class="badge badge-info"
-                                                  th:text="${p.partnerType}"></span>
-                                    <span th:if="${p.partnerType == 'Customer'}" class="badge badge-warning"
-                                          th:text="${p.partnerType}"></span>
-                                </td>
-                                <td th:text="${p.contactPerson} ?: '—'"></td>
-                                <td th:text="${p.phoneNumber} ?: '—'"></td>
-                                <td>
-                                    <span th:if="${p.isActive}" class="badge badge-success">Active</span>
-                                    <span th:unless="${p.isActive}" class="badge badge-danger">Inactive</span>
-                                </td>
-                                <td>
-                                    <div class="btn-group">
-                                        <a th:href="@{/warehouse/partners/{id}/edit(id=${p.partnerId})}"
-                                           class="btn btn-outline btn-sm">Edit</a>
-                                        <form th:action="@{/warehouse/partners/{id}/toggle(id=${p.partnerId})}"
-                                              method="post" style="display:inline;">
-                                            <button type="submit"
-                                                    th:class="${p.isActive} ? 'btn btn-warning btn-sm' : 'btn btn-success btn-sm'"
-                                                    th:text="${p.isActive} ? 'Deactivate' : 'Activate'"></button>
-                                        </form>
-                                    </div>
-                                </td>
-                            </tr>
-                            </tbody>
-                        </table>
+                                                th:text="${p.partnerType}"></span>
+                                            <span th:if="${p.partnerType == 'Customer'}" class="badge badge-warning"
+                                                th:text="${p.partnerType}"></span>
+                                        </td>
+                                        <td th:text="${p.contactPerson} ?: '—'"></td>
+                                        <td th:text="${p.phoneNumber} ?: '—'"></td>
+                                        <td>
+                                            <span th:if="${p.isActive}" class="badge badge-success">Active</span>
+                                            <span th:unless="${p.isActive}" class="badge badge-danger">Inactive</span>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group">
+                                                <a th:href="@{/warehouse/partners/{id}/edit(id=${p.partnerId})}"
+                                                    class="btn btn-outline btn-sm">Edit</a>
+                                                <form th:action="@{/warehouse/partners/{id}/toggle(id=${p.partnerId})}"
+                                                    method="post" style="display:inline;">
+                                                    <button type="submit"
+                                                        th:class="${p.isActive} ? 'btn btn-warning btn-sm' : 'btn btn-success btn-sm'"
+                                                        th:text="${p.isActive} ? 'Deactivate' : 'Activate'"></button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
-
-                    <!-- Pagination (preserves type filter and keyword) -->
-                    <div th:if="${totalPages > 1}" class="pagination-wrapper">
-                        <a th:if="${currentPage > 0}"
-                           th:href="@{/warehouse/partners(page=${currentPage - 1}, keyword=${keyword}, type=${selectedType})}"
-                           class="btn btn-outline btn-sm">&laquo; Prev</a>
-                        <span th:unless="${currentPage > 0}" class="btn btn-outline btn-sm disabled">&laquo; Prev</span>
-
-                        <span th:each="i : ${#numbers.sequence(0, totalPages - 1)}">
-                                <a th:if="${i != currentPage}"
-                                   th:href="@{/warehouse/partners(page=${i}, keyword=${keyword}, type=${selectedType})}"
-                                   th:text="${i + 1}"
-                                   class="btn btn-outline btn-sm"></a>
-                                <strong th:if="${i == currentPage}"
-                                        th:text="${i + 1}"
-                                        class="btn btn-primary btn-sm" style="pointer-events:none;"></strong>
-                            </span>
-
-                        <a th:if="${currentPage < totalPages - 1}"
-                           th:href="@{/warehouse/partners(page=${currentPage + 1}, keyword=${keyword}, type=${selectedType})}"
-                           class="btn btn-outline btn-sm">Next &raquo;</a>
-                        <span th:unless="${currentPage < totalPages - 1}" class="btn btn-outline btn-sm disabled">Next &raquo;</span>
-                    </div>
-
                 </div>
             </div>
         </div>
     </div>
-</div>
 </body>
 
 </html>

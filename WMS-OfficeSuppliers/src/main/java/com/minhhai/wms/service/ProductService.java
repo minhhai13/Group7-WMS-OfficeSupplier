@@ -2,7 +2,6 @@ package com.minhhai.wms.service;
 
 import com.minhhai.wms.dto.ProductDTO;
 import com.minhhai.wms.entity.Product;
-import org.springframework.data.domain.Page;
 
 import java.util.List;
 import java.util.Optional;
@@ -22,7 +21,5 @@ public interface ProductService {
     Product save(Product product);
 
     void toggleActive(Integer productId);
-
-    Page<Product> findPaginated(String keyword, int page, int size);
 
 }

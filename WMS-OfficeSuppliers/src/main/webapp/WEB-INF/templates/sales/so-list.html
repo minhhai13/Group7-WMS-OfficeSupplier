@@ -82,8 +82,7 @@
                                             <span th:if="${so.soStatus == 'Incomplete'}" class="badge badge-warning"
                                                 th:text="${so.soStatus}"></span>
                                             <span th:if="${so.soStatus == 'Rejected'}" class="badge badge-danger"
-                                                th:text="${so.soStatus}" style="cursor: help;"
-                                                th:title="${so.rejectReason != null ? 'Lý do: ' + so.rejectReason : 'Không có lý do cụ thể'}"></span>
+                                                th:title="${so.rejectReason != null ? 'Reason: ' + so.rejectReason : 'No specific reason'}"></span>
 
                                             <div th:if="${so.soStatus == 'Rejected' && so.rejectReason != null}"
                                                 style="font-size: 0.75rem; color: #dc3545; margin-top: 4px;">

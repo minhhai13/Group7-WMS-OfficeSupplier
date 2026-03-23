@@ -469,6 +469,3 @@ select.form-control { appearance: auto; }
     .inline-form { grid-template-columns: 1fr; }
     .stats-grid { grid-template-columns: 1fr; }
 }
-/* ---------- Pagination ---------- */
-.pagination { display: flex; align-items: center; gap: .3rem; margin-top: 1rem; justify-content: center; }
-.pagination a, .pagination span { /* ... */ }

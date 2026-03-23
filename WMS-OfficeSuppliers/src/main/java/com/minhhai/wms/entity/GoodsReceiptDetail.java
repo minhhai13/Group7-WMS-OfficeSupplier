@@ -38,6 +38,11 @@ public class GoodsReceiptDetail {
     @Column(name = "ReceivedQty", nullable = false)
     private Integer receivedQty;
 
+    @Builder.Default
+    @PositiveOrZero
+    @Column(name = "ExpectedQty", nullable = false, columnDefinition = "int default 0")
+    private Integer expectedQty = 0;
+
     @Column(name = "UoM", length = 10, nullable = false)
     private String uom;
 

@@ -17,9 +17,8 @@ public interface SalesOrderService {
 
     /**
      * Two-step submit:
-     * 1. checkAndSubmit(dto, user, false) → validates + checks ATP. If shortage,
-     * returns shortages without creating PR.
-     * 2. checkAndSubmit(dto, user, true) → same but creates PR for missing qty.
+     * 1. checkAndSubmit(dto, user, false) → validates + checks ATP. If shortage, returns shortages without creating PR.
+     * 2. checkAndSubmit(dto, user, true)  → same but creates PR for missing qty.
      * In both cases, SO moves to "Pending Approval".
      */
     StockCheckResult checkAndSubmit(SaleOrderDTO dto, User currentUser, boolean createPR);
@@ -30,8 +29,7 @@ public interface SalesOrderService {
      * Approve a SO:
      * - If linked PR exists → SO="Waiting for Stock", PR="Approved"
      * - If no PR → FIFO Reserve + auto-GIN + SO="Approved"
-     * Also called by GRN loopback with fromLoopback=true (accepts "Waiting for
-     * Stock" status).
+     * Also called by GRN loopback with fromLoopback=true (accepts "Waiting for Stock" status).
      */
     String approveSO(Integer soId, User currentUser);
 

@@ -3,27 +3,28 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Chi tiết phiếu chuyển kho nội bộ - WMS</title>
+    <title>Internal Transfer Details - WMS</title>
     <link rel="stylesheet" th:href="@{/static/css/style.css}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 
 <body>
 <div class="app-layout">
-    <th:block th:switch="${loggedInUserRole}">
-        <div th:case="'Warehouse Manager'" th:replace="~{fragments/layout :: sidebar-report}"></div>
-        <div th:case="'Storekeeper'" th:replace="~{fragments/layout :: sidebar-storekeeper}"></div>
-        <div th:case="*" th:replace="~{fragments/layout :: sidebar-storekeeper}"></div>
+    <th:block th:if="${loggedInUserRole == 'Warehouse Manager'}">
+        <div th:replace="~{fragments/layout :: sidebar-report}"></div>
+    </th:block>
+    <th:block th:if="${loggedInUserRole == 'Storekeeper'}">
+        <div th:replace="~{fragments/layout :: sidebar-storekeeper}"></div>
     </th:block>
     <div class="main-content">
-        <div th:replace="~{fragments/layout :: topbar('Chi tiết phiếu chuyển kho nội bộ')}"></div>
+        <div th:replace="~{fragments/layout :: topbar('Internal Transfer Details')}"></div>
         <div class="content-area">
             <div th:replace="~{fragments/layout :: alerts}"></div>
 
-            <!-- Page header with back button -->
+            <!-- Page header -->
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-                <h2 style="margin: 0;">Chi tiết phiếu: <span th:text="${tn.tnNumber}"></span></h2>
-                <a th:href="@{/transfer/internal}" class="btn btn-outline btn-sm">← Quay lại danh sách</a>
+                <h2 style="margin: 0;">Transfer Details: <span th:text="${tn.tnNumber}"></span></h2>
+                <a th:href="@{/transfer/internal}" class="btn btn-outline btn-sm">← Back to List</a>
             </div>
 
             <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 1.5rem; align-items: start;">
@@ -31,41 +32,33 @@
                 <!-- Info Card -->
                 <div class="card">
                     <div class="card-header">
-                        <h2>ℹ Thông tin chung</h2>
+                        <h2>ℹ General Information</h2>
                     </div>
                     <div class="card-body">
-                        <table class="table-wrapper" style="width: 100%;">
+                        <table style="width: 100%; border-collapse: collapse;">
                             <tbody>
-                            <tr>
-                                <th style="padding: 0.5rem 0; width: 45%; font-weight: 600;">Kho thực hiện:</th>
-                                <td style="padding: 0.5rem 0;" th:text="${tn.warehouseName}"></td>
-                            </tr>
-                            <tr>
-                                <th style="padding: 0.5rem 0; font-weight: 600;">Trạng thái:</th>
-                                <td style="padding: 0.5rem 0;">
-                      <span th:if="${tn.status == 'Approved'}" class="badge badge-warning"
-                            th:text="${tn.status}"></span>
-                                    <span th:if="${tn.status == 'Completed'}" class="badge badge-success"
-                                          th:text="${tn.status}"></span>
-                                    <span th:if="${tn.status != 'Approved' and tn.status != 'Completed'}"
-                                          class="badge badge-secondary" th:text="${tn.status}"></span>
-                                </td>
-                            </tr>
-                            <tr>
-                                <th style="padding: 0.5rem 0; font-weight: 600;">Ngày tạo:</th>
-                                <td style="padding: 0.5rem 0;"
-                                    th:text="${#temporals.format(tn.createdAt, 'dd/MM/yyyy HH:mm')}">
-                                </td>
-                            </tr>
+                                <tr style="border-bottom: 1px solid #f1f5f9;">
+                                    <th style="padding: 0.6rem 0; width: 45%; font-weight: 600; font-size: 0.8rem; text-transform: uppercase; color: #64748b;">Execution Warehouse</th>
+                                    <td style="padding: 0.6rem 0;" th:text="${tn.warehouseName}"></td>
+                                </tr>
+                                <tr style="border-bottom: 1px solid #f1f5f9;">
+                                    <th style="padding: 0.6rem 0; font-weight: 600; font-size: 0.8rem; text-transform: uppercase; color: #64748b;">Status</th>
+                                    <td style="padding: 0.6rem 0;">
+                                        <span th:if="${tn.status == 'Approved'}" class="badge badge-warning">Pending Execution</span>
+                                        <span th:if="${tn.status == 'Completed'}" class="badge badge-success">Completed</span>
+                                        <span th:if="${tn.status == 'Cancelled'}" class="badge badge-danger">Cancelled</span>
+                                    </td>
+                                </tr>
                             </tbody>
                         </table>
+
+                        <!-- Storekeeper action button -->
                         <div th:if="${loggedInUserRole == 'Storekeeper' and tn.status == 'Approved'}"
                              style="margin-top: 1.5rem;">
                             <form th:action="@{/transfer/internal/{id}/complete(id=${tn.tnId})}" method="post"
-                                  onsubmit="return confirm('Bạn đã thực hiện di dời hàng hóa vật lý giữa các Bin này chưa?')">
-                                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                                  onsubmit="return confirm('Have you physically moved the goods between these bins?')">
                                 <button type="submit" class="btn btn-primary" style="width: 100%;">
-                                    ✔ Xác nhận hoàn thành
+                                    ✔ Confirm Completion
                                 </button>
                             </form>
                         </div>
@@ -75,40 +68,41 @@
                 <!-- Details Card -->
                 <div class="card">
                     <div class="card-header">
-                        <h2>📋 Danh sách hàng hóa cần chuyển bin</h2>
+                        <h2>📋 Transfer Line Details</h2>
                     </div>
                     <div class="card-body">
-                        <div class="table-wrapper">
+                        <div th:if="${#lists.isEmpty(tn.details)}" class="empty-state">
+                            <p>No items found.</p>
+                        </div>
+                        <div th:unless="${#lists.isEmpty(tn.details)}" class="table-wrapper">
                             <table>
                                 <thead>
-                                <tr>
-                                    <th>Sản phẩm</th>
-                                    <th>Lô (Batch)</th>
-                                    <th>Từ Bin (Nguồn)</th>
-                                    <th>Đến Bin (Đích)</th>
-                                    <th>Số lượng</th>
-                                </tr>
+                                    <tr>
+                                        <th>Product</th>
+                                        <th>Batch</th>
+                                        <th>From Bin</th>
+                                        <th>To Bin</th>
+                                        <th>Quantity</th>
+                                    </tr>
                                 </thead>
                                 <tbody>
-                                <tr th:each="d : ${tn.details}">
-                                    <td>
-                                        <strong th:text="${d.productDisplayName}"></strong>
-                                    </td>
-                                    <td th:text="${d.batchNumber}"></td>
-                                    <td>
-                                        <div style="color: var(--danger, #dc3545); font-size: 0.78rem;">↑ Xuất từ</div>
-                                        <strong th:text="${d.fromBinLocation}"></strong>
-                                    </td>
-                                    <td>
-                                        <div style="color: var(--success, #198754); font-size: 0.78rem;">↓ Nhập vào
-                                        </div>
-                                        <strong th:text="${d.toBinLocation}"></strong>
-                                    </td>
-                                    <td>
-                                        <span class="badge badge-secondary"
-                                              th:text="${d.quantity + ' ' + d.uom}"></span>
-                                    </td>
-                                </tr>
+                                    <tr th:each="d : ${tn.details}">
+                                        <td>
+                                            <strong th:text="${d.productDisplayName}"></strong>
+                                        </td>
+                                        <td th:text="${d.batchNumber}"></td>
+                                        <td>
+                                            <div style="color: #ef4444; font-size: 0.75rem; margin-bottom: 2px;">↑ Issue From</div>
+                                            <strong th:text="${d.fromBinLocation}"></strong>
+                                        </td>
+                                        <td>
+                                            <div style="color: #22c55e; font-size: 0.75rem; margin-bottom: 2px;">↓ Receive To</div>
+                                            <strong th:text="${d.toBinLocation}"></strong>
+                                        </td>
+                                        <td>
+                                            <span class="badge badge-secondary" th:text="${d.quantity + ' ' + d.uom}"></span>
+                                        </td>
+                                    </tr>
                                 </tbody>
                             </table>
                         </div>
@@ -116,7 +110,6 @@
                 </div>
 
             </div>
-
         </div>
     </div>
 </div>

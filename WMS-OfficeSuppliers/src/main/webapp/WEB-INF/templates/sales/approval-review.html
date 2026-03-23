@@ -25,10 +25,10 @@
                 <!-- PR Indicator (if SO has linked PR) -->
                 <div th:if="${soDTO.hasPR}" class="alert alert-danger"
                     style="margin-bottom: 1.5rem; background: #fff3cd; border-color: #ffc107; color: #856404;">
-                    <strong>⚠️ Đơn hàng này có Purchase Request kèm theo:</strong>
+                    <strong>⚠️ This order includes a Purchase Request:</strong>
                     <span th:text="${soDTO.prNumber}"></span>
-                    — Trạng thái PR: <strong th:text="${soDTO.prStatus}"></strong>
-                    <br><small>Nếu phê duyệt, SO sẽ chuyển sang "Waiting for Stock" cho đến khi hàng về đủ.</small>
+                    — PR Status: <strong th:text="${soDTO.prStatus}"></strong>
+                    <br><small>If approved, the SO will change to "Waiting for Stock" until enough stock arrives.</small>
                 </div>
 
                 <!-- Order Information (Read-Only) -->

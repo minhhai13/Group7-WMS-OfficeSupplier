@@ -14,15 +14,15 @@ public class SaleOrderDetailDTO {
 
     private Integer soDetailId;
 
-    @NotNull(message = "Vui lòng chọn sản phẩm")
+    @NotNull(message = "Choose product")
     private Integer productId;
 
     private String productDisplayName; // "SKU - ProductName" for display
 
-    @NotBlank(message = "Vui lòng chọn đơn vị tính")
+    @NotBlank(message = "Choose UoM")
     private String uom;
 
-    @NotNull(message = "Số lượng không được để trống")
-    @Positive(message = "Số lượng đặt hàng phải lớn hơn 0")
+    @NotNull(message = "Quantity must not null")
+    @Positive(message = "Quantity must be positive")
     private Integer orderedQty;
 }

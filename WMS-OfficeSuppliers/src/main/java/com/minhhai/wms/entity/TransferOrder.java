@@ -35,7 +35,7 @@ public class TransferOrder {
     @Column(
             name = "Status",
             length = 30,
-            columnDefinition = "nvarchar(30) default 'Pending' CHECK ([Status] IN ('Pending', 'Approved', 'In-Transit', 'Completed', 'Rejected'))"
+            columnDefinition = "nvarchar(30) default 'Pending' CHECK ([Status] IN ('Draft', 'Pending', 'Approved', 'In-Transit', 'Completed', 'Rejected', 'Incomplete'))"
     )
     private String status = "Pending";
 

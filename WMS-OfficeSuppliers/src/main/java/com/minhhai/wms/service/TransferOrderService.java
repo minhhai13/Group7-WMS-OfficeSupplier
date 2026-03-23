@@ -8,22 +8,23 @@ import java.util.List;
 import java.util.Map;
 
 public interface TransferOrderService {
-    
-    TransferOrderDTO getTOById(Integer id);
 
-    TransferOrderDTO submitTO(@Valid TransferOrderDTO toDTO, User user);
 
-    void saveDraftTO(@Valid TransferOrderDTO toDTO, User user);
+    TransferOrderDTO getTRById(Integer id);
 
-    void deleteTO(Integer id, User user);
+    void saveDraftTR(@Valid TransferOrderDTO trDTO, User user);
 
-    List<TransferOrderDTO> getOutgoingTransferOrders(Integer warehouseId, String status, Integer sourceWarehouseId);
+    TransferOrderDTO submitTR(@Valid TransferOrderDTO trDTO, User user);
 
-    List<TransferOrderDTO> getIncomingWarehouseTransferOrders(Integer warehouseId, String filterStatus, Integer destWarehouseId);
+    void deleteTR(Integer id, User user);
 
-    void approveTO(Integer id, User user);
+    //out going: mình là destination wh, gửi tr cho các wh khác
+    //in coming: mình là source wh, duyệt tr từ các wh khác gửi
+    List<TransferOrderDTO> getOutgoingWHTransferOrders(Integer warehouseId, Integer sourceWarehouseId, String status);
 
-    void rejectTO(Integer id, String trim);
+    List<TransferOrderDTO> getIncomingWHTransferOrders(Integer destWarehouseId, Integer warehouseId, String status);
 
-    List<Map<String, String>> getAvailableUoMs(Integer productId);
+    void approveTR(Integer id, User user);
+
+    void rejectTR(Integer id, User user, String trim);
 }

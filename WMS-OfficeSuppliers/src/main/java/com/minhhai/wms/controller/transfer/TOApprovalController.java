@@ -22,89 +22,85 @@ public class TOApprovalController {
     private final WarehouseService warehouseService;
 
     @GetMapping
-    public String list(@RequestParam(name = "status", required = false, defaultValue = "All") String status,
-                       @RequestParam(name = "destWarehouseId", required = false) Integer destWarehouseId,
-                       Model model, HttpSession session) {
-
-        User user = (User) session.getAttribute("loggedInUser");
-        if (user == null) {
-            return "redirect:/login";
-        }
+    public String list(Model model,
+                       HttpSession session,
+                       @RequestParam(name = "status", required = false) String status,
+                       @RequestParam(name = "destWarehouseId", required = false) Integer destWarehouseId){
+        User user = (User)session.getAttribute("loggedInUser");
+        if(user == null || user.getWarehouse() == null) return "redirect:/login";
 
         Integer warehouseId = user.getWarehouse().getWarehouseId();
+
         String filterStatus = "All".equals(status) ? null : status;
 
-        List<TransferOrderDTO> transfers =
-                transferOrderService.getIncomingWarehouseTransferOrders(warehouseId, filterStatus, destWarehouseId);
+        List<TransferOrderDTO> transferOrders = transferOrderService.getIncomingWHTransferOrders(destWarehouseId, warehouseId, filterStatus);
+        List<Warehouse> destWarehouses = warehouseService.findAllActiveExcluding(warehouseId);
 
-        List<Warehouse> sourceWarehouses =
-                warehouseService.findAllActiveExcluding(warehouseId);
-
+        model.addAttribute("transfers", transferOrders);
+        model.addAttribute("destWarehouses", destWarehouses);
         model.addAttribute("activePage", "transfer-approvals");
-        model.addAttribute("transfers", transfers);
-        model.addAttribute("sourceWarehouses", sourceWarehouses);
-        model.addAttribute("selectedStatus", status);
         model.addAttribute("selectedDestId", destWarehouseId);
-
+        model.addAttribute("selectedStatus", status);
         return "transfer/to-approved-list";
     }
-
     @GetMapping("/{id}/review")
-    public String review(@PathVariable Integer id,
-                         Model model,
-                         RedirectAttributes redirectAttributes) {
-        try {
-            TransferOrderDTO dto = transferOrderService.getTOById(id);
+    public String review(Model model,
+                         HttpSession session,
+                         @PathVariable Integer id,
+                         RedirectAttributes ra){
+        User user = (User)session.getAttribute("loggedInUser");
+        if(user == null || user.getWarehouse() == null) return "redirect:/login";
 
-            model.addAttribute("activePage", "transfer-approvals");
+        try{
+            TransferOrderDTO dto = transferOrderService.getTRById(id);
             model.addAttribute("trDTO", dto);
-
+            model.addAttribute("activePage", "transfer-approvals");
             return "transfer/to-approved-review";
-        } catch (IllegalArgumentException e) {
-            redirectAttributes.addFlashAttribute("error", e.getMessage());
+        }catch(IllegalArgumentException e){
+            ra.addFlashAttribute("error", e.getMessage());
             return "redirect:/transfer/approvals";
         }
+
     }
 
     @PostMapping("/{id}/approve")
-    public String approve(@PathVariable Integer id,
-                          HttpSession session,
-                          RedirectAttributes redirectAttributes) {
+    public String approve(HttpSession session,
+                          @PathVariable Integer id,
+                          RedirectAttributes ra){
+        User user = (User)session.getAttribute("loggedInUser");
+        if(user == null || user.getWarehouse() == null) return "redirect:/login";
 
-        User user = (User) session.getAttribute("loggedInUser");
-        if (user == null) {
-            return "redirect:/login";
+        try{
+            transferOrderService.approveTR(id, user);
+            ra.addFlashAttribute("success",
+                    "Transfer Order approved. A Goods Issue Note has been auto-created for the source warehouse storekeeper.");
+        }catch(IllegalArgumentException e){
+            ra.addFlashAttribute("error", e.getMessage());
         }
-
-        try {
-            transferOrderService.approveTO(id, user);
-            redirectAttributes.addFlashAttribute("success",
-                    "Transfer Order has been approved.");
-        } catch (IllegalArgumentException e) {
-            redirectAttributes.addFlashAttribute("error", e.getMessage());
-        }
-
         return "redirect:/transfer/approvals";
+
     }
 
     @PostMapping("/{id}/reject")
-    public String reject(@PathVariable Integer id,
-                         @RequestParam("reason") String reason,
-                         RedirectAttributes redirectAttributes) {
+    public String reject(HttpSession session,
+                         @PathVariable Integer id,
+                         RedirectAttributes ra,
+                         @RequestParam("reason") String reason){
+        User user = (User)session.getAttribute("loggedInUser");
+        if(user == null || user.getWarehouse() == null) return "redirect:/login";
 
         if (reason == null || reason.trim().isEmpty()) {
-            redirectAttributes.addFlashAttribute("error", "Reject reason is required.");
+            ra.addFlashAttribute("error", "Reject reason is required.");
             return "redirect:/transfer/approvals/" + id + "/review";
         }
-
-        try {
-            transferOrderService.rejectTO(id, reason.trim());
-            redirectAttributes.addFlashAttribute("success",
-                    "Transfer Order has been rejected.");
-        } catch (IllegalArgumentException e) {
-            redirectAttributes.addFlashAttribute("error", e.getMessage());
+        try{
+            transferOrderService.rejectTR(id, user, reason.trim());
+            ra.addFlashAttribute("success", "Transfer Order rejected successfully.");
         }
-
+        catch(IllegalArgumentException e){
+            ra.addFlashAttribute("error", e.getMessage());
+        }
         return "redirect:/transfer/approvals";
     }
+
 }

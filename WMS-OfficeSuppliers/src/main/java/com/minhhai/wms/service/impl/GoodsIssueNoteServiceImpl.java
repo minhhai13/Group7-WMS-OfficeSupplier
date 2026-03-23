@@ -21,6 +21,7 @@ import java.util.stream.Collectors;
 public class GoodsIssueNoteServiceImpl implements GoodsIssueNoteService {
 
     private final GoodsIssueNoteRepository ginRepository;
+    private final GoodsReceiptNoteRepository grnRepository;
     private final SalesOrderRepository soRepository;
     private final TransferOrderRepository toRepository;
     private final StockBatchRepository stockBatchRepository;
@@ -122,11 +123,16 @@ public class GoodsIssueNoteServiceImpl implements GoodsIssueNoteService {
         }
     }
 
+    // ==================== Post GIN for Transfer Order (auto-creates GRN) ====================
+
     private String postGINForTO(GoodsIssueNote gin, Map<Integer, Integer> issuedQtyMap) {
         TransferOrder to = gin.getTransferOrder();
         Warehouse sourceWarehouse = gin.getWarehouse();
         Warehouse destWarehouse = to.getDestinationWarehouse();
         int totalIssuedInput = 0;
+
+        // Track (toDetail, product, batchNumber, destBin, uom) for auto-GRN creation
+        List<GRNAllocation> grnAllocations = new ArrayList<>();
 
         for (GoodsIssueDetail ginDetail : gin.getDetails()) {
             Integer inputIssuedQty = issuedQtyMap.getOrDefault(ginDetail.getGiDetailId(), 0);
@@ -165,6 +171,9 @@ public class GoodsIssueNoteServiceImpl implements GoodsIssueNoteService {
                 stockBatchRepository.save(destBatch);
 
                 toDetail.setIssuedQty(toDetail.getIssuedQty() + inputIssuedQty);
+
+                // Track the allocated dest bin/batch for GRN creation below
+                grnAllocations.add(new GRNAllocation(toDetail, product, ginDetail.getBatchNumber(), destBin, ginDetail.getUom(), inputIssuedQty));
             }
         }
 
@@ -174,14 +183,41 @@ public class GoodsIssueNoteServiceImpl implements GoodsIssueNoteService {
         boolean allComplete = true;
         for (TransferOrderDetail toD : to.getDetails()) if (toD.getIssuedQty() < toD.getRequestedQty()) allComplete = false;
 
+        String toStatusMsg;
         if (allComplete) {
             to.setStatus("In-Transit"); toRepository.save(to);
-            return "Phiếu GIN " + gin.getGinNumber() + " đã ghi sổ. Lệnh chuyển kho " + to.getToNumber() + " đang In-Transit.";
+            toStatusMsg = "Lệnh chuyển kho " + to.getToNumber() + " đang In-Transit.";
         } else {
             to.setStatus("Incomplete"); toRepository.save(to);
             String backOrder = createBackOrderGINForTO(to, gin);
-            return "Phiếu GIN " + gin.getGinNumber() + " đã ghi sổ. Phiếu bù " + backOrder + " đã được tạo.";
+            toStatusMsg = "Phiếu bù " + backOrder + " đã được tạo.";
         }
+
+        // ── Auto-create Draft GRN for destination warehouse ──────────────────
+        GoodsReceiptNote grn = new GoodsReceiptNote();
+        grn.setGrnNumber(generateGRNNumber());
+        grn.setTransferOrder(to);
+        grn.setWarehouse(destWarehouse);
+        grn.setGrStatus("Draft");
+        grn.setDetails(new ArrayList<>());
+
+        for (GRNAllocation alloc : grnAllocations) {
+            GoodsReceiptDetail grnDetail = new GoodsReceiptDetail();
+            grnDetail.setGoodsReceiptNote(grn);
+            grnDetail.setTransferOrderDetail(alloc.toDetail());
+            grnDetail.setProduct(alloc.product());
+            grnDetail.setReceivedQty(0);
+            grnDetail.setExpectedQty(alloc.issuedQty());
+            grnDetail.setUom(alloc.uom());
+            grnDetail.setBatchNumber(alloc.batchNumber());
+            grnDetail.setBin(alloc.destBin());
+            grn.getDetails().add(grnDetail);
+        }
+
+        grnRepository.save(grn);
+
+        return "Phiếu GIN " + gin.getGinNumber() + " đã ghi sổ. " + toStatusMsg
+                + " Phiếu GRN " + grn.getGrnNumber() + " đã được tạo tự động tại kho đích.";
     }
 
     private String createBackOrderGINForSO(SalesOrder so, GoodsIssueNote postedGin) {
@@ -207,21 +243,43 @@ public class GoodsIssueNoteServiceImpl implements GoodsIssueNoteService {
     private String createBackOrderGINForTO(TransferOrder to, GoodsIssueNote postedGin) {
         String ginNumber = generateGINNumber();
         GoodsIssueNote newGin = new GoodsIssueNote();
-        newGin.setGinNumber(ginNumber); newGin.setTransferOrder(to); newGin.setWarehouse(to.getSourceWarehouse());
-        newGin.setGiStatus("Draft"); newGin.setDetails(new ArrayList<>());
+        newGin.setGinNumber(ginNumber);
+        newGin.setTransferOrder(to);
+        newGin.setWarehouse(to.getSourceWarehouse());
+        newGin.setGiStatus("Draft");
+        newGin.setDetails(new ArrayList<>());
 
-        for (TransferOrderDetail toDetail : to.getDetails()) {
-            if (toDetail.getRequestedQty() - toDetail.getIssuedQty() > 0) {
-                GoodsIssueDetail old = postedGin.getDetails().stream().filter(d -> d.getTransferOrderDetail().equals(toDetail)).findFirst().orElse(null);
+        // DUYỆT TRÊN CHI TIẾT CỦA GIN VỪA POST
+        for (GoodsIssueDetail postedDetail : postedGin.getDetails()) {
+            // Giả sử trong GIN cũ bạn định xuất 5 (planned), nhưng thực tế chỉ xuất 3 (issued)
+            // Bạn cần một field như 'plannedQty' hoặc lấy từ chính số lượng ban đầu của Detail đó
+            int planned = postedDetail.getPlannedQty(); // Bạn nên có field này để biết GIN này định xuất bao nhiêu
+            int issued = postedDetail.getIssuedQty();
+            int missing = planned - issued;
+
+            if (missing > 0) {
                 GoodsIssueDetail newDetail = new GoodsIssueDetail();
-                newDetail.setGoodsIssueNote(newGin); newDetail.setTransferOrderDetail(toDetail); newDetail.setProduct(toDetail.getProduct());
-                newDetail.setIssuedQty(0); newDetail.setUom(toDetail.getUom());
-                newDetail.setBatchNumber(old != null ? old.getBatchNumber() : ""); newDetail.setBin(old != null ? old.getBin() : null);
+                newDetail.setGoodsIssueNote(newGin);
+                newDetail.setTransferOrderDetail(postedDetail.getTransferOrderDetail());
+                newDetail.setProduct(postedDetail.getProduct());
+                newDetail.setUom(postedDetail.getUom());
+
+                // QUAN TRỌNG: Giữ nguyên Bin và Batch từ GIN cũ vì hàng thường đã được quy hoạch sẵn
+                newDetail.setBatchNumber(postedDetail.getBatchNumber());
+                newDetail.setBin(postedDetail.getBin());
+
+                newDetail.setIssuedQty(0);
+                newDetail.setPlannedQty(missing); // GIN mới sẽ gánh phần còn lại của GIN cũ
+
                 newGin.getDetails().add(newDetail);
             }
         }
-        ginRepository.save(newGin);
-        return ginNumber;
+
+        if (!newGin.getDetails().isEmpty()) {
+            ginRepository.save(newGin);
+            return ginNumber;
+        }
+        return null;
     }
 
     private Bin allocateBin(Integer warehouseId, BigDecimal incomingWeight, String productName) {
@@ -240,6 +298,13 @@ public class GoodsIssueNoteServiceImpl implements GoodsIssueNoteService {
         String dateStr = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         String prefix = "GIN-" + dateStr + "-";
         String maxNumber = ginRepository.findMaxGinNumber(prefix);
+        return prefix + String.format("%03d", maxNumber != null ? Integer.parseInt(maxNumber.substring(prefix.length())) + 1 : 1);
+    }
+
+    private String generateGRNNumber() {
+        String dateStr = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        String prefix = "GRN-" + dateStr + "-";
+        String maxNumber = grnRepository.findMaxGrnNumber(prefix);
         return prefix + String.format("%03d", maxNumber != null ? Integer.parseInt(maxNumber.substring(prefix.length())) + 1 : 1);
     }
 
@@ -274,4 +339,8 @@ public class GoodsIssueNoteServiceImpl implements GoodsIssueNoteService {
                 .orderedQty(orderedQty).issuedQty(detail.getIssuedQty()).batchNumber(detail.getBatchNumber())
                 .binLocation(detail.getBin() != null ? detail.getBin().getBinLocation() : null).build();
     }
+
+    // ── Private record for GRN destination allocation tracking ───────────────
+    private record GRNAllocation(TransferOrderDetail toDetail, Product product,
+                                  String batchNumber, Bin destBin, String uom, int issuedQty) {}
 }

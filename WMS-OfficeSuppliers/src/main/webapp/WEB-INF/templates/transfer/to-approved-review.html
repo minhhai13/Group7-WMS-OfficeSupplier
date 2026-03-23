@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Review Transfer Order - WMS</title>
+    <link rel="stylesheet" th:href="@{/static/css/style.css}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="app-layout">
+        <div th:replace="~{fragments/layout :: sidebar-report}"></div>
+        <div class="main-content">
+            <div th:replace="~{fragments/layout :: topbar('Review Transfer Order')}"></div>
+            <div class="content-area">
+                <div th:replace="~{fragments/layout :: alerts}"></div>
+
+                <!-- Rejection Reason Alert -->
+                <div th:if="${trDTO.status == 'Rejected' && trDTO.rejectReason != null}"
+                     class="alert alert-danger" style="margin-bottom: 1.5rem;">
+                    <strong>Rejection Reason:</strong> <span th:text="${trDTO.rejectReason}"></span>
+                </div>
+
+                <!-- Transfer Order Information (Read-Only) -->
+                <div class="card" style="margin-bottom: 1.5rem;">
+                    <div class="card-header">
+                        <h2>Transfer Order</h2>
+                        <span th:if="${trDTO.status == 'Pending'}" class="badge badge-warning" th:text="${trDTO.status}"></span>
+                        <span th:if="${trDTO.status == 'Approved'}" class="badge badge-info" th:text="${trDTO.status}"></span>
+                        <span th:if="${trDTO.status == 'In-Transit'}" class="badge badge-warning" th:text="${trDTO.status}"></span>
+                        <span th:if="${trDTO.status == 'Incomplete'}" class="badge badge-warning" th:text="${trDTO.status}"></span>
+                        <span th:if="${trDTO.status == 'Completed'}" class="badge badge-success" th:text="${trDTO.status}"></span>
+                        <span th:if="${trDTO.status == 'Rejected'}" class="badge badge-danger" th:text="${trDTO.status}"></span>
+                    </div>
+                    <div class="card-body">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.5rem;">
+                            <div class="form-group">
+                                <label>TO Number</label>
+                                <input type="text" class="form-control" th:value="${trDTO.toNumber}" readonly disabled>
+                            </div>
+                            <div class="form-group">
+                                <label>Source Warehouse</label>
+                                <input type="text" class="form-control" th:value="${trDTO.sourceWarehouseName}" readonly disabled>
+                            </div>
+                            <div class="form-group">
+                                <label>Destination Warehouse</label>
+                                <input type="text" class="form-control" th:value="${trDTO.destinationWarehouseName}" readonly disabled>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Product Lines (Read-Only) -->
+                <div class="card" style="margin-bottom: 1.5rem;">
+                    <div class="card-header">
+                        <h2>Product Lines</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-wrapper">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th style="width:5%;">#</th>
+                                        <th style="width:40%;">Product</th>
+                                        <th style="width:20%;">UoM</th>
+                                        <th style="width:15%;">Requested Qty</th>
+                                        <th style="width:10%;">Issued Qty</th>
+                                        <th style="width:10%;">Received Qty</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr th:each="detail, iter : ${trDTO.details}">
+                                        <td th:text="${iter.count}"></td>
+                                        <td th:text="${detail.productDisplayName}"></td>
+                                        <td th:text="${detail.uom}"></td>
+                                        <td><strong th:text="${detail.requestedQty}"></strong></td>
+                                        <td th:text="${detail.issuedQty} ?: '0'"></td>
+                                        <td th:text="${detail.receivedQty} ?: '0'"></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="card">
+                    <div class="card-body" style="display: flex; gap: 1rem; justify-content: flex-end; align-items: flex-start;">
+                        <a th:href="@{/transfer/approvals}" class="btn btn-outline">Back to List</a>
+
+                        <!-- Approve / Reject only when Pending -->
+                        <th:block th:if="${trDTO.status == 'Pending'}">
+                            <!-- Approve -->
+                            <form th:action="@{/transfer/approvals/{id}/approve(id=${trDTO.toId})}" method="post"
+                                  style="display:inline;"
+                                  onsubmit="return confirm('Approve this Transfer Order? Stock will be reserved and a Goods Issue Note will be auto-created.');">
+                                <button type="submit" class="btn btn-primary">✅ Approve</button>
+                            </form>
+
+                            <!-- Reject with reason -->
+                            <div id="rejectSection"
+                                 style="display: none; border: 1px solid #ef4444; border-radius: 8px; padding: 1rem; max-width: 400px;">
+                                <form th:action="@{/transfer/approvals/{id}/reject(id=${trDTO.toId})}" method="post"
+                                      onsubmit="return validateRejectReason();">
+                                    <div class="form-group" style="margin-bottom: 0.75rem;">
+                                        <label for="reason" style="font-weight: 600; color: #ef4444;">
+                                            Rejection Reason <span style="color:red;">*</span>
+                                        </label>
+                                        <textarea id="reason" name="reason" class="form-control" rows="3"
+                                                  placeholder="Enter the reason for rejection..." required
+                                                  style="resize: vertical;"></textarea>
+                                    </div>
+                                    <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                                        <button type="button" class="btn btn-outline btn-sm" onclick="toggleReject()">Cancel</button>
+                                        <button type="submit" class="btn btn-danger btn-sm">Confirm Reject</button>
+                                    </div>
+                                </form>
+                            </div>
+                            <button type="button" class="btn btn-danger" id="rejectToggleBtn" onclick="toggleReject()">
+                                ❌ Reject
+                            </button>
+                        </th:block>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleReject() {
+            var section = document.getElementById('rejectSection');
+            var btn = document.getElementById('rejectToggleBtn');
+            if (section.style.display === 'none') {
+                section.style.display = 'block';
+                btn.style.display = 'none';
+            } else {
+                section.style.display = 'none';
+                btn.style.display = 'inline-block';
+            }
+        }
+
+        function validateRejectReason() {
+            var reason = document.getElementById('reason').value.trim();
+            if (!reason) {
+                alert('Please enter a rejection reason.');
+                return false;
+            }
+            return confirm('Are you sure you want to REJECT this Transfer Order?');
+        }
+    </script>
+</body>
+
+</html>

@@ -4,9 +4,6 @@ import com.minhhai.wms.entity.Product;
 import com.minhhai.wms.repository.ProductRepository;
 import com.minhhai.wms.service.ProductService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -96,15 +93,5 @@ public class ProductServiceImpl implements ProductService {
                 .orElseThrow(() -> new RuntimeException("Product not found: " + productId));
         product.setIsActive(!product.getIsActive());
         productRepository.save(product);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public Page<Product> findPaginated(String keyword, int page, int size) {
-        PageRequest pageable = PageRequest.of(page, size, Sort.by("productName").ascending());
-        if (keyword != null && !keyword.isBlank()) {
-            return productRepository.searchByKeywordPageable(keyword.trim(), pageable);
-        }
-        return productRepository.findAll(pageable);
     }
 }

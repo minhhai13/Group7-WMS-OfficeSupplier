@@ -15,6 +15,7 @@ public class GoodsReceiptDetailDTO {
     private String productDisplayName;
     private String uom;
     private Integer orderedQty;   // from PO detail — read-only
+    private Integer expectedQty;  // for TO: qty issued in this GIN batch
     private String batchNumber;   // read-only
     private String binLocation;   // read-only
 

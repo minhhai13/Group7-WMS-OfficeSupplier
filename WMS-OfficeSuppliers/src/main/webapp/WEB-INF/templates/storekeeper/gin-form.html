@@ -121,17 +121,17 @@
                 var ordered = parseInt(inputs[i].getAttribute('data-ordered')) || 0;
 
                 if (issued < 0) {
-                    alert('Số lượng thực xuất không được âm.');
+                    alert('Issued quantity cannot be negative.');
                     inputs[i].focus();
                     return false;
                 }
                 if (issued > ordered) {
-                    alert('Số lượng thực xuất không được lớn hơn số lượng còn thiếu (' + ordered + ').');
+                    alert('Issued quantity cannot be greater than remaining quantity (' + ordered + ').');
                     inputs[i].focus();
                     return false;
                 }
             }
-            return confirm('Bạn có chắc chắn muốn ghi sổ (Post) phiếu xuất kho này? Hành động này không thể hoàn tác.');
+            return confirm('Are you sure you want to post this GIN? This action cannot be undone.');
         }
     </script>
 </body>

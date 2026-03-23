@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Transfer Orders - WMS</title>
+    <link rel="stylesheet" th:href="@{/static/css/style.css}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="app-layout">
+        <div th:replace="~{fragments/layout :: sidebar-report}"></div>
+        <div class="main-content">
+            <div th:replace="~{fragments/layout :: topbar('Transfer Orders')}"></div>
+            <div class="content-area">
+                <div th:replace="~{fragments/layout :: alerts}"></div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Transfer Orders</h2>
+                        <a th:href="@{/transfer/requests/new}" class="btn btn-primary btn-sm">+ New Transfer Order</a>
+                    </div>
+                    <div class="card-body">
+                        <!-- Filter Bar -->
+                        <form th:action="@{/transfer/requests}" method="get" class="search-bar">
+                            <select name="status" class="form-control" style="max-width: 200px;">
+                                <option value="" th:selected="${selectedStatus == null || selectedStatus == 'ALL'}">All Statuses</option>
+                                <option value="Draft" th:selected="${selectedStatus == 'Draft'}">Draft</option>
+                                <option value="Pending" th:selected="${selectedStatus == 'Pending'}">Pending</option>
+                                <option value="Approved" th:selected="${selectedStatus == 'Approved'}">Approved</option>
+                                <option value="In-Transit" th:selected="${selectedStatus == 'In-Transit'}">In-Transit</option>
+                                <option value="Incomplete" th:selected="${selectedStatus == 'Incomplete'}">Incomplete</option>
+                                <option value="Completed" th:selected="${selectedStatus == 'Completed'}">Completed</option>
+                                <option value="Rejected" th:selected="${selectedStatus == 'Rejected'}">Rejected</option>
+                            </select>
+                            <select name="sourceWarehouseId" class="form-control" style="max-width: 220px;">
+                                <option value="">All Source Warehouses</option>
+                                <option th:each="wh : ${sourceWarehouses}"
+                                        th:value="${wh.warehouseId}"
+                                        th:text="${wh.warehouseName}"
+                                        th:selected="${selectedSourceId != null && selectedSourceId == wh.warehouseId}">
+                                </option>
+                            </select>
+                            <button type="submit" class="btn btn-outline">Filter</button>
+                            <a th:href="@{/transfer/requests}" class="btn btn-outline">Reset</a>
+                        </form>
+
+                        <div th:if="${#lists.isEmpty(transfers)}" class="empty-state">
+                            <p>No transfer orders found.</p>
+                        </div>
+                        <div th:unless="${#lists.isEmpty(transfers)}" class="table-wrapper">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>TO Number</th>
+                                        <th>Source Warehouse</th>
+                                        <th>Destination Warehouse</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr th:each="to, iter : ${transfers}">
+                                        <td th:text="${iter.count}"></td>
+                                        <td><strong th:text="${to.toNumber}"></strong></td>
+                                        <td th:text="${to.sourceWarehouseName}"></td>
+                                        <td th:text="${to.destinationWarehouseName}"></td>
+                                        <td>
+                                            <span th:if="${to.status == 'Draft'}" class="badge badge-secondary" th:text="${to.status}"></span>
+                                            <span th:if="${to.status == 'Pending'}" class="badge badge-warning" th:text="${to.status}"></span>
+                                            <span th:if="${to.status == 'Approved'}" class="badge badge-info" th:text="${to.status}"></span>
+                                            <span th:if="${to.status == 'In-Transit'}" class="badge badge-warning" th:text="${to.status}"></span>
+                                            <span th:if="${to.status == 'Incomplete'}" class="badge badge-warning" th:text="${to.status}"></span>
+                                            <span th:if="${to.status == 'Completed'}" class="badge badge-success" th:text="${to.status}"></span>
+                                            <span th:if="${to.status == 'Rejected'}" class="badge badge-danger" th:text="${to.status}"></span>
+                                            <div th:if="${to.status == 'Rejected' && to.rejectReason != null}"
+                                                 style="font-size: 0.75rem; color: #dc3545; margin-top: 4px;">
+                                                <i th:text="'💬 ' + ${to.rejectReason}"></i>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group">
+                                                <a th:href="@{/transfer/requests/{id}/edit(id=${to.toId})}"
+                                                   class="btn btn-outline btn-sm">View / Edit</a>
+                                                <form th:if="${to.status == 'Draft' || to.status == 'Rejected'}"
+                                                      th:action="@{/transfer/requests/{id}/delete(id=${to.toId})}"
+                                                      method="post" style="display:inline;"
+                                                      onsubmit="return confirm('Are you sure you want to delete this Transfer Order?');">
+                                                    <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

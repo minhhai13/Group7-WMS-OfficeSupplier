@@ -37,7 +37,7 @@ public class TransferNoteServiceImpl implements TransferNoteService {
     @Override
     @Transactional(readOnly = true)
     public TransferNoteDTO getTransferNoteById(Integer tnId) {
-        return mapToDTO(transferNoteRepository.findById(tnId)
+        return mapToDTO(transferNoteRepository.findByIdWithDetails(tnId)
                 .orElseThrow(() -> new IllegalArgumentException("TransferNote not found: " + tnId)));
     }
 
@@ -101,7 +101,7 @@ public class TransferNoteServiceImpl implements TransferNoteService {
             // Movement Out
             stockMovementRepository.save(StockMovement.builder()
                     .warehouse(warehouse).product(product).bin(detail.getFromBin()).batchNumber(detail.getBatchNumber())
-                    .movementType("Internal Transfer-Out").stockType("Physical").quantity(baseQty)
+                    .movementType("Transfer-Out").stockType("Physical").quantity(baseQty)
                     .uom(product.getBaseUoM()).balanceAfter(fromBatch.getQtyAvailable()).build());
 
             // 2. Cộng kho tại Bin đích
@@ -118,7 +118,7 @@ public class TransferNoteServiceImpl implements TransferNoteService {
             // Movement In
             stockMovementRepository.save(StockMovement.builder()
                     .warehouse(warehouse).product(product).bin(detail.getToBin()).batchNumber(detail.getBatchNumber())
-                    .movementType("Internal Transfer-In").stockType("Physical").quantity(baseQty)
+                    .movementType("Transfer-In").stockType("Physical").quantity(baseQty)
                     .uom(product.getBaseUoM()).balanceAfter(toBatch.getQtyAvailable()).build());
         }
 

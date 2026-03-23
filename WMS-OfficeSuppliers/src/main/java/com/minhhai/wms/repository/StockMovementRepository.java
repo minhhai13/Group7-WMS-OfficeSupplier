@@ -28,7 +28,7 @@ public interface StockMovementRepository extends JpaRepository<StockMovement, In
     "LEFT JOIN FETCH m.warehouse " +
        "LEFT JOIN FETCH m.product " +
        "LEFT JOIN FETCH m.bin " +
-           "WHERE m.movementType = 'Receipt' " +
+           "WHERE m.movementType IN ('Receipt', 'Transfer-In') " +
            "AND m.stockType = 'Physical' " +
            "AND (:startDate IS NULL OR m.movementDate >= :startDate) " +
            "AND (:endDate IS NULL OR m.movementDate <= :endDate) " +
@@ -52,7 +52,7 @@ public interface StockMovementRepository extends JpaRepository<StockMovement, In
            "LEFT JOIN FETCH m.warehouse " +
            "LEFT JOIN FETCH m.product " +
            "LEFT JOIN FETCH m.bin " +
-           "WHERE m.movementType = 'Issue' " +
+           "WHERE m.movementType IN ('Issue', 'Transfer-Out') " +
            "AND m.stockType = 'Physical' " +
            "AND (:startDate IS NULL OR m.movementDate >= :startDate) " +
            "AND (:endDate IS NULL OR m.movementDate <= :endDate) " +

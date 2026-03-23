@@ -2,6 +2,7 @@ package com.minhhai.wms.controller.transfer;
 
 import com.minhhai.wms.dto.ProductDTO;
 import com.minhhai.wms.dto.TransferOrderDTO;
+import com.minhhai.wms.dto.WarehouseDTO;
 import com.minhhai.wms.entity.User;
 import com.minhhai.wms.entity.Warehouse;
 import com.minhhai.wms.service.ProductService;
@@ -23,71 +24,72 @@ import java.util.List;
 @RequiredArgsConstructor
 public class TOController {
     private final TransferOrderService transferOrderService;
-    private final ProductService productService;
     private final WarehouseService warehouseService;
+    private final ProductService productService;
 
     @GetMapping
-    public String list(
-            @RequestParam(name = "status", required = false) String status,
-            @RequestParam(name = "sourceWarehouseId", required = false) Integer sourceWarehouseId,
-            Model model,
-            HttpSession session) {
-
+    public String list(Model model,
+                       @RequestParam(value = "status", required = false) String status,
+                       @RequestParam(value = "sourceWarehouseId", required = false) Integer sourceWarehouseId,
+                       HttpSession session){
         User user = (User) session.getAttribute("loggedInUser");
+        if(user == null || user.getWarehouse() == null) return "redirect:/login";
+
         Integer warehouseId = user.getWarehouse().getWarehouseId();
 
-        List<TransferOrderDTO> transferOrders =
-                transferOrderService.getOutgoingTransferOrders(warehouseId, status, sourceWarehouseId);
+        String filterStatus = "All".equals(status) ? null : status;
 
-        List<Warehouse> sourceWarehouses =
-                warehouseService.findAllActiveExcluding(warehouseId);
-
+        List<TransferOrderDTO> transferOrders = transferOrderService.getOutgoingWHTransferOrders(warehouseId, sourceWarehouseId, filterStatus);
+        List<Warehouse> sourceWarehouses = warehouseService.findAllActiveExcluding(warehouseId);
         model.addAttribute("transfers", transferOrders);
-        model.addAttribute("sourceWarehouse", sourceWarehouses);
-        model.addAttribute("activePage", "transfer-requests");
-        model.addAttribute("selectedSourceId", sourceWarehouseId);
+        model.addAttribute("sourceWarehouses", sourceWarehouses);
+        model.addAttribute("activePage", "transfer-request");
+        model.addAttribute("selectedSourceId",sourceWarehouseId);
         model.addAttribute("selectedStatus", status);
-
         return "transfer/to-list";
     }
 
     @GetMapping("/new")
-    public String createForm(Model model, HttpSession session) {
+    public String createForm(Model model,
+                             HttpSession session){
+
         User user = (User) session.getAttribute("loggedInUser");
-        Integer warehouseId = user.getWarehouse().getWarehouseId();
+        if(user == null || user.getWarehouse() == null) return "redirect:/login";
+
+        Integer destWarehouseId = user.getWarehouse().getWarehouseId();
+
         TransferOrderDTO dto = new TransferOrderDTO();
-
-        dto.setDestinationWarehouseId(warehouseId);
+        dto.setDestinationWarehouseId(destWarehouseId);
         dto.setDestinationWarehouseName(user.getWarehouse().getWarehouseName());
+        List<Warehouse> sourceWarehouses = warehouseService.findAllActiveExcluding(destWarehouseId);
 
-        List<Warehouse> sourceWarehouses =
-                warehouseService.findAllActiveExcluding(warehouseId);
-
-        model.addAttribute("activePage", "transfer-requests");
+        model.addAttribute("sourceWarehouses", sourceWarehouses);
+        model.addAttribute("activePage", "transfer-request");
         model.addAttribute("trDTO", dto);
         model.addAttribute("products", getActiveProductDTOs());
-        model.addAttribute("sourceWarehouse", sourceWarehouses);
         return "transfer/to-form";
     }
 
     @GetMapping("/{id}/edit")
-    public String editForm(@PathVariable(name = "id") Integer id,
-                           Model model, HttpSession session, RedirectAttributes redirectAttributes) {
-        try {
-            User user = (User) session.getAttribute("loggedInUser");
-            Integer warehouseId = user.getWarehouse().getWarehouseId();
+    public String editForm(Model model,
+                           HttpSession session,
+                           @PathVariable Integer id,
+                           RedirectAttributes redirectAttributes) {
+        User user = (User) session.getAttribute("loggedInUser");
+        if(user == null || user.getWarehouse() == null) return "redirect:/login";
 
-            TransferOrderDTO dto = transferOrderService.getTOById(id);
-            model.addAttribute("activePage", "transfer-requests");
+        try{
+
+            Integer destWarehouseId = user.getWarehouse().getWarehouseId();
+            List<Warehouse> sourceWarehouses = warehouseService.findAllActiveExcluding(destWarehouseId);
+
+            TransferOrderDTO dto = transferOrderService.getTRById(id);
+            model.addAttribute("sourceWarehouses", sourceWarehouses);
             model.addAttribute("trDTO", dto);
+            model.addAttribute("activePage", "transfer-request");
             model.addAttribute("products", getActiveProductDTOs());
-
-            List<Warehouse> sourceWarehouses =
-                warehouseService.findAllActiveExcluding(warehouseId);
-
-            model.addAttribute("sourceWarehouse", sourceWarehouses);
             return "transfer/to-form";
-        } catch (IllegalArgumentException e) {
+        }catch(IllegalArgumentException e){
             redirectAttributes.addFlashAttribute("error", e.getMessage());
             return "redirect:/transfer/requests";
         }
@@ -101,72 +103,60 @@ public class TOController {
                        Model model,
                        HttpSession session,
                        RedirectAttributes redirectAttributes) {
-
         User user = (User) session.getAttribute("loggedInUser");
+        if(user == null || user.getWarehouse() == null) return "redirect:/login";
 
-        if (user == null || user.getWarehouse() == null) {
-            return "redirect:/login";
-        }
-
-        Integer warehouseId = user.getWarehouse().getWarehouseId();
-
-        if (bindingResult.hasErrors()) {
-
-            trDTO.setDestinationWarehouseId(warehouseId);
+        //check vi pham cac dk cua cac field dto
+        if(bindingResult.hasErrors()){
+            trDTO.setDestinationWarehouseId(user.getWarehouse().getWarehouseId());
             trDTO.setDestinationWarehouseName(user.getWarehouse().getWarehouseName());
 
-            List<Warehouse> sourceWarehouses =
-                    warehouseService.findAllActiveExcluding(warehouseId);
+            Integer destWarehouseId = user.getWarehouse().getWarehouseId();
+            List<Warehouse> sourceWarehouses = warehouseService.findAllActiveExcluding(destWarehouseId);
 
-            model.addAttribute("activePage", "transfer-requests");
-            model.addAttribute("sourceWarehouse", sourceWarehouses);
+            model.addAttribute("sourceWarehouses", sourceWarehouses);
             model.addAttribute("products", getActiveProductDTOs());
             model.addAttribute("error", "Please fix the errors below.");
+            model.addAttribute("activePage", "transfer-request");
 
             return "transfer/to-form";
         }
-
-        try {
-            if ("submit".equals(action)) {
-                transferOrderService.submitTO(trDTO, user);
-                redirectAttributes.addFlashAttribute("success", "Transfer Order submitted successfully.");
-            } else {
-                transferOrderService.saveDraftTO(trDTO, user);
-                redirectAttributes.addFlashAttribute("success", "Transfer Order saved as draft.");
+        //kiem tra la draft hay submit
+        try{
+            //để draft.equal action để tránh null
+            if("draft".equals(action)){
+                transferOrderService.saveDraftTR(trDTO, user);
+                redirectAttributes.addFlashAttribute("success", "Transfer request saved as draft successfully.");
+            }else{
+                transferOrderService.submitTR(trDTO, user);
+                redirectAttributes.addFlashAttribute("success", "Transfer request submitted successfully.");
             }
-
-        } catch (IllegalArgumentException e) {
-
+        }catch(IllegalArgumentException e){
             redirectAttributes.addFlashAttribute("error", e.getMessage());
-
-            if (trDTO.getToId() != null) {
-                return "redirect:/transfer/requests/" + trDTO.getToId() + "/edit";
-            }
+            if(trDTO.getToId() != null) return "redirect:/transfer/requests/" + trDTO.getToId() + "/edit";
 
             return "redirect:/transfer/requests/new";
         }
-
         return "redirect:/transfer/requests";
     }
 
     @PostMapping("/{id}/delete")
-    public String delete(@PathVariable(name = "id") Integer id,
+    public String delete(Model model,
                          HttpSession session,
-                         RedirectAttributes redirectAttributes) {
+                         @PathVariable Integer id,
+                         RedirectAttributes redirectAttributes){
         User user = (User) session.getAttribute("loggedInUser");
-
-        if (user == null || user.getWarehouse() == null) {
-            return "redirect:/login";
-        }
-        try {
-            transferOrderService.deleteTO(id, user);
-            redirectAttributes.addFlashAttribute("success", "Transfer Order deleted successfully.");
-        } catch (IllegalArgumentException e) {
+        if(user == null || user.getWarehouse() == null) return "redirect:/login";
+        try{
+            transferOrderService.deleteTR(id, user);
+            redirectAttributes.addFlashAttribute("success", "Transfer request deleted successfully.");
+        }catch(IllegalArgumentException e){
             redirectAttributes.addFlashAttribute("error", e.getMessage());
+
         }
         return "redirect:/transfer/requests";
     }
-
+    //helper
     private List<ProductDTO> getActiveProductDTOs() {
         return productService.findAllActive().stream()
                 .map(p -> ProductDTO.builder()

@@ -11,7 +11,7 @@ import java.util.Optional;
 
 @Repository
 public interface TransferOrderRepository extends JpaRepository<TransferOrder, Integer> {
-    
+
     Optional<TransferOrder> findById(Integer id);
 
     List<TransferOrder> findBySourceWarehouse_WarehouseId(Integer warehouseId);
@@ -23,7 +23,7 @@ public interface TransferOrderRepository extends JpaRepository<TransferOrder, In
     List<TransferOrder> findByDestinationWarehouse_WarehouseIdAndStatus(Integer warehouseId, String status);
 
     List<TransferOrder> findBySourceWarehouse_WarehouseIdAndStatusAndDestinationWarehouse_WarehouseId(Integer sourceId, String status, Integer destId);
-    
+
     List<TransferOrder> findBySourceWarehouse_WarehouseIdAndDestinationWarehouse_WarehouseId(Integer sourceId, Integer destId);
 
     @Query("SELECT MAX(t.toNumber) FROM TransferOrder t WHERE t.toNumber LIKE :prefix%")

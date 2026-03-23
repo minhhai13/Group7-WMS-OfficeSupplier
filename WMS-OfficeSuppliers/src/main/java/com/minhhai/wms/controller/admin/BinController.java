@@ -8,7 +8,6 @@ import com.minhhai.wms.service.BinService;
 import jakarta.validation.Valid;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -18,6 +17,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 @Controller
@@ -27,11 +27,8 @@ public class BinController {
 
     private final BinService binService;
 
-    private static final int PAGE_SIZE = 10;
-
     @GetMapping
     public String list(@RequestParam(name = "keyword", required = false) String keyword,
-                       @RequestParam(name = "page", defaultValue = "0") int page,
                        Model model, HttpSession session) {
         User loggedInUser = (User) session.getAttribute("loggedInUser");
         if (loggedInUser.getWarehouse() == null) {
@@ -41,30 +38,24 @@ public class BinController {
         }
         Integer warehouseId = loggedInUser.getWarehouse().getWarehouseId();
 
-        if (page < 0) page = 0;
-
-        Page<Bin> binPage = binService.findPaginated(warehouseId, keyword, page, PAGE_SIZE);
-
-        if (page > 0 && page >= binPage.getTotalPages()) {
-            page = Math.max(0, binPage.getTotalPages() - 1);
-            binPage = binService.findPaginated(warehouseId, keyword, page, PAGE_SIZE);
+        List<Bin> bins;
+        if (keyword != null && !keyword.isBlank()) {
+            bins = binService.search(warehouseId, keyword);
+            model.addAttribute("keyword", keyword);
+        } else {
+            bins = binService.findByWarehouseId(warehouseId);
         }
+        model.addAttribute("activePage", "warehouse-bins");
+        model.addAttribute("bins", bins);
 
-        // Calculate weight info only for the current page's bins
+        // Calculate weight info for each bin
         Map<Integer, BigDecimal> currentWeights = new LinkedHashMap<>();
         Map<Integer, BigDecimal> availableCapacities = new LinkedHashMap<>();
-        for (Bin bin : binPage.getContent()) {
+        for (Bin bin : bins) {
             currentWeights.put(bin.getBinId(), binService.getCurrentWeight(bin.getBinId()));
             availableCapacities.put(bin.getBinId(), binService.getAvailableCapacity(bin.getBinId()));
         }
 
-        model.addAttribute("activePage", "warehouse-bins");
-        model.addAttribute("binPage", binPage);
-        model.addAttribute("bins", binPage.getContent());
-        model.addAttribute("currentPage", page);
-        model.addAttribute("totalPages", binPage.getTotalPages());
-        model.addAttribute("totalElements", binPage.getTotalElements());
-        model.addAttribute("keyword", keyword);
         model.addAttribute("currentWeights", currentWeights);
         model.addAttribute("availableCapacities", availableCapacities);
         return "warehouse/bin-list";
@@ -108,10 +99,10 @@ public class BinController {
                        HttpSession session,
                        Model model,
                        RedirectAttributes redirectAttributes) {
-
+        
         User loggedInUser = (User) session.getAttribute("loggedInUser");
         Warehouse warehouse = loggedInUser.getWarehouse();
-
+        
         // Pass warehouse info to DTO
         binDTO.setWarehouseId(warehouse.getWarehouseId());
 
@@ -156,7 +147,7 @@ public class BinController {
             binService.toggleActive(id);
             redirectAttributes.addFlashAttribute("success", "Bin status updated.");
         } catch (IllegalArgumentException e) {
-            redirectAttributes.addFlashAttribute("error", "Error: " + e.getMessage());
+            redirectAttributes.addFlashAttribute("error", "Error: " +e.getMessage());
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("error", "Error: " + e.getMessage());
         }
@@ -172,4 +163,6 @@ public class BinController {
                 .isActive(bin.getIsActive())
                 .build();
     }
+
+
 }

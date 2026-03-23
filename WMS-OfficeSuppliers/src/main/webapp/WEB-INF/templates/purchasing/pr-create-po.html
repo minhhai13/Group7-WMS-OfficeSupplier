@@ -42,7 +42,7 @@
                         </div>
                         <div class="card-body">
                             <div th:if="${#lists.isEmpty(approvedPRs)}" class="empty-state">
-                                <p>Không có Purchase Request nào ở trạng thái Approved.</p>
+                                <p>No Purchase Requests in Approved status.</p>
                             </div>
                             <div th:unless="${#lists.isEmpty(approvedPRs)}" class="table-wrapper">
                                 <table>
@@ -101,15 +101,15 @@
         function validateForm() {
             var supplier = document.getElementById('supplierId').value;
             if (!supplier) {
-                alert('Vui lòng chọn nhà cung cấp.');
+                alert('Please select a supplier.');
                 return false;
             }
             var checked = document.querySelectorAll('.pr-checkbox:checked');
             if (checked.length === 0) {
-                alert('Vui lòng chọn ít nhất một Purchase Request.');
+                alert('Please select at least one Purchase Request.');
                 return false;
             }
-            return confirm('Xác nhận tạo Purchase Order từ ' + checked.length + ' PR đã chọn?');
+            return confirm('Confirm creating Purchase Order from ' + checked.length + ' selected PRs?');
         }
     </script>
 </body>

@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Tạo phiếu chuyển kho nội bộ - WMS</title>
+    <title>Create Internal Transfer - WMS</title>
     <link rel="stylesheet" th:href="@{/static/css/style.css}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -33,48 +33,50 @@
 
 <body>
     <div class="app-layout">
-        <th:block th:switch="${loggedInUserRole}">
-            <div th:case="'Warehouse Manager'" th:replace="~{fragments/layout :: sidebar-report}"></div>
-            <div th:case="'Storekeeper'" th:replace="~{fragments/layout :: sidebar-storekeeper}"></div>
-            <div th:case="*" th:replace="~{fragments/layout :: sidebar-storekeeper}"></div>
+        <th:block th:if="${loggedInUserRole == 'Warehouse Manager'}">
+            <div th:replace="~{fragments/layout :: sidebar-report}"></div>
         </th:block>
+        <th:block th:if="${loggedInUserRole == 'Storekeeper'}">
+            <div th:replace="~{fragments/layout :: sidebar-storekeeper}"></div>
+        </th:block>
+
         <div class="main-content">
-            <div th:replace="~{fragments/layout :: topbar('Tạo phiếu chuyển kho nội bộ')}"></div>
+            <div th:replace="~{fragments/layout :: topbar('Create Internal Transfer')}"></div>
             <div class="content-area">
                 <div th:replace="~{fragments/layout :: alerts}"></div>
 
                 <div class="card">
                     <div class="card-header">
-                        <h2>Tạo phiếu chuyển kho nội bộ</h2>
+                        <h2>Create Internal Transfer</h2>
                     </div>
                     <div class="card-body">
                         <form id="tnForm" th:action="@{/transfer/internal/save}" th:object="${tnDTO}" method="post"
                             onsubmit="enableAllBeforeSubmit()">
 
                             <div class="form-group" style="max-width: 320px; margin-bottom: 1.5rem;">
-                                <label class="form-label">Kho thực hiện</label>
+                                <label class="form-label">Execution Warehouse</label>
                                 <input type="text" th:value="${tnDTO.warehouseName}" class="form-control" readonly>
                                 <input type="hidden" th:field="*{warehouseId}" id="warehouseId">
                             </div>
 
                             <h3
                                 style="margin-bottom: 0.5rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.5rem;">
-                                Danh sách hàng hóa chuyển bin
+                                Transfer Details
                             </h3>
                             <p class="step-hint" style="margin-bottom: 1rem; font-size: 0.8rem; color: #64748b;">
-                                📌 Quy trình: Chọn <strong>Bin đi</strong> → chọn <strong>Sản phẩm/Lô</strong> → nhập
-                                <strong>Số lượng</strong> → chọn <strong>Bin đến</strong>
+                                📌 Process: Select <strong>From Bin</strong> → select <strong>Product/Batch</strong> → enter
+                                <strong>Quantity</strong> → select <strong>To Bin</strong>
                             </p>
 
                             <div class="table-wrapper" style="overflow-x: auto;">
                                 <table id="detailsTable">
                                     <thead>
                                         <tr>
-                                            <th style="min-width: 170px;">Từ Bin</th>
-                                            <th style="min-width: 220px;">Sản phẩm / Lô</th>
-                                            <th style="min-width: 100px;">Số lượng</th>
-                                            <th style="min-width: 90px;">ĐVT</th>
-                                            <th style="min-width: 170px;">Đến Bin</th>
+                                            <th style="min-width: 170px;">From Bin</th>
+                                            <th style="min-width: 220px;">Product / Batch</th>
+                                            <th style="min-width: 100px;">Quantity</th>
+                                            <th style="min-width: 90px;">UoM</th>
+                                            <th style="min-width: 170px;">To Bin</th>
                                             <th style="min-width: 50px;"></th>
                                         </tr>
                                     </thead>
@@ -84,7 +86,7 @@
                                             <td>
                                                 <select name="details[0].fromBinId" class="form-control from-bin-select"
                                                     required onchange="onFromBinChange(this, 0)">
-                                                    <option value="">-- Chọn Bin đi --</option>
+                                                    <option value="">-- Select From Bin --</option>
                                                     <option th:each="b : ${bins}" th:value="${b.binId}"
                                                         th:text="${b.binLocation}"></option>
                                                 </select>
@@ -92,7 +94,7 @@
                                             <td>
                                                 <select name="details[0].batchKey" class="form-control batch-select"
                                                     disabled onchange="onBatchChange(this, 0)">
-                                                    <option value="">-- Chọn SP/Lô --</option>
+                                                    <option value="">-- Select Product/Batch --</option>
                                                 </select>
                                                 <!-- hidden fields populated by JS -->
                                                 <input type="hidden" name="details[0].productId"
@@ -112,7 +114,7 @@
                                             <td>
                                                 <select name="details[0].toBinId" class="form-control to-bin-select"
                                                     required disabled>
-                                                    <option value="">-- Chọn Bin đến --</option>
+                                                    <option value="">-- Select To Bin --</option>
                                                 </select>
                                             </td>
                                             <td></td>
@@ -122,13 +124,13 @@
                             </div>
 
                             <div style="margin-top: 1rem;">
-                                <button type="button" class="btn btn-outline btn-sm" onclick="addRow()">+ Thêm
-                                    dòng</button>
+                                <button type="button" class="btn btn-outline btn-sm" onclick="addRow()">+ Add
+                                    Line</button>
                             </div>
 
                             <div style="display: flex; gap: 0.75rem; margin-top: 1.5rem;">
-                                <button type="submit" class="btn btn-primary">Lưu và Duyệt phiếu</button>
-                                <a th:href="@{/transfer/internal}" class="btn btn-outline">Hủy bỏ</a>
+                                <button type="submit" class="btn btn-primary">Save and Approve</button>
+                                <a th:href="@{/transfer/internal}" class="btn btn-outline">Cancel</a>
                             </div>
                         </form>
                     </div>
@@ -139,7 +141,7 @@
 
     <!-- Hidden templates for JS cloning -->
     <select id="tpl-fromBin" style="display:none;">
-        <option value="">-- Chọn Bin đi --</option>
+        <option value="">-- Select From Bin --</option>
         <option th:each="b : ${bins}" th:value="${b.binId}" th:text="${b.binLocation}"></option>
     </select>
 
@@ -162,11 +164,11 @@
             const qtyInfo = row.querySelector('.hidden-qty-info');
 
             // Reset downstream
-            resetSelect(batchSel, '-- Chọn SP/Lô --', true);
+            resetSelect(batchSel, '-- Select Product/Batch --', true);
             qtyInput.value = '';
             qtyInput.disabled = true;
             uomInput.value = '';
-            resetSelect(toBinSel, '-- Chọn Bin đến --', true);
+            resetSelect(toBinSel, '-- Select To Bin --', true);
             hidProd.value = '';
             hidBatch.value = '';
             qtyInfo.style.display = 'none';
@@ -179,20 +181,20 @@
                 if (!res.ok) throw new Error('Network error');
                 const batches = await res.json();
 
-                batchSel.innerHTML = '<option value="">-- Chọn SP/Lô --</option>';
+                batchSel.innerHTML = '<option value="">-- Select Product/Batch --</option>';
                 if (batches.length === 0) {
-                    batchSel.innerHTML = '<option value="" disabled>Không có hàng trong bin này</option>';
+                    batchSel.innerHTML = '<option value="" disabled>No stock in this bin</option>';
                 } else {
                     batches.forEach(b => {
                         const opt = document.createElement('option');
                         opt.value = JSON.stringify({ productId: b.productId, batchNumber: b.batchNumber, uom: b.uom, qtyAvailable: b.qtyAvailable });
-                        opt.textContent = `${b.productName} | Lô: ${b.batchNumber} | Tồn: ${b.qtyAvailable} ${b.uom}`;
+                        opt.textContent = `${b.productName} | Batch: ${b.batchNumber} | Avail: ${b.qtyAvailable} ${b.uom}`;
                         batchSel.appendChild(opt);
                     });
                     batchSel.disabled = false;
                 }
             } catch (e) {
-                batchSel.innerHTML = '<option value="" disabled>Lỗi tải dữ liệu</option>';
+                batchSel.innerHTML = '<option value="" disabled>Error loading data</option>';
             }
         }
 
@@ -213,7 +215,7 @@
             qtyInput.value = '';
             qtyInput.disabled = true;
             uomInput.value = '';
-            resetSelect(toBinSel, '-- Chọn Bin đến --', true);
+            resetSelect(toBinSel, '-- Select To Bin --', true);
             qtyInfo.style.display = 'none';
 
             if (!select.value) return;
@@ -227,9 +229,9 @@
             uomInput.value = data.uom;
             qtyInput.max = data.qtyAvailable;
             qtyInput.disabled = false;
-            qtyInput.placeholder = `Tối đa ${data.qtyAvailable}`;
+            qtyInput.placeholder = `Max ${data.qtyAvailable}`;
 
-            qtyInfo.textContent = `Tồn kho khả dụng: ${data.qtyAvailable} ${data.uom}`;
+            qtyInfo.textContent = `Available Stock: ${data.qtyAvailable} ${data.uom}`;
             qtyInfo.style.display = 'block';
 
             // Load valid To Bins (all active bins in warehouse, excluding from bin)
@@ -238,7 +240,7 @@
                 if (!res.ok) throw new Error();
                 const bins = await res.json();
 
-                toBinSel.innerHTML = '<option value="">-- Chọn Bin đến --</option>';
+                toBinSel.innerHTML = '<option value="">-- Select To Bin --</option>';
                 bins.forEach(b => {
                     const opt = document.createElement('option');
                     opt.value = b.binId;
@@ -247,10 +249,10 @@
                 });
                 toBinSel.disabled = bins.length === 0;
                 if (bins.length === 0) {
-                    toBinSel.innerHTML = '<option value="" disabled>Không có bin hợp lệ</option>';
+                    toBinSel.innerHTML = '<option value="" disabled>No valid bins</option>';
                 }
             } catch (e) {
-                toBinSel.innerHTML = '<option value="" disabled>Lỗi tải dữ liệu</option>';
+                toBinSel.innerHTML = '<option value="" disabled>Error loading data</option>';
             }
         }
 
@@ -280,7 +282,7 @@
             batchSel.className = 'form-control batch-select';
             batchSel.disabled = true;
             batchSel.onchange = function () { onBatchChange(this, i); };
-            batchSel.innerHTML = '<option value="">-- Chọn SP/Lô --</option>';
+            batchSel.innerHTML = '<option value="">-- Select Product/Batch --</option>';
 
             const hidProd = document.createElement('input');
             hidProd.type = 'hidden'; hidProd.name = `details[${i}].productId`;
@@ -308,7 +310,7 @@
             toBinSel.name = `details[${i}].toBinId`;
             toBinSel.className = 'form-control to-bin-select';
             toBinSel.required = true; toBinSel.disabled = true;
-            toBinSel.innerHTML = '<option value="">-- Chọn Bin đến --</option>';
+            toBinSel.innerHTML = '<option value="">-- Select To Bin --</option>';
 
             const removeBtn = document.createElement('button');
             removeBtn.type = 'button';
