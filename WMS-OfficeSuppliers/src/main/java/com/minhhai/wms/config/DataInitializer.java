@@ -1,7 +1,7 @@
 package com.minhhai.wms.config;
 
+import com.minhhai.wms.dao.UserDao;
 import com.minhhai.wms.entity.User;
-import com.minhhai.wms.repository.UserRepository;
 import com.minhhai.wms.util.PasswordUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationListener;
@@ -18,12 +18,12 @@ public class DataInitializer implements ApplicationListener<ContextRefreshedEven
     private static final String DEFAULT_ADMIN_ROLE = "System Admin";
     private static final String DEFAULT_ADMIN_FULL_NAME = "System Administrator";
 
-    private final UserRepository userRepository;
+    private final UserDao userDao;
 
     @Override
     @Transactional
     public void onApplicationEvent(ContextRefreshedEvent event) {
-        if (userRepository.count() > 0) {
+        if (userDao.count() > 0) {
             return;
         }
         User admin = User.builder()
@@ -33,6 +33,6 @@ public class DataInitializer implements ApplicationListener<ContextRefreshedEven
                 .role(DEFAULT_ADMIN_ROLE)
                 .warehouse(null)
                 .build();
-        userRepository.save(admin);
+        userDao.save(admin);
     }
 }

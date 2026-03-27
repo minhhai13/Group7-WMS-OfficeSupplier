@@ -1,10 +1,20 @@
 package com.minhhai.wms.service.impl;
 
+import com.minhhai.wms.dao.GoodsIssueDetailDao;
+import com.minhhai.wms.dao.GoodsIssueNoteDao;
+import com.minhhai.wms.dao.PartnerDao;
+import com.minhhai.wms.dao.ProductDao;
+import com.minhhai.wms.dao.ProductUoMConversionDao;
+import com.minhhai.wms.dao.PurchaseRequestDao;
+import com.minhhai.wms.dao.PurchaseRequestDetailDao;
+import com.minhhai.wms.dao.SalesOrderDao;
+import com.minhhai.wms.dao.SalesOrderDetailDao;
+import com.minhhai.wms.dao.StockBatchDao;
+import com.minhhai.wms.dao.StockMovementDao;
 import com.minhhai.wms.dto.SaleOrderDTO;
 import com.minhhai.wms.dto.SaleOrderDetailDTO;
 import com.minhhai.wms.dto.StockCheckResult;
 import com.minhhai.wms.entity.*;
-import com.minhhai.wms.repository.*;
 import com.minhhai.wms.service.SalesOrderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -21,15 +31,17 @@ import java.util.stream.Collectors;
 @Transactional
 public class SalesOrderServiceImpl implements SalesOrderService {
 
-    private final SalesOrderRepository soRepository;
-    private final PartnerRepository partnerRepository;
-    private final ProductRepository productRepository;
-    private final ProductUoMConversionRepository uomConversionRepository;
-    private final GoodsIssueNoteRepository ginRepository;
-    private final StockBatchRepository stockBatchRepository;
-    private final StockMovementRepository stockMovementRepository;
-    private final PurchaseRequestRepository prRepository;
-    private final PurchaseRequestDetailRepository prDetailRepository;
+    private final SalesOrderDao soDao;
+    private final SalesOrderDetailDao soDetailDao;
+    private final PartnerDao partnerDao;
+    private final ProductDao productDao;
+    private final ProductUoMConversionDao uomConversionDao;
+    private final GoodsIssueNoteDao ginDao;
+    private final GoodsIssueDetailDao ginDetailDao;
+    private final StockBatchDao stockBatchDao;
+    private final StockMovementDao stockMovementDao;
+    private final PurchaseRequestDao prDao;
+    private final PurchaseRequestDetailDao prDetailDao;
 
     // ==================== Query Methods ====================
 
@@ -41,13 +53,13 @@ public class SalesOrderServiceImpl implements SalesOrderService {
         boolean hasCustomer = customerId != null;
 
         if (hasStatus && hasCustomer) {
-            orders = soRepository.findByWarehouse_WarehouseIdAndSoStatusAndCustomer_PartnerId(warehouseId, status, customerId);
+            orders = soDao.findByWarehouseIdAndStatusAndCustomerId(warehouseId, status, customerId);
         } else if (hasStatus) {
-            orders = soRepository.findByWarehouse_WarehouseIdAndSoStatus(warehouseId, status);
+            orders = soDao.findByWarehouseIdAndStatus(warehouseId, status);
         } else if (hasCustomer) {
-            orders = soRepository.findByWarehouse_WarehouseIdAndCustomer_PartnerId(warehouseId, customerId);
+            orders = soDao.findByWarehouseIdAndCustomerId(warehouseId, customerId);
         } else {
-            orders = soRepository.findByWarehouse_WarehouseId(warehouseId);
+            orders = soDao.findByWarehouseId(warehouseId);
         }
         return orders.stream().map(this::mapToDTO).collect(Collectors.toList());
     }
@@ -55,8 +67,9 @@ public class SalesOrderServiceImpl implements SalesOrderService {
     @Override
     @Transactional(readOnly = true)
     public SaleOrderDTO getSOById(Integer soId) {
-        SalesOrder so = soRepository.findById(soId)
+        SalesOrder so = soDao.findById(soId)
                 .orElseThrow(() -> new IllegalArgumentException("Sales Order not found: " + soId));
+        so.setDetails(soDetailDao.findBySoId(soId));
         return mapToDTO(so);
     }
 
@@ -64,10 +77,12 @@ public class SalesOrderServiceImpl implements SalesOrderService {
 
     @Override
     public SaleOrderDTO saveDraft(SaleOrderDTO dto, User currentUser) {
-        SalesOrder so = mapToEntity(dto, currentUser);
+        SalesOrder so = buildSalesOrder(dto, currentUser);
         so.setSoStatus("Draft");
         so.setRejectReason(null);
-        so = soRepository.save(so);
+        boolean isUpdate = dto.getSoId() != null;
+        List<SalesOrderDetail> details = buildDetails(dto);
+        so = saveSalesOrder(so, details, isUpdate);
         return mapToDTO(so);
     }
 
@@ -88,10 +103,12 @@ public class SalesOrderServiceImpl implements SalesOrderService {
         }
 
         // 2. Map to entity but keep as Draft for now (so mapToEntity won't block re-entry)
-        SalesOrder so = mapToEntity(dto, currentUser);
+        SalesOrder so = buildSalesOrder(dto, currentUser);
         so.setSoStatus("Draft");           // ← Keep Draft until decision
         so.setRejectReason(null);
-        so = soRepository.save(so);
+        boolean isUpdate = dto.getSoId() != null;
+        List<SalesOrderDetail> details = buildDetails(dto);
+        so = saveSalesOrder(so, details, isUpdate);
 
         Integer warehouseId = so.getWarehouse().getWarehouseId();
 
@@ -104,8 +121,8 @@ public class SalesOrderServiceImpl implements SalesOrderService {
                     .multiply(conversionFactor).intValue();
 
             // Total_ATP = Σ(qtyAvailable - qtyReserved) for this product in THIS warehouse
-            List<StockBatch> batches = stockBatchRepository
-                    .findByWarehouseWarehouseIdAndProductProductId(warehouseId, product.getProductId());
+            List<StockBatch> batches = stockBatchDao
+                    .findByWarehouseIdAndProductId(warehouseId, product.getProductId());
             int totalATP = 0;
             for (StockBatch batch : batches) {
                 totalATP += (batch.getQtyAvailable() - batch.getQtyReserved());
@@ -137,7 +154,7 @@ public class SalesOrderServiceImpl implements SalesOrderService {
             } else {
                 // Second call: confirmed → now set Pending Approval + create PR
                 so.setSoStatus("Pending Approval");
-                so = soRepository.save(so);
+                so = soDao.save(so);
                 String prNumber = createPurchaseRequest(so);
                 return StockCheckResult.builder()
                         .success(true)
@@ -151,7 +168,7 @@ public class SalesOrderServiceImpl implements SalesOrderService {
 
         // 5. No shortage → set Pending Approval directly
         so.setSoStatus("Pending Approval");
-        so = soRepository.save(so);
+        so = soDao.save(so);
         return StockCheckResult.builder()
                 .success(true)
                 .hasShortage(false)
@@ -179,8 +196,8 @@ public class SalesOrderServiceImpl implements SalesOrderService {
 
             // Recalculate ATP for this product
             Integer warehouseId = so.getWarehouse().getWarehouseId();
-            List<StockBatch> batches = stockBatchRepository
-                    .findByWarehouseWarehouseIdAndProductProductId(warehouseId, product.getProductId());
+            List<StockBatch> batches = stockBatchDao
+                    .findByWarehouseIdAndProductId(warehouseId, product.getProductId());
             int totalATP = 0;
             for (StockBatch batch : batches) {
                 totalATP += (batch.getQtyAvailable() - batch.getQtyReserved());
@@ -198,7 +215,10 @@ public class SalesOrderServiceImpl implements SalesOrderService {
             }
         }
 
-        prRepository.save(pr);
+        prDao.save(pr);
+        for (PurchaseRequestDetail detail : pr.getDetails()) {
+            prDetailDao.save(detail);
+        }
         return prNumber;
     }
 
@@ -206,20 +226,26 @@ public class SalesOrderServiceImpl implements SalesOrderService {
 
     @Override
     public void deleteSO(Integer soId) {
-        SalesOrder so = soRepository.findById(soId)
+        SalesOrder so = soDao.findById(soId)
                 .orElseThrow(() -> new IllegalArgumentException("Sales Order not found: " + soId));
         if (!"Draft".equals(so.getSoStatus()) && !"Rejected".equals(so.getSoStatus())) {
             throw new IllegalArgumentException("Only Draft or Rejected SOs can be deleted.");
         }
-        soRepository.delete(so);
+        prDao.findByRelatedSalesOrderId(soId).ifPresent(pr -> {
+            prDetailDao.deleteByPrId(pr.getPrId());
+            prDao.deleteById(pr.getPrId());
+        });
+        soDetailDao.deleteBySoId(soId);
+        soDao.deleteById(soId);
     }
 
     // ==================== Approve (with PR branching) ====================
 
     @Override
     public String approveSO(Integer soId, User currentUser) {
-        SalesOrder so = soRepository.findById(soId)
+        SalesOrder so = soDao.findById(soId)
                 .orElseThrow(() -> new IllegalArgumentException("Sales Order not found: " + soId));
+        so.setDetails(soDetailDao.findBySoId(soId));
 
         // IDEMPOTENCY GUARD: If SO is already Approved/Completed, return immediately
         if ("Approved".equals(so.getSoStatus()) || "Completed".equals(so.getSoStatus())) {
@@ -230,7 +256,7 @@ public class SalesOrderServiceImpl implements SalesOrderService {
         // Within the same transaction, the in-memory list may be stale — a GIN inserted
         // earlier in the loopback may not be reflected in so.getGoodsIssueNotes() yet.
         // existsBySalesOrder_SoId() issues an actual SELECT EXISTS, bypassing the cache.
-        if (ginRepository.existsBySalesOrder_SoId(soId)) {
+        if (ginDao.existsBySalesOrderId(soId)) {
             return null; // GIN already exists in DB, skip to prevent duplicate
         }
 
@@ -242,7 +268,7 @@ public class SalesOrderServiceImpl implements SalesOrderService {
         Warehouse warehouse = so.getWarehouse();
 
         // Check if SO has linked PR
-        Optional<PurchaseRequest> linkedPR = prRepository.findByRelatedSalesOrder_SoId(soId);
+        Optional<PurchaseRequest> linkedPR = prDao.findByRelatedSalesOrderId(soId);
 
         // BRANCH A: Has PR and PR is NOT yet Completed → Waiting for Stock
         if (linkedPR.isPresent()) {
@@ -251,11 +277,11 @@ public class SalesOrderServiceImpl implements SalesOrderService {
                 // PR exists and not completed → set PR to Approved (if still Pending), SO to Waiting
                 if ("Pending".equals(pr.getStatus())) {
                     pr.setStatus("Approved");
-                    prRepository.save(pr);
+                    prDao.save(pr);
                 }
                 so.setSoStatus("Waiting for Stock");
-                soRepository.save(so);
-                return "SO đã được duyệt. Đang chờ hàng về kho (PR " + pr.getPrNumber() + ").";
+                soDao.save(so);
+                return "SO approved. Waiting for incoming stock (PR " + pr.getPrNumber() + ").";
             }
             // If PR is Completed → fall through to Branch B (called from loopback)
         }
@@ -269,8 +295,8 @@ public class SalesOrderServiceImpl implements SalesOrderService {
             int baseQtyNeeded = BigDecimal.valueOf(soDetail.getOrderedQty())
                     .multiply(conversionFactor).intValue();
 
-            List<StockBatch> batches = stockBatchRepository
-                    .findByWarehouse_WarehouseIdAndProduct_ProductIdOrderByArrivalDateTimeAsc(
+            List<StockBatch> batches = stockBatchDao
+                    .findByWarehouseIdAndProductIdOrderByArrivalDateTimeAsc(
                             warehouse.getWarehouseId(), product.getProductId());
 
             int remainingToReserve = baseQtyNeeded;
@@ -282,7 +308,7 @@ public class SalesOrderServiceImpl implements SalesOrderService {
 
                 int reserveQty = Math.min(freeQty, remainingToReserve);
                 batch.setQtyReserved(batch.getQtyReserved() + reserveQty);
-                stockBatchRepository.save(batch);
+                stockBatchDao.save(batch);
 
                 // Log StockMovement: Reserve / Reserved
                 StockMovement movement = StockMovement.builder()
@@ -296,7 +322,7 @@ public class SalesOrderServiceImpl implements SalesOrderService {
                         .uom(product.getBaseUoM())
                         .balanceAfter(batch.getQtyReserved())
                         .build();
-                stockMovementRepository.save(movement);
+                stockMovementDao.save(movement);
 
                 ginAllocations.add(new GINAllocation(soDetail, product, batch, reserveQty));
                 remainingToReserve -= reserveQty;
@@ -304,14 +330,14 @@ public class SalesOrderServiceImpl implements SalesOrderService {
 
             if (remainingToReserve > 0) {
                 throw new IllegalArgumentException(
-                        "Không đủ tồn kho cho sản phẩm '" + product.getProductName()
-                        + "'. Thiếu " + remainingToReserve + " " + product.getBaseUoM() + ".");
+                        "Insufficient available stock for product '" + product.getProductName()
+                        + "'. Missing " + remainingToReserve + " " + product.getBaseUoM() + ".");
             }
         }
 
         // SO → Approved
         so.setSoStatus("Approved");
-        soRepository.save(so);
+        soDao.save(so);
 
         // Auto-generate GIN (Draft)
         String ginNumber = generateGINNumber();
@@ -328,13 +354,17 @@ public class SalesOrderServiceImpl implements SalesOrderService {
             ginDetail.setSalesOrderDetail(alloc.soDetail);
             ginDetail.setProduct(alloc.product);
             ginDetail.setIssuedQty(0);
+            ginDetail.setPlannedQty(alloc.reservedQty); // FIX: batch-level reserved qty, not 0
             ginDetail.setUom(alloc.soDetail.getUom());
             ginDetail.setBatchNumber(alloc.batch.getBatchNumber());
             ginDetail.setBin(alloc.batch.getBin());
             gin.getDetails().add(ginDetail);
         }
 
-        ginRepository.save(gin);
+        ginDao.save(gin);
+        for (GoodsIssueDetail detail : gin.getDetails()) {
+            ginDetailDao.save(detail);
+        }
         return ginNumber;
     }
 
@@ -342,7 +372,7 @@ public class SalesOrderServiceImpl implements SalesOrderService {
 
     @Override
     public void rejectSO(Integer soId, String reason) {
-        SalesOrder so = soRepository.findById(soId)
+        SalesOrder so = soDao.findById(soId)
                 .orElseThrow(() -> new IllegalArgumentException("Sales Order not found: " + soId));
 
         if (!"Pending Approval".equals(so.getSoStatus())) {
@@ -351,14 +381,14 @@ public class SalesOrderServiceImpl implements SalesOrderService {
 
         so.setSoStatus("Rejected");
         so.setRejectReason(reason);
-        soRepository.save(so);
+        soDao.save(so);
 
         // Cascade: reject any linked PRs that are still active
-        List<PurchaseRequest> linkedPRs = prRepository.findByRelatedSalesOrder_SoIdAndStatusIn(
+        List<PurchaseRequest> linkedPRs = prDao.findByRelatedSalesOrderIdAndStatusIn(
                 soId, List.of("Pending", "Approved"));
         for (PurchaseRequest pr : linkedPRs) {
             pr.setStatus("Rejected");
-            prRepository.save(pr);
+            prDao.save(pr);
         }
     }
 
@@ -367,7 +397,7 @@ public class SalesOrderServiceImpl implements SalesOrderService {
     private String generateSONumber() {
         String dateStr = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         String prefix = "SO-" + dateStr + "-";
-        String maxNumber = soRepository.findMaxSoNumber(prefix);
+        String maxNumber = soDao.findMaxSoNumber(prefix);
         int nextNum = 1;
         if (maxNumber != null) {
             String suffix = maxNumber.substring(prefix.length());
@@ -379,7 +409,7 @@ public class SalesOrderServiceImpl implements SalesOrderService {
     private String generateGINNumber() {
         String dateStr = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         String prefix = "GIN-" + dateStr + "-";
-        String maxNumber = ginRepository.findMaxGinNumber(prefix);
+        String maxNumber = ginDao.findMaxGinNumber(prefix);
         int nextNum = 1;
         if (maxNumber != null) {
             String suffix = maxNumber.substring(prefix.length());
@@ -391,7 +421,7 @@ public class SalesOrderServiceImpl implements SalesOrderService {
     private String generatePRNumber() {
         String dateStr = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         String prefix = "PR-" + dateStr + "-";
-        String maxNumber = prRepository.findMaxPrNumber(prefix);
+        String maxNumber = prDao.findMaxPrNumber(prefix);
         int nextNum = 1;
         if (maxNumber != null) {
             String suffix = maxNumber.substring(prefix.length());
@@ -404,7 +434,7 @@ public class SalesOrderServiceImpl implements SalesOrderService {
 
     private BigDecimal getConversionFactor(Product product, String uom) {
         if (uom.equals(product.getBaseUoM())) return BigDecimal.ONE;
-        List<ProductUoMConversion> conversions = uomConversionRepository.findByProduct_ProductId(product.getProductId());
+        List<ProductUoMConversion> conversions = uomConversionDao.findByProductId(product.getProductId());
         for (ProductUoMConversion conv : conversions) {
             if (conv.getFromUoM().equals(uom)) return BigDecimal.valueOf(conv.getConversionFactor());
         }
@@ -414,8 +444,7 @@ public class SalesOrderServiceImpl implements SalesOrderService {
     // ==================== Mapping: Entity -> DTO ====================
 
     private SaleOrderDTO mapToDTO(SalesOrder so) {
-        // Check for linked PR
-        Optional<PurchaseRequest> linkedPR = prRepository.findByRelatedSalesOrder_SoId(so.getSoId());
+        Optional<PurchaseRequest> linkedPR = prDao.findByRelatedSalesOrderId(so.getSoId());
         SaleOrderDTO dto = SaleOrderDTO.builder()
                 .soId(so.getSoId())
                 .soNumber(so.getSoNumber())
@@ -452,45 +481,30 @@ public class SalesOrderServiceImpl implements SalesOrderService {
 
     // ==================== Mapping: DTO -> Entity ====================
 
-    private SalesOrder mapToEntity(SaleOrderDTO dto, User currentUser) {
+    private SalesOrder buildSalesOrder(SaleOrderDTO dto, User currentUser) {
         SalesOrder so;
         if (dto.getSoId() != null) {
-            so = soRepository.findById(dto.getSoId())
+            so = soDao.findById(dto.getSoId())
                     .orElseThrow(() -> new IllegalArgumentException("Sales Order not found: " + dto.getSoId()));
             if (!"Draft".equals(so.getSoStatus()) && !"Rejected".equals(so.getSoStatus())) {
                 throw new IllegalArgumentException("Only Draft or Rejected SOs can be edited.");
             }
-            if (so.getPurchaseRequest() != null) {
-                prRepository.delete(so.getPurchaseRequest());
-                so.setPurchaseRequest(null);
-                // Flush thay đổi xuống DB ngay lập tức để giải phóng khóa ngoại
-                prRepository.flush();
-            }
-            if (so.getDetails() != null) so.getDetails().clear();
+            prDao.findByRelatedSalesOrderId(so.getSoId()).ifPresent(pr -> {
+                prDetailDao.deleteByPrId(pr.getPrId());
+                prDao.deleteById(pr.getPrId());
+            });
         } else {
             so = new SalesOrder();
             so.setSoNumber(generateSONumber());
-            so.setWarehouse(currentUser.getWarehouse());
-            so.setDetails(new ArrayList<>());
+            Warehouse warehouse = new Warehouse();
+            warehouse.setWarehouseId(currentUser.getWarehouse().getWarehouseId());
+            so.setWarehouse(warehouse);
         }
 
         if (dto.getCustomerId() != null) {
-            Partner customer = partnerRepository.findById(dto.getCustomerId())
+            Partner customer = partnerDao.findById(dto.getCustomerId())
                     .orElseThrow(() -> new IllegalArgumentException("Customer not found: " + dto.getCustomerId()));
             so.setCustomer(customer);
-        }
-
-        List<SaleOrderDetailDTO> validDetails = filterEmptyDetails(dto.getDetails());
-        for (SaleOrderDetailDTO detailDTO : validDetails) {
-            SalesOrderDetail detail = new SalesOrderDetail();
-            detail.setSalesOrder(so);
-            Product product = productRepository.findById(detailDTO.getProductId())
-                    .orElseThrow(() -> new IllegalArgumentException("Product not found: " + detailDTO.getProductId()));
-            detail.setProduct(product);
-            detail.setUom(detailDTO.getUom());
-            detail.setOrderedQty(detailDTO.getOrderedQty());
-            detail.setIssuedQty(0);
-            so.getDetails().add(detail);
         }
         return so;
     }
@@ -501,4 +515,33 @@ public class SalesOrderServiceImpl implements SalesOrderService {
     }
 
     private record GINAllocation(SalesOrderDetail soDetail, Product product, StockBatch batch, int reservedQty) {}
+
+    private List<SalesOrderDetail> buildDetails(SaleOrderDTO dto) {
+        List<SaleOrderDetailDTO> validDetails = filterEmptyDetails(dto.getDetails());
+        List<SalesOrderDetail> details = new ArrayList<>();
+        for (SaleOrderDetailDTO detailDTO : validDetails) {
+            SalesOrderDetail detail = new SalesOrderDetail();
+            Product product = productDao.findById(detailDTO.getProductId())
+                    .orElseThrow(() -> new IllegalArgumentException("Product not found: " + detailDTO.getProductId()));
+            detail.setProduct(product);
+            detail.setUom(detailDTO.getUom());
+            detail.setOrderedQty(detailDTO.getOrderedQty());
+            detail.setIssuedQty(0);
+            details.add(detail);
+        }
+        return details;
+    }
+
+    private SalesOrder saveSalesOrder(SalesOrder so, List<SalesOrderDetail> details, boolean clearExisting) {
+        SalesOrder saved = soDao.save(so);
+        if (clearExisting) {
+            soDetailDao.deleteBySoId(saved.getSoId());
+        }
+        for (SalesOrderDetail detail : details) {
+            detail.setSalesOrder(saved);
+            soDetailDao.save(detail);
+        }
+        saved.setDetails(details);
+        return saved;
+    }
 }

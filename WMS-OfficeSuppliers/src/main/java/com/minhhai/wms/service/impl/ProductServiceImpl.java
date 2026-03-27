@@ -1,7 +1,7 @@
 package com.minhhai.wms.service.impl;
 
+import com.minhhai.wms.dao.ProductDao;
 import com.minhhai.wms.entity.Product;
-import com.minhhai.wms.repository.ProductRepository;
 import com.minhhai.wms.service.ProductService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -15,24 +15,24 @@ import java.util.Optional;
 @Transactional
 public class ProductServiceImpl implements ProductService {
 
-    private final ProductRepository productRepository;
+    private final ProductDao productDao;
 
     @Override
     @Transactional(readOnly = true)
     public List<Product> findAll() {
-        return productRepository.findAll();
+        return productDao.findAll();
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<Product> findAllActive() {
-        return productRepository.findByIsActive(true);
+        return productDao.findByIsActive(true);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Optional<Product> findById(Integer id) {
-        return productRepository.findById(id);
+        return productDao.findById(id);
     }
 
     @Override
@@ -41,31 +41,30 @@ public class ProductServiceImpl implements ProductService {
         if (keyword == null || keyword.isBlank()) {
             return findAll();
         }
-        return productRepository.searchByKeyword(keyword.trim());
+        return productDao.searchByKeyword(keyword.trim());
     }
 
     @Override
     public Product save(Product product) {
-        return productRepository.save(product);
+        return productDao.save(product);
     }
 
     @Override
     public Product save(com.minhhai.wms.dto.ProductDTO productDTO) {
         // Uniqueness check
         if (productDTO.getProductId() == null) {
-            if (productRepository.existsBySku(productDTO.getSku())) {
+            if (productDao.existsBySku(productDTO.getSku())) {
                 throw new IllegalArgumentException("SKU already exists.");
             }
         } else {
-            if (productRepository.existsBySkuAndProductIdNot(productDTO.getSku(), productDTO.getProductId())) {
+            if (productDao.existsBySkuAndProductIdNot(productDTO.getSku(), productDTO.getProductId())) {
                 throw new IllegalArgumentException("SKU already exists.");
             }
         }
 
         Product product;
         if (productDTO.getProductId() != null) {
-            // Update
-            product = productRepository.findById(productDTO.getProductId())
+            product = productDao.findById(productDTO.getProductId())
                     .orElseThrow(() -> new IllegalArgumentException("Product not found: " + productDTO.getProductId()));
             product.setSku(productDTO.getSku());
             product.setProductName(productDTO.getProductName());
@@ -73,7 +72,6 @@ public class ProductServiceImpl implements ProductService {
             product.setBaseUoM(productDTO.getBaseUoM());
             product.setMinStockLevel(productDTO.getMinStockLevel());
         } else {
-            // Create
             product = Product.builder()
                     .sku(productDTO.getSku())
                     .productName(productDTO.getProductName())
@@ -84,14 +82,14 @@ public class ProductServiceImpl implements ProductService {
                     .build();
         }
 
-        return productRepository.save(product);
+        return productDao.save(product);
     }
 
     @Override
     public void toggleActive(Integer productId) {
-        Product product = productRepository.findById(productId)
+        Product product = productDao.findById(productId)
                 .orElseThrow(() -> new RuntimeException("Product not found: " + productId));
         product.setIsActive(!product.getIsActive());
-        productRepository.save(product);
+        productDao.save(product);
     }
 }

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <title th:text="${alertOnly} ? 'Low Stock Alerts - WMS' : 'Stock Availability - WMS'">Stock Availability - WMS</title>
+    <link rel="stylesheet" th:href="@{/static/css/style.css}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        .alert-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            background: var(--danger-color, #e53e3e);
+            color: #fff;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .tab-switch { display: flex; gap: 0.5rem; margin-bottom: 1.25rem; }
+        .tab-switch a {
+            padding: 0.5rem 1.25rem;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            text-decoration: none;
+            border: 1px solid #e2e8f0;
+            color: #4a5568;
+            background: #fff;
+            transition: all 0.15s;
+        }
+        .tab-switch a.active {
+            background: var(--primary-color, #3182ce);
+            color: #fff;
+            border-color: var(--primary-color, #3182ce);
+        }
+        .row-low { background: #fff5f5 !important; }
+        .threshold-col { font-size: 0.8rem; color: #718096; }
+    </style>
+</head>
+
+<body>
+    <div class="app-layout">
+        <th:block th:if="${loggedInUserRole == 'System Admin'}"><div th:replace="~{fragments/layout :: sidebar-admin}"></div></th:block>
+        <th:block th:if="${loggedInUserRole == 'Warehouse Admin'}"><div th:replace="~{fragments/layout :: sidebar-warehouse}"></div></th:block>
+        <th:block th:if="${loggedInUserRole == 'Purchasing Manager' || loggedInUserRole == 'Purchasing Staff'}"><div th:replace="~{fragments/layout :: sidebar-purchasing}"></div></th:block>
+        <th:block th:if="${loggedInUserRole == 'Sales Manager' || loggedInUserRole == 'Sales Staff'}"><div th:replace="~{fragments/layout :: sidebar-sales}"></div></th:block>
+        <th:block th:if="${loggedInUserRole == 'Storekeeper'}"><div th:replace="~{fragments/layout :: sidebar-storekeeper}"></div></th:block>
+        <th:block th:if="${loggedInUserRole == 'Warehouse Manager' || loggedInUserRole == 'Report Manager'}"><div th:replace="~{fragments/layout :: sidebar-report}"></div></th:block>
+        
+        <!-- Fallback if role doesn't match -->
+        <th:block th:if="${loggedInUserRole != 'System Admin' && loggedInUserRole != 'Warehouse Admin' && loggedInUserRole != 'Purchasing Manager' && loggedInUserRole != 'Purchasing Staff' && loggedInUserRole != 'Sales Manager' && loggedInUserRole != 'Sales Staff' && loggedInUserRole != 'Storekeeper' && loggedInUserRole != 'Warehouse Manager' && loggedInUserRole != 'Report Manager'}"><div th:replace="~{fragments/layout :: sidebar-report}"></div></th:block>
+        <div class="main-content">
+            <div th:replace="~{fragments/layout :: topbar(${alertOnly} ? 'Low Stock Alerts' : 'Stock Availability')}"></div>
+            <div class="content-area">
+                <div th:replace="~{fragments/layout :: alerts}"></div>
+
+                <!-- Summary bar -->
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem;">
+                    <div>
+                        <span class="badge badge-info" style="padding: 6px 12px; font-size: 0.875rem;">
+                            [[${currentWarehouse.warehouseName}]]
+                        </span>
+                    </div>
+                    <div th:if="${loggedInUserRole != 'Storekeeper' && lowStockCount > 0}">
+                        <span class="alert-badge">
+                            ⚠ [[${lowStockCount}]] products below minimum stock
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Tab switcher (Show both tabs to all users) -->
+                <div class="tab-switch">
+                    <a th:href="@{/reports/current-stock}"
+                       th:classappend="${!alertOnly} ? 'active' : ''">📦 All Inventory</a>
+                    <a th:href="@{/reports/current-stock(alertOnly=true)}"
+                       th:classappend="${alertOnly} ? 'active' : ''">
+                        ⚠ Below Threshold
+                        <span th:if="${lowStockCount > 0}"
+                              style="background:#e53e3e;color:#fff;border-radius:9999px;padding:1px 7px;font-size:0.75rem;margin-left:4px;"
+                              th:text="${lowStockCount}"></span>
+                    </a>
+                </div>
+
+                <div class="card">
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>SKU</th>
+                                    <th>Product Name</th>
+                                    <th class="text-right">Physical Stock</th>
+                                    <th class="text-right">Reserved Stock</th>
+                                    <th class="text-right">Available Stock</th>
+                                    <th class="text-right">In-Transit Stock</th>
+                                    <th class="text-right">Min Stock Level</th>
+                                    <th>UoM</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="row : ${rows}"
+                                    th:classappend="${row.belowThreshold} ? 'row-low' : ''">
+                                    <td><strong th:text="${row.sku}"></strong></td>
+                                    <td th:text="${row.productName}"></td>
+                                    <td class="text-right font-weight-bold" th:text="${row.totalAvailable}"></td>
+                                    <td class="text-right"
+                                        th:style="${row.totalReserved > 0} ? 'color:var(--warning-color,#d69e2e);font-weight:600;' : ''"
+                                        th:text="${row.totalReserved}"></td>
+                                    <td class="text-right"
+                                        th:style="${row.freeStock <= 0} ? 'color:var(--danger-color,#e53e3e);font-weight:600;' : 'color:var(--success-color,#38a169);font-weight:600;'"
+                                        th:text="${row.freeStock}"></td>
+                                    <td class="text-right threshold-col" th:text="${row.totalInTransit}"></td>
+                                    <td class="text-right threshold-col"
+                                        th:text="${row.minStockLevel != null ? row.minStockLevel : '-'}"></td>
+                                    <td><span class="badge badge-secondary" th:text="${row.uom}"></span></td>
+                                    <td>
+                                        <span th:if="${row.belowThreshold}"
+                                              class="badge"
+                                              style="background:var(--danger-color,#e53e3e);color:#fff;">
+                                            ⚠ Below Threshold
+                                        </span>
+                                        <span th:if="${row.freeStock <= 0 && !row.belowThreshold}"
+                                              class="badge"
+                                              style="background:var(--warning-color,#d69e2e);color:#fff;">
+                                            No Free Stock
+                                        </span>
+                                        <span th:if="${!row.belowThreshold && row.freeStock > 0}"
+                                              class="badge badge-success">OK</span>
+                                    </td>
+                                </tr>
+                                <tr th:if="${#lists.isEmpty(rows)}">
+                                    <td colspan="9" class="text-center"
+                                        th:text="${alertOnly} ? 'No products below minimum stock. ✅' : 'No inventory data available.'"></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

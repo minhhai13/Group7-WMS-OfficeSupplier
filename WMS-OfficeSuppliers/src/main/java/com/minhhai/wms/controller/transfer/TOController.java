@@ -83,7 +83,7 @@ public class TOController {
             Integer destWarehouseId = user.getWarehouse().getWarehouseId();
             List<Warehouse> sourceWarehouses = warehouseService.findAllActiveExcluding(destWarehouseId);
 
-            TransferOrderDTO dto = transferOrderService.getTRById(id);
+            TransferOrderDTO dto = transferOrderService.getTOById(id);
             model.addAttribute("sourceWarehouses", sourceWarehouses);
             model.addAttribute("trDTO", dto);
             model.addAttribute("activePage", "transfer-request");
@@ -125,10 +125,10 @@ public class TOController {
         try{
             //để draft.equal action để tránh null
             if("draft".equals(action)){
-                transferOrderService.saveDraftTR(trDTO, user);
+                transferOrderService.saveDraftTO(trDTO, user);
                 redirectAttributes.addFlashAttribute("success", "Transfer request saved as draft successfully.");
             }else{
-                transferOrderService.submitTR(trDTO, user);
+                transferOrderService.submitTO(trDTO, user);
                 redirectAttributes.addFlashAttribute("success", "Transfer request submitted successfully.");
             }
         }catch(IllegalArgumentException e){
@@ -148,7 +148,7 @@ public class TOController {
         User user = (User) session.getAttribute("loggedInUser");
         if(user == null || user.getWarehouse() == null) return "redirect:/login";
         try{
-            transferOrderService.deleteTR(id, user);
+            transferOrderService.deleteTO(id, user);
             redirectAttributes.addFlashAttribute("success", "Transfer request deleted successfully.");
         }catch(IllegalArgumentException e){
             redirectAttributes.addFlashAttribute("error", e.getMessage());

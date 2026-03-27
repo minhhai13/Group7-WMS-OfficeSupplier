@@ -1,9 +1,18 @@
 package com.minhhai.wms.service.impl;
 
+import com.minhhai.wms.dao.BinDao;
+import com.minhhai.wms.dao.GoodsReceiptDetailDao;
+import com.minhhai.wms.dao.GoodsReceiptNoteDao;
+import com.minhhai.wms.dao.PartnerDao;
+import com.minhhai.wms.dao.ProductDao;
+import com.minhhai.wms.dao.ProductUoMConversionDao;
+import com.minhhai.wms.dao.PurchaseOrderDao;
+import com.minhhai.wms.dao.PurchaseOrderDetailDao;
+import com.minhhai.wms.dao.PurchaseRequestDao;
+import com.minhhai.wms.dao.StockBatchDao;
 import com.minhhai.wms.dto.PurchaseOrderDTO;
 import com.minhhai.wms.dto.PurchaseOrderDetailDTO;
 import com.minhhai.wms.entity.*;
-import com.minhhai.wms.repository.*;
 import com.minhhai.wms.service.PurchaseOrderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -20,14 +29,16 @@ import java.util.stream.Collectors;
 @Transactional
 public class PurchaseOrderServiceImpl implements PurchaseOrderService {
 
-    private final PurchaseOrderRepository poRepository;
-    private final PartnerRepository partnerRepository;
-    private final ProductRepository productRepository;
-    private final ProductUoMConversionRepository uomConversionRepository;
-    private final GoodsReceiptNoteRepository grnRepository;
-    private final GoodsReceiptDetailRepository grnDetailRepository;
-    private final BinRepository binRepository;
-    private final StockBatchRepository stockBatchRepository;
+    private final PurchaseOrderDao poDao;
+    private final PurchaseOrderDetailDao poDetailDao;
+    private final PurchaseRequestDao purchaseRequestDao;
+    private final PartnerDao partnerDao;
+    private final ProductDao productDao;
+    private final ProductUoMConversionDao uomConversionDao;
+    private final GoodsReceiptNoteDao grnDao;
+    private final GoodsReceiptDetailDao grnDetailDao;
+    private final BinDao binDao;
+    private final StockBatchDao stockBatchDao;
 
     // ==================== Query Methods ====================
 
@@ -40,13 +51,13 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
         boolean hasSupplier = supplierId != null;
 
         if (hasStatus && hasSupplier) {
-            orders = poRepository.findByWarehouse_WarehouseIdAndPoStatusAndSupplier_PartnerId(warehouseId, status, supplierId);
+            orders = poDao.findByWarehouseIdAndStatusAndSupplierId(warehouseId, status, supplierId);
         } else if (hasStatus) {
-            orders = poRepository.findByWarehouse_WarehouseIdAndPoStatus(warehouseId, status);
+            orders = poDao.findByWarehouseIdAndStatus(warehouseId, status);
         } else if (hasSupplier) {
-            orders = poRepository.findByWarehouse_WarehouseIdAndSupplier_PartnerId(warehouseId, supplierId);
+            orders = poDao.findByWarehouseIdAndSupplierId(warehouseId, supplierId);
         } else {
-            orders = poRepository.findByWarehouse_WarehouseId(warehouseId);
+            orders = poDao.findByWarehouseId(warehouseId);
         }
 
         return orders.stream().map(this::mapToDTO).collect(Collectors.toList());
@@ -55,7 +66,7 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
     @Override
     @Transactional(readOnly = true)
     public PurchaseOrderDTO getPOById(Integer poId) {
-        PurchaseOrder po = poRepository.findById(poId)
+        PurchaseOrder po = poDao.findById(poId)
                 .orElseThrow(() -> new IllegalArgumentException("Purchase Order not found: " + poId));
         return mapToDTO(po);
     }
@@ -64,10 +75,12 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
 
     @Override
     public PurchaseOrderDTO saveDraft(PurchaseOrderDTO dto, User currentUser) {
-        PurchaseOrder po = mapToEntity(dto, currentUser);
+        PurchaseOrder po = buildPurchaseOrder(dto, currentUser);
         po.setPoStatus("Draft");
         po.setRejectReason(null);
-        po = poRepository.save(po);
+        boolean isUpdate = dto.getPoId() != null;
+        List<PurchaseOrderDetail> details = buildDetails(dto);
+        po = savePurchaseOrder(po, details, isUpdate);
         return mapToDTO(po);
     }
 
@@ -94,29 +107,33 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
             }
         }
 
-        PurchaseOrder po = mapToEntity(dto, currentUser);
+        PurchaseOrder po = buildPurchaseOrder(dto, currentUser);
         po.setPoStatus("Pending Approval");
         po.setRejectReason(null);
-        po = poRepository.save(po);
+        boolean isUpdate = dto.getPoId() != null;
+        List<PurchaseOrderDetail> details = buildDetails(dto);
+        po = savePurchaseOrder(po, details, isUpdate);
         return mapToDTO(po);
     }
 
     @Override
     public void deletePO(Integer poId) {
-        PurchaseOrder po = poRepository.findById(poId)
+        PurchaseOrder po = poDao.findById(poId)
                 .orElseThrow(() -> new IllegalArgumentException("Purchase Order not found: " + poId));
         if (!"Draft".equals(po.getPoStatus()) && !"Rejected".equals(po.getPoStatus())) {
             throw new IllegalArgumentException("Only Draft or Rejected POs can be deleted.");
         }
-        poRepository.delete(po);
+        poDetailDao.deleteByPoId(poId);
+        poDao.deleteById(poId);
     }
 
     // ==================== Approve / Reject ====================
 
     @Override
     public String approvePO(Integer poId, User currentUser) {
-        PurchaseOrder po = poRepository.findById(poId)
+        PurchaseOrder po = poDao.findById(poId)
                 .orElseThrow(() -> new IllegalArgumentException("Purchase Order not found: " + poId));
+        po.setDetails(poDetailDao.findByPoId(poId));
 
         if (!"Pending Approval".equals(po.getPoStatus())) {
             throw new IllegalArgumentException("Only POs with 'Pending Approval' status can be approved.");
@@ -165,17 +182,18 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
             grn.getDetails().add(grnDetail);
         }
 
-        // 4. Save GRN (cascade saves details)
-        // NO StockBatch/StockMovement updates — that's Phase 3 (Storekeeper Post)
-        grnRepository.save(grn);
-        poRepository.save(po);
+        grnDao.save(grn);
+        for (GoodsReceiptDetail detail : grn.getDetails()) {
+            grnDetailDao.save(detail);
+        }
+        poDao.save(po);
 
         return grnNumber;
     }
 
     @Override
     public void rejectPO(Integer poId, String reason) {
-        PurchaseOrder po = poRepository.findById(poId)
+        PurchaseOrder po = poDao.findById(poId)
                 .orElseThrow(() -> new IllegalArgumentException("Purchase Order not found: " + poId));
 
         if (!"Pending Approval".equals(po.getPoStatus())) {
@@ -184,7 +202,7 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
 
         po.setPoStatus("Rejected");
         po.setRejectReason(reason);
-        poRepository.save(po);
+        poDao.save(po);
     }
 
     // ==================== PO Number Generation ====================
@@ -192,7 +210,7 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
     private String generatePONumber() {
         String dateStr = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         String prefix = "PO-" + dateStr + "-";
-        String maxNumber = poRepository.findMaxPoNumber(prefix);
+        String maxNumber = poDao.findMaxPoNumber(prefix);
 
         int nextNum = 1;
         if (maxNumber != null) {
@@ -207,7 +225,7 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
     private String generateGRNNumber() {
         String dateStr = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         String prefix = "GRN-" + dateStr + "-";
-        String maxNumber = grnRepository.findMaxGrnNumber(prefix);
+        String maxNumber = grnDao.findMaxGrnNumber(prefix);
 
         int nextNum = 1;
         if (maxNumber != null) {
@@ -227,7 +245,7 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
         if (uom.equals(product.getBaseUoM())) {
             return BigDecimal.ONE;
         }
-        List<ProductUoMConversion> conversions = uomConversionRepository.findByProduct_ProductId(product.getProductId());
+        List<ProductUoMConversion> conversions = uomConversionDao.findByProductId(product.getProductId());
         for (ProductUoMConversion conv : conversions) {
             if (conv.getFromUoM().equals(uom)) {
                 return BigDecimal.valueOf(conv.getConversionFactor());
@@ -244,7 +262,7 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
      *   2. Virtual weight from Draft GRN allocations (not yet posted)
      */
     private Bin allocateBin(Integer warehouseId, BigDecimal incomingWeight, String productName) {
-        List<Bin> activeBins = binRepository.findByWarehouseWarehouseIdAndIsActive(warehouseId, true);
+        List<Bin> activeBins = binDao.findByWarehouseIdAndIsActive(warehouseId, true);
 
         for (Bin bin : activeBins) {
             BigDecimal currentWeight = calculateCurrentBinWeight(bin);
@@ -256,8 +274,8 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
         }
 
         throw new IllegalArgumentException(
-                "Kho không đủ sức chứa cho mặt hàng '" + productName +
-                "' (Yêu cầu: " + incomingWeight + " kg). Vui lòng giải phóng không gian hoặc thêm bin mới.");
+                "Insufficient warehouse capacity for item '" + productName +
+                "' (Required: " + incomingWeight + " kg). Please free up space or add new bins.");
     }
 
     /**
@@ -267,7 +285,7 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
         BigDecimal totalWeight = BigDecimal.ZERO;
 
         // 1. Actual stock weight from StockBatch
-        List<StockBatch> batches = stockBatchRepository.findByBinBinId(bin.getBinId());
+        List<StockBatch> batches = stockBatchDao.findByBinId(bin.getBinId());
         for (StockBatch batch : batches) {
             Product product = batch.getProduct();
             BigDecimal batchWeight = product.getUnitWeight()
@@ -276,7 +294,7 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
         }
 
         // 2. Virtual weight from Draft GRN allocations (not yet posted)
-        List<GoodsReceiptDetail> draftDetails = grnDetailRepository.findDraftGrnDetailsByBinId(bin.getBinId());
+        List<GoodsReceiptDetail> draftDetails = grnDetailDao.findDraftByBinId(bin.getBinId());
         for (GoodsReceiptDetail grnDetail : draftDetails) {
             Product product = grnDetail.getProduct();
             // Use PO's ordered qty for weight calculation (receivedQty is 0 in Draft)
@@ -305,20 +323,17 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
                 .rejectReason(po.getRejectReason())
                 .build();
 
-        // Populate PR source info (which PRs generated this PO)
-        if (po.getPurchaseRequests() != null && !po.getPurchaseRequests().isEmpty()) {
-            String prNumbers = po.getPurchaseRequests().stream()
-                    .map(PurchaseRequest::getPrNumber)
-                    .collect(Collectors.joining(", "));
+        List<PurchaseRequest> prs = purchaseRequestDao.findByPurchaseOrderId(po.getPoId());
+        if (!prs.isEmpty()) {
+            String prNumbers = prs.stream().map(PurchaseRequest::getPrNumber).collect(Collectors.joining(", "));
             dto.setSourcePRNumbers(prNumbers);
         }
 
-        if (po.getDetails() != null) {
-            List<PurchaseOrderDetailDTO> detailDTOs = po.getDetails().stream()
-                    .map(this::mapDetailToDTO)
-                    .collect(Collectors.toList());
-            dto.setDetails(detailDTOs);
-        }
+        List<PurchaseOrderDetail> details = poDetailDao.findByPoId(po.getPoId());
+        List<PurchaseOrderDetailDTO> detailDTOs = details.stream()
+                .map(this::mapDetailToDTO)
+                .collect(Collectors.toList());
+        dto.setDetails(detailDTOs);
 
         return dto;
     }
@@ -339,48 +354,29 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
 
     // ==================== Mapping: DTO -> Entity ====================
 
-    private PurchaseOrder mapToEntity(PurchaseOrderDTO dto, User currentUser) {
+    private PurchaseOrder buildPurchaseOrder(PurchaseOrderDTO dto, User currentUser) {
         PurchaseOrder po;
 
         if (dto.getPoId() != null) {
-            // Update existing PO
-            po = poRepository.findById(dto.getPoId())
+            po = poDao.findById(dto.getPoId())
                     .orElseThrow(() -> new IllegalArgumentException("Purchase Order not found: " + dto.getPoId()));
             // Only allow editing Draft or Rejected POs
             if (!"Draft".equals(po.getPoStatus()) && !"Rejected".equals(po.getPoStatus())) {
                 throw new IllegalArgumentException("Only Draft or Rejected POs can be edited.");
             }
-            // Clear old details
-            if (po.getDetails() != null) {
-                po.getDetails().clear();
-            }
         } else {
-            // Create new PO
             po = new PurchaseOrder();
             po.setPoNumber(generatePONumber());
-            po.setWarehouse(currentUser.getWarehouse());
-            po.setDetails(new ArrayList<>());
+            Warehouse warehouse = new Warehouse();
+            warehouse.setWarehouseId(currentUser.getWarehouse().getWarehouseId());
+            po.setWarehouse(warehouse);
         }
 
         // Set supplier
         if (dto.getSupplierId() != null) {
-            Partner supplier = partnerRepository.findById(dto.getSupplierId())
+            Partner supplier = partnerDao.findById(dto.getSupplierId())
                     .orElseThrow(() -> new IllegalArgumentException("Supplier not found: " + dto.getSupplierId()));
             po.setSupplier(supplier);
-        }
-
-        // Map detail lines (filter empty ones)
-        List<PurchaseOrderDetailDTO> validDetails = filterEmptyDetails(dto.getDetails());
-        for (PurchaseOrderDetailDTO detailDTO : validDetails) {
-            PurchaseOrderDetail detail = new PurchaseOrderDetail();
-            detail.setPurchaseOrder(po);
-            Product product = productRepository.findById(detailDTO.getProductId())
-                    .orElseThrow(() -> new IllegalArgumentException("Product not found: " + detailDTO.getProductId()));
-            detail.setProduct(product);
-            detail.setUom(detailDTO.getUom());
-            detail.setOrderedQty(detailDTO.getOrderedQty());
-            detail.setReceivedQty(0);
-            po.getDetails().add(detail);
         }
 
         return po;
@@ -393,5 +389,34 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
         return details.stream()
                 .filter(d -> d.getProductId() != null)
                 .collect(Collectors.toList());
+    }
+
+    private List<PurchaseOrderDetail> buildDetails(PurchaseOrderDTO dto) {
+        List<PurchaseOrderDetailDTO> validDetails = filterEmptyDetails(dto.getDetails());
+        List<PurchaseOrderDetail> details = new ArrayList<>();
+        for (PurchaseOrderDetailDTO detailDTO : validDetails) {
+            PurchaseOrderDetail detail = new PurchaseOrderDetail();
+            Product product = productDao.findById(detailDTO.getProductId())
+                    .orElseThrow(() -> new IllegalArgumentException("Product not found: " + detailDTO.getProductId()));
+            detail.setProduct(product);
+            detail.setUom(detailDTO.getUom());
+            detail.setOrderedQty(detailDTO.getOrderedQty());
+            detail.setReceivedQty(0);
+            details.add(detail);
+        }
+        return details;
+    }
+
+    private PurchaseOrder savePurchaseOrder(PurchaseOrder po, List<PurchaseOrderDetail> details, boolean clearExisting) {
+        PurchaseOrder saved = poDao.save(po);
+        if (clearExisting) {
+            poDetailDao.deleteByPoId(saved.getPoId());
+        }
+        for (PurchaseOrderDetail detail : details) {
+            detail.setPurchaseOrder(saved);
+            poDetailDao.save(detail);
+        }
+        saved.setDetails(details);
+        return saved;
     }
 }

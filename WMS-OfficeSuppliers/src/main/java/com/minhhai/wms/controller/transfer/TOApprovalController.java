@@ -52,7 +52,7 @@ public class TOApprovalController {
         if(user == null || user.getWarehouse() == null) return "redirect:/login";
 
         try{
-            TransferOrderDTO dto = transferOrderService.getTRById(id);
+            TransferOrderDTO dto = transferOrderService.getTOById(id);
             model.addAttribute("trDTO", dto);
             model.addAttribute("activePage", "transfer-approvals");
             return "transfer/to-approved-review";
@@ -71,7 +71,7 @@ public class TOApprovalController {
         if(user == null || user.getWarehouse() == null) return "redirect:/login";
 
         try{
-            transferOrderService.approveTR(id, user);
+            transferOrderService.approveTO(id, user);
             ra.addFlashAttribute("success",
                     "Transfer Order approved. A Goods Issue Note has been auto-created for the source warehouse storekeeper.");
         }catch(IllegalArgumentException e){
@@ -94,7 +94,7 @@ public class TOApprovalController {
             return "redirect:/transfer/approvals/" + id + "/review";
         }
         try{
-            transferOrderService.rejectTR(id, user, reason.trim());
+            transferOrderService.rejectTO(id, user, reason.trim());
             ra.addFlashAttribute("success", "Transfer Order rejected successfully.");
         }
         catch(IllegalArgumentException e){

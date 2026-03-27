@@ -111,11 +111,11 @@ public class AdminUserController {
     public String toggleActive(@PathVariable(name = "id") Integer id, RedirectAttributes redirectAttributes) {
         try {
             userService.toggleActive(id);
-            redirectAttributes.addFlashAttribute("success", "Trạng thái người dùng đã được cập nhật.");
+            redirectAttributes.addFlashAttribute("success", "User status updated.");
         } catch (IllegalArgumentException e) {
             redirectAttributes.addFlashAttribute("error", e.getMessage());
         } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("error", "Có lỗi xảy ra: " + e.getMessage());
+            redirectAttributes.addFlashAttribute("error", "Error occurred: " + e.getMessage());
         }
         return "redirect:/admin/users";
     }

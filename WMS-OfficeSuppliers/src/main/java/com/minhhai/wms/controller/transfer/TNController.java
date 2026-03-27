@@ -88,13 +88,13 @@ public class TNController {
             model.addAttribute("products", getActiveProductDTOs());
             model.addAttribute("bins", bins);
             model.addAttribute("activePage", "transfer-internal");
-            model.addAttribute("error", "Vui lòng sửa các lỗi bên dưới.");
+            model.addAttribute("error", "Please correct the errors below.");
             return "transfer/tn-form";
         }
 
         try {
             transferNoteService.createTransferNote(tnDTO, user);
-            redirectAttributes.addFlashAttribute("success", "Phiếu chuyển kho nội bộ đã được tạo và ghi sổ thành công.");
+            redirectAttributes.addFlashAttribute("success", "Internal transfer note created and posted successfully.");
         } catch (IllegalArgumentException e) {
             redirectAttributes.addFlashAttribute("error", e.getMessage());
             return "redirect:/transfer/internal/new";
@@ -108,7 +108,7 @@ public class TNController {
         User user = (User) session.getAttribute("loggedInUser");
         try {
             transferNoteService.completeTransferNote(id, user);
-            ra.addFlashAttribute("success", "Đã xác nhận chuyển bin và cập nhật kho thành công.");
+            ra.addFlashAttribute("success", "Bin transfer confirmed and inventory updated successfully.");
         } catch (Exception e) {
             ra.addFlashAttribute("error", e.getMessage());
         }

@@ -1,11 +1,8 @@
 package com.minhhai.wms.service.impl;
 
-import com.minhhai.wms.entity.Bin;
-import com.minhhai.wms.entity.StockBatch;
+import com.minhhai.wms.dao.StockBatchDao;
+import com.minhhai.wms.dao.WarehouseDao;
 import com.minhhai.wms.entity.Warehouse;
-import com.minhhai.wms.repository.BinRepository;
-import com.minhhai.wms.repository.StockBatchRepository;
-import com.minhhai.wms.repository.WarehouseRepository;
 import com.minhhai.wms.service.WarehouseService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -19,26 +16,25 @@ import java.util.Optional;
 @Transactional
 public class WarehouseServiceImpl implements WarehouseService {
 
-    private final WarehouseRepository warehouseRepository;
-    private  final BinRepository binRepository;
-    private final StockBatchRepository stockBatchRepository;
+    private final WarehouseDao warehouseDao;
+    private final StockBatchDao stockBatchDao;
 
     @Override
     @Transactional(readOnly = true)
     public List<Warehouse> findAll() {
-        return warehouseRepository.findAll();
+        return warehouseDao.findAll();
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<Warehouse> findAllActive() {
-        return warehouseRepository.findByIsActive(true);
+        return warehouseDao.findByIsActive(true);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Optional<Warehouse> findById(Integer id) {
-        return warehouseRepository.findById(id);
+        return warehouseDao.findById(id);
     }
 
     @Override
@@ -47,37 +43,35 @@ public class WarehouseServiceImpl implements WarehouseService {
         if (keyword == null || keyword.isBlank()) {
             return findAll();
         }
-        return warehouseRepository.searchByKeyword(keyword.trim());
+        return warehouseDao.searchByKeyword(keyword.trim());
     }
 
     @Override
     public Warehouse save(Warehouse warehouse) {
-        return warehouseRepository.save(warehouse);
+        return warehouseDao.save(warehouse);
     }
 
     @Override
     public Warehouse save(com.minhhai.wms.dto.WarehouseDTO warehouseDTO) {
         // Uniqueness check
         if (warehouseDTO.getWarehouseId() == null) {
-            if (warehouseRepository.existsByWarehouseCode(warehouseDTO.getWarehouseCode())) {
+            if (warehouseDao.existsByWarehouseCode(warehouseDTO.getWarehouseCode())) {
                 throw new IllegalArgumentException("Warehouse code already exists.");
             }
         } else {
-            if (warehouseRepository.existsByWarehouseCodeAndWarehouseIdNot(warehouseDTO.getWarehouseCode(), warehouseDTO.getWarehouseId())) {
+            if (warehouseDao.existsByWarehouseCodeAndWarehouseIdNot(warehouseDTO.getWarehouseCode(), warehouseDTO.getWarehouseId())) {
                 throw new IllegalArgumentException("Warehouse code already exists.");
             }
         }
 
         Warehouse warehouse;
         if (warehouseDTO.getWarehouseId() != null) {
-            // Update
-            warehouse = warehouseRepository.findById(warehouseDTO.getWarehouseId())
+            warehouse = warehouseDao.findById(warehouseDTO.getWarehouseId())
                     .orElseThrow(() -> new IllegalArgumentException("Warehouse not found: " + warehouseDTO.getWarehouseId()));
             warehouse.setWarehouseCode(warehouseDTO.getWarehouseCode());
             warehouse.setWarehouseName(warehouseDTO.getWarehouseName());
             warehouse.setAddress(warehouseDTO.getAddress());
         } else {
-            // Create
             warehouse = Warehouse.builder()
                     .warehouseCode(warehouseDTO.getWarehouseCode())
                     .warehouseName(warehouseDTO.getWarehouseName())
@@ -86,27 +80,27 @@ public class WarehouseServiceImpl implements WarehouseService {
                     .build();
         }
 
-        return warehouseRepository.save(warehouse);
+        return warehouseDao.save(warehouse);
     }
 
     @Override
     public void toggleActive(Integer warehouseId) {
-        Warehouse warehouse = warehouseRepository.findById(warehouseId)
+        Warehouse warehouse = warehouseDao.findById(warehouseId)
                 .orElseThrow(() -> new RuntimeException("Warehouse not found: " + warehouseId));
         if (warehouse.getIsActive()) {
-            Integer totalStock = stockBatchRepository.getTotalQtyByWarehouseId(warehouseId);
+            Integer totalStock = stockBatchDao.getTotalQtyByWarehouseId(warehouseId);
 
             if (totalStock != null && totalStock > 0) {
                 throw new IllegalArgumentException("Can not deactive because this warehouse contains " + totalStock + " products.");
             }
         }
         warehouse.setIsActive(!warehouse.getIsActive());
-        warehouseRepository.save(warehouse);
+        warehouseDao.save(warehouse);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<Warehouse> findAllActiveExcluding(Integer warehouseId) {
-        return warehouseRepository.findByIsActiveTrueAndWarehouseIdNot(warehouseId);
+        return warehouseDao.findByIsActiveTrueAndWarehouseIdNot(warehouseId);
     }
 }

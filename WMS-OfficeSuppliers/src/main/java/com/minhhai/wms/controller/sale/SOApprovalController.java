@@ -69,14 +69,14 @@ public class SOApprovalController {
         try {
             String result = soService.approveSO(id, user);
             if (result == null) {
-                redirectAttributes.addFlashAttribute("success", "SO đã được xử lý.");
+                redirectAttributes.addFlashAttribute("success", "SO processed.");
             } else if (result.contains("Waiting") || result.contains("chờ hàng")) {
                 // Branch A: SO → Waiting for Stock (PR not yet completed)
                 redirectAttributes.addFlashAttribute("success", result);
             } else {
                 // Branch B: GIN created
                 redirectAttributes.addFlashAttribute("success",
-                        "SO đã được duyệt. Phiếu xuất kho " + result + " đã được tạo tự động.");
+                        "SO approved. Goods Issue Note " + result + " auto-created.");
             }
         } catch (IllegalArgumentException e) {
             redirectAttributes.addFlashAttribute("error", e.getMessage());

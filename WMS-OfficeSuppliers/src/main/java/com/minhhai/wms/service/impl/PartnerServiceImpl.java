@@ -1,7 +1,7 @@
 package com.minhhai.wms.service.impl;
 
+import com.minhhai.wms.dao.PartnerDao;
 import com.minhhai.wms.entity.Partner;
-import com.minhhai.wms.repository.PartnerRepository;
 import com.minhhai.wms.service.PartnerService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -15,12 +15,12 @@ import java.util.Optional;
 @Transactional
 public class PartnerServiceImpl implements PartnerService {
 
-    private final PartnerRepository partnerRepository;
+    private final PartnerDao partnerDao;
 
     @Override
     @Transactional(readOnly = true)
     public List<Partner> findAll() {
-        return partnerRepository.findAll();
+        return partnerDao.findAll();
     }
 
     @Override
@@ -29,7 +29,7 @@ public class PartnerServiceImpl implements PartnerService {
         if (partnerType == null || partnerType.isBlank()) {
             return findAll();
         }
-        return partnerRepository.findByPartnerType(partnerType);
+        return partnerDao.findByPartnerType(partnerType);
     }
 
     @Override
@@ -39,35 +39,33 @@ public class PartnerServiceImpl implements PartnerService {
             return findByType(partnerType);
         }
         if (partnerType != null && !partnerType.isBlank()) {
-            return partnerRepository.searchByNameAndType(keyword.trim(), partnerType);
+            return partnerDao.searchByNameAndType(keyword.trim(), partnerType);
         }
-        return partnerRepository.searchByName(keyword.trim());
+        return partnerDao.searchByName(keyword.trim());
     }
 
     @Override
     @Transactional(readOnly = true)
     public Optional<Partner> findById(Integer id) {
-        return partnerRepository.findById(id);
+        return partnerDao.findById(id);
     }
 
     @Override
     public Partner save(Partner partner) {
-        return partnerRepository.save(partner);
+        return partnerDao.save(partner);
     }
 
     @Override
     public Partner save(com.minhhai.wms.dto.PartnerDTO partnerDTO) {
         Partner partner;
         if (partnerDTO.getPartnerId() != null) {
-            // Update
-            partner = partnerRepository.findById(partnerDTO.getPartnerId())
+            partner = partnerDao.findById(partnerDTO.getPartnerId())
                     .orElseThrow(() -> new IllegalArgumentException("Partner not found: " + partnerDTO.getPartnerId()));
             partner.setPartnerName(partnerDTO.getPartnerName());
             partner.setPartnerType(partnerDTO.getPartnerType());
             partner.setContactPerson(partnerDTO.getContactPerson());
             partner.setPhoneNumber(partnerDTO.getPhoneNumber());
         } else {
-            // Create
             partner = Partner.builder()
                     .partnerName(partnerDTO.getPartnerName())
                     .partnerType(partnerDTO.getPartnerType())
@@ -77,14 +75,14 @@ public class PartnerServiceImpl implements PartnerService {
                     .build();
         }
 
-        return partnerRepository.save(partner);
+        return partnerDao.save(partner);
     }
 
     @Override
     public void toggleActive(Integer partnerId) {
-        Partner partner = partnerRepository.findById(partnerId)
+        Partner partner = partnerDao.findById(partnerId)
                 .orElseThrow(() -> new RuntimeException("Partner not found: " + partnerId));
         partner.setIsActive(!partner.getIsActive());
-        partnerRepository.save(partner);
+        partnerDao.save(partner);
     }
 }

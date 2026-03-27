@@ -1,13 +1,16 @@
 package com.minhhai.wms.service.impl;
 
+import com.minhhai.wms.dao.StockBatchDao;
+import com.minhhai.wms.dao.StockMovementDao;
+import com.minhhai.wms.dto.CurrentStockDTO;
 import com.minhhai.wms.dto.InboundReportDTO;
 import com.minhhai.wms.dto.InventoryBalanceDTO;
 import com.minhhai.wms.dto.OutboundReportDTO;
 import com.minhhai.wms.entity.StockMovement;
-import com.minhhai.wms.repository.StockMovementRepository;
 import com.minhhai.wms.service.ReportService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,7 +25,8 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class ReportServiceImpl implements ReportService {
 
-    private final StockMovementRepository movementRepository;
+    private final StockMovementDao stockMovementDao;
+    private final StockBatchDao stockBatchDao;
 
     // ==================== Inbound ====================
 
@@ -35,10 +39,9 @@ public class ReportServiceImpl implements ReportService {
         LocalDateTime startDt = (startDate != null) ? startDate.atStartOfDay() : null;
         LocalDateTime endDt   = (endDate   != null) ? endDate.atTime(LocalTime.MAX) : null;
 
-        Page<StockMovement> movements = movementRepository.findInboundHistory(
-                startDt, endDt, warehouseId, productId, PageRequest.of(page, size));
-
-        return movements.map(this::mapToInboundDTO);
+        return stockMovementDao
+                .findInboundHistory(startDt, endDt, warehouseId, productId, PageRequest.of(page, size))
+                .map(this::mapToInboundDTO);
     }
 
     // ==================== Outbound ====================
@@ -52,10 +55,9 @@ public class ReportServiceImpl implements ReportService {
         LocalDateTime startDt = (startDate != null) ? startDate.atStartOfDay() : null;
         LocalDateTime endDt   = (endDate   != null) ? endDate.atTime(LocalTime.MAX) : null;
 
-        Page<StockMovement> movements = movementRepository.findOutboundHistory(
-                startDt, endDt, warehouseId, productId, PageRequest.of(page, size));
-
-        return movements.map(this::mapToOutboundDTO);
+        return stockMovementDao
+                .findOutboundHistory(startDt, endDt, warehouseId, productId, PageRequest.of(page, size))
+                .map(this::mapToOutboundDTO);
     }
 
     // ==================== Inventory Balance ====================
@@ -64,7 +66,6 @@ public class ReportServiceImpl implements ReportService {
     public List<InventoryBalanceDTO> getInventoryReport(
             LocalDate startDate, LocalDate endDate, Integer warehouseId) {
 
-        // Default: from beginning of current month to today
         LocalDate resolvedStart = (startDate != null) ? startDate : LocalDate.now().withDayOfMonth(1);
         LocalDate resolvedEnd   = (endDate   != null) ? endDate   : LocalDate.now();
 
@@ -73,15 +74,14 @@ public class ReportServiceImpl implements ReportService {
         LocalDateTime endDt    = resolvedEnd.atTime(LocalTime.MAX);
 
         // Query 1: Opening stock (Receipt - Issue) before startDate
-        List<Object[]> openingRows = movementRepository.findOpeningStock(beforeDt, warehouseId);
+        List<Object[]> openingRows = stockMovementDao.findOpeningStock(beforeDt, warehouseId);
 
         // Query 2: Period summary (inbound + outbound) in [startDate, endDate]
-        List<Object[]> periodRows = movementRepository.findPeriodSummary(startDt, endDt, warehouseId);
+        List<Object[]> periodRows  = stockMovementDao.findPeriodSummary(startDt, endDt, warehouseId);
 
         // Build result map keyed by "productId-warehouseId"
         Map<String, InventoryBalanceDTO> resultMap = new LinkedHashMap<>();
 
-        // Populate from opening stock
         for (Object[] row : openingRows) {
             Integer productId  = (Integer) row[0];
             String  sku        = (String)  row[1];
@@ -93,20 +93,13 @@ public class ReportServiceImpl implements ReportService {
 
             String key = productId + "-" + warehId;
             resultMap.put(key, InventoryBalanceDTO.builder()
-                    .productId(productId)
-                    .sku(sku)
-                    .productName(productName)
-                    .warehouseId(warehId)
-                    .warehouseName(warehName)
-                    .uom(uom)
-                    .openingStock(opening)
-                    .inboundQty(0)
-                    .outboundQty(0)
-                    .closingStock(opening) // will be updated below
+                    .productId(productId).sku(sku).productName(productName)
+                    .warehouseId(warehId).warehouseName(warehName).uom(uom)
+                    .openingStock(opening).inboundQty(0).outboundQty(0)
+                    .closingStock(opening)
                     .build());
         }
 
-        // Merge period summary (inbound + outbound) — 8 columns now
         for (Object[] row : periodRows) {
             Integer productId  = (Integer) row[0];
             String  sku        = (String)  row[1];
@@ -120,7 +113,6 @@ public class ReportServiceImpl implements ReportService {
             String key = productId + "-" + warehId;
             InventoryBalanceDTO dto = resultMap.get(key);
             if (dto == null) {
-                // New product: only has activity in this period, opening = 0
                 dto = InventoryBalanceDTO.builder()
                         .productId(productId).sku(sku).productName(pName)
                         .warehouseId(warehId).warehouseName(wName).uom(uom)
@@ -133,10 +125,10 @@ public class ReportServiceImpl implements ReportService {
             dto.setClosingStock(dto.getOpeningStock() + inbound - outbound);
         }
 
-        // Sort: by warehouseName then productName
         return resultMap.values().stream()
-                .sorted(Comparator.comparing(d -> (d.getWarehouseName() != null ? d.getWarehouseName() : "") +
-                                                   (d.getProductName()  != null ? d.getProductName()  : "")))
+                .sorted(Comparator.comparing(d ->
+                        (d.getWarehouseName() != null ? d.getWarehouseName() : "") +
+                        (d.getProductName()   != null ? d.getProductName()   : "")))
                 .collect(Collectors.toList());
     }
 
@@ -169,6 +161,16 @@ public class ReportServiceImpl implements ReportService {
                 .balanceAfter(m.getBalanceAfter())
                 .build();
     }
+
+    // ==================== Current Stock ====================
+
+    @Override
+    public List<CurrentStockDTO> getCurrentStock(Integer warehouseId, boolean lowStockOnly) {
+        return stockBatchDao.findCurrentStockByWarehouse(warehouseId, lowStockOnly);
+    }
+
+    @Override
+    public long countLowStockProducts(Integer warehouseId) {
+        return stockBatchDao.countLowStockProducts(warehouseId);
+    }
 }
-
-

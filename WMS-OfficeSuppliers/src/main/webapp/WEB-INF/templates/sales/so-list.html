@@ -19,7 +19,8 @@
                 <div class="card">
                     <div class="card-header">
                         <h2>Sales Orders</h2>
-                        <a th:href="@{/sales/orders/new}" class="btn btn-primary btn-sm">+ New SO</a>
+                        <a th:href="@{/sales/orders/new}" class="btn btn-primary btn-sm"
+                           th:if="${loggedInUserRole != 'Sales Manager'}">+ New SO</a>
                     </div>
                     <div class="card-body">
                         <!-- Filter Bar -->
@@ -92,8 +93,9 @@
                                         <td>
                                             <div class="btn-group">
                                                 <a th:href="@{/sales/orders/{id}/edit(id=${so.soId})}"
-                                                    class="btn btn-outline btn-sm">View / Edit</a>
-                                                <form th:if="${so.soStatus == 'Draft' || so.soStatus == 'Rejected'}"
+                                                    class="btn btn-outline btn-sm"
+                                                    th:text="${loggedInUserRole == 'Sales Manager' ? 'View' : 'View / Edit'}">View / Edit</a>
+                                                <form th:if="${loggedInUserRole != 'Sales Manager' && (so.soStatus == 'Draft' || so.soStatus == 'Rejected')}"
                                                     th:action="@{/sales/orders/{id}/delete(id=${so.soId})}"
                                                     method="post" style="display:inline;"
                                                     onsubmit="return confirm('Are you sure you want to delete this SO?');">

@@ -73,7 +73,7 @@
                             <div class="text-danger" th:if="${#fields.hasErrors('details')}" th:errors="*{details}"
                                 style="font-size: 0.9rem; font-weight: bold;"></div>
                             <button type="button" class="btn btn-primary btn-sm" onclick="addLine()"
-                                th:if="${poDTO.poStatus == null || poDTO.poStatus == 'Draft' || poDTO.poStatus == 'Rejected'}"
+                                th:if="${loggedInUserRole != 'Purchasing Manager' && (poDTO.poStatus == null || poDTO.poStatus == 'Draft' || poDTO.poStatus == 'Rejected')}"
                                 id="addLineBtn">+ Add Product Line</button>
                         </div>
                         <div class="card-body">
@@ -96,7 +96,7 @@
                                                 <select th:name="'details[' + ${idx} + '].productId'"
                                                     class="form-control product-select" th:attr="data-index=${idx}"
                                                     onchange="onProductChange(this)"
-                                                    th:disabled="${poDTO.poStatus != null && poDTO.poStatus != 'Draft' && poDTO.poStatus != 'Rejected'}">
+                                                    th:disabled="${loggedInUserRole == 'Purchasing Manager' || (poDTO.poStatus != null && poDTO.poStatus != 'Draft' && poDTO.poStatus != 'Rejected')}">
                                                     <option value="">-- Select Product --</option>
                                                     <option th:each="p : ${products}" th:value="${p.productId}"
                                                         th:text="${p.sku + ' - ' + p.productName}"
@@ -113,7 +113,7 @@
                                             <td>
                                                 <select th:name="'details[' + ${idx} + '].uom'"
                                                     class="form-control uom-select" th:id="'uom-' + ${idx}"
-                                                    th:disabled="${poDTO.poStatus != null && poDTO.poStatus != 'Draft' && poDTO.poStatus != 'Rejected'}">
+                                                    th:disabled="${loggedInUserRole == 'Purchasing Manager' || (poDTO.poStatus != null && poDTO.poStatus != 'Draft' && poDTO.poStatus != 'Rejected')}">
                                                     <option value="">-- Select UoM --</option>
                                                     <!-- Will be populated by JS on load for existing lines -->
                                                     <option th:if="${detail.uom != null}" th:value="${detail.uom}"
@@ -127,7 +127,7 @@
                                             <td>
                                                 <input type="number" th:name="'details[' + ${idx} + '].orderedQty'"
                                                     class="form-control" th:value="${detail.orderedQty}"
-                                                    th:readonly="${poDTO.poStatus != null && poDTO.poStatus != 'Draft' && poDTO.poStatus != 'Rejected'}">
+                                                    th:readonly="${loggedInUserRole == 'Purchasing Manager' || (poDTO.poStatus != null && poDTO.poStatus != 'Draft' && poDTO.poStatus != 'Rejected')}">
                                                 <div class="text-danger"
                                                     th:if="${#fields.hasErrors('details[' + idx + '].orderedQty')}"
                                                     th:errors="*{details[__${idx}__].orderedQty}"
@@ -136,7 +136,7 @@
                                             <td>
                                                 <button type="button" class="btn btn-danger btn-sm"
                                                     onclick="removeLine(this)"
-                                                    th:if="${poDTO.poStatus == null || poDTO.poStatus == 'Draft' || poDTO.poStatus == 'Rejected'}">✕</button>
+                                                    th:if="${loggedInUserRole != 'Purchasing Manager' && (poDTO.poStatus == null || poDTO.poStatus == 'Draft' || poDTO.poStatus == 'Rejected')}">✕</button>
                                             </td>
                                         </tr>
                                     </tbody>
@@ -147,7 +147,7 @@
 
                     <!-- Action Buttons -->
                     <div class="card"
-                        th:if="${poDTO.poStatus == null || poDTO.poStatus == 'Draft' || poDTO.poStatus == 'Rejected'}">
+                        th:if="${loggedInUserRole != 'Purchasing Manager' && (poDTO.poStatus == null || poDTO.poStatus == 'Draft' || poDTO.poStatus == 'Rejected')}">
                         <div class="card-body" style="display: flex; gap: 1rem; justify-content: flex-end;">
                             <a th:href="@{/purchasing/orders}" class="btn btn-outline">Cancel</a>
                             <button type="submit" name="action" value="draft" class="btn btn-outline">Save
@@ -157,7 +157,7 @@
                         </div>
                     </div>
                     <div class="card"
-                        th:unless="${poDTO.poStatus == null || poDTO.poStatus == 'Draft' || poDTO.poStatus == 'Rejected'}">
+                        th:unless="${loggedInUserRole != 'Purchasing Manager' && (poDTO.poStatus == null || poDTO.poStatus == 'Draft' || poDTO.poStatus == 'Rejected')}">
                         <div class="card-body" style="display: flex; gap: 1rem; justify-content: flex-end;">
                             <a th:href="@{/purchasing/orders}" class="btn btn-outline">Back to List</a>
                         </div>

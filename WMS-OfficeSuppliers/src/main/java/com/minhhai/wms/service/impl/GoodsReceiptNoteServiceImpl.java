@@ -1,9 +1,19 @@
 package com.minhhai.wms.service.impl;
 
+import com.minhhai.wms.dao.BinDao;
+import com.minhhai.wms.dao.GoodsReceiptDetailDao;
+import com.minhhai.wms.dao.GoodsReceiptNoteDao;
+import com.minhhai.wms.dao.ProductUoMConversionDao;
+import com.minhhai.wms.dao.PurchaseOrderDao;
+import com.minhhai.wms.dao.PurchaseOrderDetailDao;
+import com.minhhai.wms.dao.PurchaseRequestDao;
+import com.minhhai.wms.dao.StockBatchDao;
+import com.minhhai.wms.dao.StockMovementDao;
+import com.minhhai.wms.dao.TransferOrderDao;
+import com.minhhai.wms.dao.TransferOrderDetailDao;
 import com.minhhai.wms.dto.GoodsReceiptDetailDTO;
 import com.minhhai.wms.dto.GoodsReceiptNoteDTO;
 import com.minhhai.wms.entity.*;
-import com.minhhai.wms.repository.*;
 import com.minhhai.wms.service.GoodsReceiptNoteService;
 import com.minhhai.wms.service.SalesOrderService;
 import org.springframework.context.annotation.Lazy;
@@ -21,37 +31,43 @@ import java.util.stream.Collectors;
 @Transactional
 public class GoodsReceiptNoteServiceImpl implements GoodsReceiptNoteService {
 
-    private final GoodsReceiptNoteRepository grnRepository;
-    private final GoodsReceiptDetailRepository grnDetailRepository;
-    private final PurchaseOrderRepository poRepository;
-    private final TransferOrderRepository toRepository;
-    private final StockBatchRepository stockBatchRepository;
-    private final StockMovementRepository stockMovementRepository;
-    private final ProductUoMConversionRepository uomConversionRepository;
-    private final BinRepository binRepository;
-    private final PurchaseRequestRepository prRepository;
+    private final GoodsReceiptNoteDao grnDao;
+    private final GoodsReceiptDetailDao grnDetailDao;
+    private final PurchaseOrderDao poDao;
+    private final PurchaseOrderDetailDao poDetailDao;
+    private final TransferOrderDao toDao;
+    private final TransferOrderDetailDao toDetailDao;
+    private final StockBatchDao stockBatchDao;
+    private final StockMovementDao stockMovementDao;
+    private final ProductUoMConversionDao uomConversionDao;
+    private final BinDao binDao;
+    private final PurchaseRequestDao prDao;
     private final SalesOrderService soService;
 
     public GoodsReceiptNoteServiceImpl(
-            GoodsReceiptNoteRepository grnRepository,
-            GoodsReceiptDetailRepository grnDetailRepository,
-            PurchaseOrderRepository poRepository,
-            TransferOrderRepository toRepository,
-            StockBatchRepository stockBatchRepository,
-            StockMovementRepository stockMovementRepository,
-            ProductUoMConversionRepository uomConversionRepository,
-            BinRepository binRepository,
-            PurchaseRequestRepository prRepository,
+            GoodsReceiptNoteDao grnDao,
+            GoodsReceiptDetailDao grnDetailDao,
+            PurchaseOrderDao poDao,
+            PurchaseOrderDetailDao poDetailDao,
+            TransferOrderDao toDao,
+            TransferOrderDetailDao toDetailDao,
+            StockBatchDao stockBatchDao,
+            StockMovementDao stockMovementDao,
+            ProductUoMConversionDao uomConversionDao,
+            BinDao binDao,
+            PurchaseRequestDao prDao,
             @Lazy SalesOrderService soService) {
-        this.grnRepository = grnRepository;
-        this.grnDetailRepository = grnDetailRepository;
-        this.poRepository = poRepository;
-        this.toRepository = toRepository;
-        this.stockBatchRepository = stockBatchRepository;
-        this.stockMovementRepository = stockMovementRepository;
-        this.uomConversionRepository = uomConversionRepository;
-        this.binRepository = binRepository;
-        this.prRepository = prRepository;
+        this.grnDao = grnDao;
+        this.grnDetailDao = grnDetailDao;
+        this.poDao = poDao;
+        this.poDetailDao = poDetailDao;
+        this.toDao = toDao;
+        this.toDetailDao = toDetailDao;
+        this.stockBatchDao = stockBatchDao;
+        this.stockMovementDao = stockMovementDao;
+        this.uomConversionDao = uomConversionDao;
+        this.binDao = binDao;
+        this.prDao = prDao;
         this.soService = soService;
     }
 
@@ -60,9 +76,9 @@ public class GoodsReceiptNoteServiceImpl implements GoodsReceiptNoteService {
     public List<GoodsReceiptNoteDTO> getGRNsByWarehouse(Integer warehouseId, String status) {
         List<GoodsReceiptNote> grns;
         if (status != null && !status.isBlank()) {
-            grns = grnRepository.findByWarehouse_WarehouseIdAndGrStatus(warehouseId, status);
+            grns = grnDao.findByWarehouseIdAndStatus(warehouseId, status);
         } else {
-            grns = grnRepository.findByWarehouse_WarehouseId(warehouseId);
+            grns = grnDao.findByWarehouseId(warehouseId);
         }
         return grns.stream().map(this::mapToListDTO).collect(Collectors.toList());
     }
@@ -70,15 +86,17 @@ public class GoodsReceiptNoteServiceImpl implements GoodsReceiptNoteService {
     @Override
     @Transactional(readOnly = true)
     public GoodsReceiptNoteDTO getGRNById(Integer grnId) {
-        GoodsReceiptNote grn = grnRepository.findById(grnId)
+        GoodsReceiptNote grn = grnDao.findById(grnId)
                 .orElseThrow(() -> new IllegalArgumentException("GRN not found: " + grnId));
+        grn.setDetails(grnDetailDao.findByGrnId(grnId));
         return mapToFullDTO(grn);
     }
 
     @Override
     public String postGRN(Integer grnId, List<GoodsReceiptDetailDTO> receivedDetails) {
-        GoodsReceiptNote grn = grnRepository.findById(grnId)
+        GoodsReceiptNote grn = grnDao.findById(grnId)
                 .orElseThrow(() -> new IllegalArgumentException("GRN not found: " + grnId));
+        grn.setDetails(grnDetailDao.findByGrnId(grnId));
 
         if (!"Draft".equals(grn.getGrStatus())) {
             throw new IllegalArgumentException("Chi co the ghi so phieu GRN o trang thai Draft.");
@@ -92,64 +110,78 @@ public class GoodsReceiptNoteServiceImpl implements GoodsReceiptNoteService {
         }
 
         if (grn.getPurchaseOrder() != null) {
+            PurchaseOrder po = poDao.findById(grn.getPurchaseOrder().getPoId())
+                    .orElseThrow(() -> new IllegalArgumentException("Purchase Order not found: " + grn.getPurchaseOrder().getPoId()));
+            po.setDetails(poDetailDao.findByPoId(po.getPoId()));
+            grn.setPurchaseOrder(po);
             return postGRNForPO(grn, receivedQtyMap);
         } else if (grn.getTransferOrder() != null) {
+            TransferOrder to = toDao.findById(grn.getTransferOrder().getToId())
+                    .orElseThrow(() -> new IllegalArgumentException("Transfer Order not found: " + grn.getTransferOrder().getToId()));
+            to.setDetails(toDetailDao.findByTransferOrderId(to.getToId()));
+            grn.setTransferOrder(to);
             return postGRNForTO(grn, receivedQtyMap);
         }
-        throw new IllegalArgumentException("GRN khong lien ket voi don hang hop le.");
+        throw new IllegalArgumentException("GRN is not linked to a valid order.");
     }
 
     private String postGRNForPO(GoodsReceiptNote grn, Map<Integer, Integer> receivedQtyMap) {
         PurchaseOrder po = grn.getPurchaseOrder();
         Warehouse warehouse = grn.getWarehouse();
         int totalInputQty = 0;
+        Map<Integer, PurchaseOrderDetail> poDetailMap = po.getDetails().stream()
+                .collect(Collectors.toMap(PurchaseOrderDetail::getPoDetailId, d -> d));
 
         for (GoodsReceiptDetail grnDetail : grn.getDetails()) {
             Integer inputReceivedQty = receivedQtyMap.getOrDefault(grnDetail.getGrDetailId(), 0);
-            PurchaseOrderDetail poDetail = grnDetail.getPurchaseOrderDetail();
+            PurchaseOrderDetail poDetail = poDetailMap.get(grnDetail.getPurchaseOrderDetail().getPoDetailId());
+            if (poDetail == null) {
+                poDetail = grnDetail.getPurchaseOrderDetail();
+            }
 
-            if (inputReceivedQty < 0) throw new IllegalArgumentException("So luong thuc nhan khong duoc am.");
+            if (inputReceivedQty < 0) throw new IllegalArgumentException("Received quantity cannot be negative.");
             int remainingQty = poDetail.getOrderedQty() - poDetail.getReceivedQty();
-            if (inputReceivedQty > remainingQty) throw new IllegalArgumentException("So luong thuc nhan vuot qua so luong thieu.");
+            if (inputReceivedQty > remainingQty)
+                throw new IllegalArgumentException("So luong thuc nhan vuot qua so luong thieu.");
 
             totalInputQty += inputReceivedQty;
             grnDetail.setReceivedQty(inputReceivedQty);
+            grnDetailDao.updateReceivedQty(grnDetail.getGrDetailId(), inputReceivedQty);
 
             if (inputReceivedQty > 0) {
                 Product product = grnDetail.getProduct();
                 int baseQty = BigDecimal.valueOf(inputReceivedQty).multiply(getConversionFactor(product, grnDetail.getUom())).intValue();
 
-                StockBatch stockBatch = stockBatchRepository.findByWarehouse_WarehouseIdAndProduct_ProductIdAndBin_BinIdAndBatchNumber(
-                        warehouse.getWarehouseId(), product.getProductId(), grnDetail.getBin().getBinId(), grnDetail.getBatchNumber())
+                StockBatch stockBatch = stockBatchDao.findByWarehouseIdAndProductIdAndBinIdAndBatchNumber(
+                                warehouse.getWarehouseId(), product.getProductId(), grnDetail.getBin().getBinId(), grnDetail.getBatchNumber())
                         .orElseGet(() -> StockBatch.builder().warehouse(warehouse).product(product).bin(grnDetail.getBin())
                                 .batchNumber(grnDetail.getBatchNumber()).arrivalDateTime(LocalDateTime.now())
                                 .qtyAvailable(0).qtyReserved(0).qtyInTransit(0).uom(product.getBaseUoM()).build());
 
                 stockBatch.setQtyAvailable(stockBatch.getQtyAvailable() + baseQty);
-                stockBatchRepository.save(stockBatch);
+                stockBatchDao.save(stockBatch);
 
-                stockMovementRepository.save(StockMovement.builder().warehouse(warehouse).product(product).bin(grnDetail.getBin()).batchNumber(grnDetail.getBatchNumber()).movementType("Receipt").stockType("Physical").quantity(baseQty).uom(product.getBaseUoM()).balanceAfter(stockBatch.getQtyAvailable()).build());
+                stockMovementDao.save(StockMovement.builder().warehouse(warehouse).product(product).bin(grnDetail.getBin()).batchNumber(grnDetail.getBatchNumber()).movementType("Receipt").stockType("Physical").quantity(baseQty).uom(product.getBaseUoM()).balanceAfter(stockBatch.getQtyAvailable()).build());
                 poDetail.setReceivedQty(poDetail.getReceivedQty() + inputReceivedQty);
+                poDetailDao.updateReceivedQty(poDetail.getPoDetailId(), poDetail.getReceivedQty());
             }
         }
 
         if (totalInputQty == 0) throw new IllegalArgumentException("Vui long nhap so luong thuc nhan.");
         grn.setGrStatus("Posted");
-        grnRepository.save(grn);
-        // FIX: Flush immediately so Hibernate clears all GRN dirty state before the loopback
-        // triggers approveSO() -> ginRepository.save(gin). Without this flush,
-        // Hibernate's auto-flush during the GIN INSERT cascades back into
-        // GRN detail lines, creating duplicate rows.
-        grnRepository.flush();
+        grnDao.updateStatus(grn.getGrnId(), "Posted");
 
         boolean allComplete = true;
-        for (PurchaseOrderDetail poDetail : po.getDetails()) if (poDetail.getReceivedQty() < poDetail.getOrderedQty()) allComplete = false;
+        for (PurchaseOrderDetail poDetail : po.getDetails())
+            if (poDetail.getReceivedQty() < poDetail.getOrderedQty()) allComplete = false;
 
         if (allComplete) {
-            po.setPoStatus("Completed"); poRepository.save(po);
+            po.setPoStatus("Completed");
+            poDao.save(po);
             return handlePOCompletionLoopback(po, grn);
         } else {
-            po.setPoStatus("Incomplete"); poRepository.save(po);
+            po.setPoStatus("Incomplete");
+            poDao.save(po);
             String backOrderGrnNumber = createBackOrderGRN(po, grn);
             return "Phieu GRN " + grn.getGrnNumber() + " da ghi so. Phieu bu " + backOrderGrnNumber + " da duoc tao tu dong.";
         }
@@ -159,19 +191,25 @@ public class GoodsReceiptNoteServiceImpl implements GoodsReceiptNoteService {
         TransferOrder to = grn.getTransferOrder();
         Warehouse warehouse = grn.getWarehouse();
         int totalInputQty = 0;
+        Map<Integer, TransferOrderDetail> toDetailMap = to.getDetails().stream()
+                .collect(Collectors.toMap(TransferOrderDetail::getToDetailId, d -> d));
 
         for (GoodsReceiptDetail grnDetail : grn.getDetails()) {
 
             Integer input = receivedQtyMap.getOrDefault(grnDetail.getGrDetailId(), 0);
-            TransferOrderDetail toDetail = grnDetail.getTransferOrderDetail();
+            TransferOrderDetail toDetail = toDetailMap.get(grnDetail.getTransferOrderDetail().getToDetailId());
+            if (toDetail == null) {
+                toDetail = grnDetail.getTransferOrderDetail();
+            }
 
-            if (input < 0) throw new IllegalArgumentException("Không được âm");
+            if (input < 0) throw new IllegalArgumentException("Received quantity cannot be negative.");
 
             int remaining = grnDetail.getExpectedQty() != null ? grnDetail.getExpectedQty() : toDetail.getIssuedQty() - toDetail.getReceivedQty();
-            if (input > remaining) throw new IllegalArgumentException("Nhận vượt xuất");
+            if (input > remaining) throw new IllegalArgumentException("Received quantity exceeds expected");
 
             totalInputQty += input;
             grnDetail.setReceivedQty(input);
+            grnDetailDao.updateReceivedQty(grnDetail.getGrDetailId(), input);
 
             if (input > 0) {
                 Product product = grnDetail.getProduct();
@@ -180,19 +218,19 @@ public class GoodsReceiptNoteServiceImpl implements GoodsReceiptNoteService {
                         .multiply(getConversionFactor(product, grnDetail.getUom()))
                         .intValue();
 
-                StockBatch transitBatch = stockBatchRepository
-                        .findByWarehouse_WarehouseIdAndProduct_ProductIdOrderByArrivalDateTimeAsc(
+                StockBatch transitBatch = stockBatchDao
+                        .findByWarehouseIdAndProductIdOrderByArrivalDateTimeAsc(
                                 warehouse.getWarehouseId(), product.getProductId())
                         .stream()
                         .filter(b -> b.getBatchNumber().equals(grnDetail.getBatchNumber())
                                 && b.getQtyInTransit() >= baseQty)
                         .findFirst()
-                        .orElseThrow(() -> new IllegalArgumentException("Không có hàng in-transit"));
+                        .orElseThrow(() -> new IllegalArgumentException("No in-transit stock found"));
 
                 transitBatch.setQtyInTransit(transitBatch.getQtyInTransit() - baseQty);
                 transitBatch.setQtyAvailable(transitBatch.getQtyAvailable() + baseQty);
-                stockBatchRepository.save(transitBatch);
-                stockMovementRepository.save(StockMovement.builder()
+                stockBatchDao.save(transitBatch);
+                stockMovementDao.save(StockMovement.builder()
                         .warehouse(warehouse)
                         .product(product)
                         .bin(transitBatch.getBin())
@@ -205,15 +243,15 @@ public class GoodsReceiptNoteServiceImpl implements GoodsReceiptNoteService {
                         .build());
 
                 toDetail.setReceivedQty(toDetail.getReceivedQty() + input);
+                toDetailDao.updateReceivedQty(toDetail.getToDetailId(), toDetail.getReceivedQty());
             }
         }
 
         if (totalInputQty == 0)
-            throw new IllegalArgumentException("Chưa nhập số lượng");
+            throw new IllegalArgumentException("Quantity not entered");
 
         grn.setGrStatus("Posted");
-        grnRepository.save(grn);
-        grnRepository.flush();
+        grnDao.updateStatus(grn.getGrnId(), "Posted");
 
         // Chỉ check các detail có trong GRN này (theo expectedQty > 0)
         boolean thisGRNFullyReceived = grn.getDetails().stream()
@@ -224,13 +262,10 @@ public class GoodsReceiptNoteServiceImpl implements GoodsReceiptNoteService {
 
         if (allFullyComplete) {
             to.setStatus("Completed");
-        } else {
-        to.setStatus("In-Transit");
-        if (!thisGRNFullyReceived) {
+        } else if (!thisGRNFullyReceived) {
             createBackOrderGRNForTO(to, grn);
         }
-    }
-        toRepository.save(to);
+        toDao.save(to);
 
         return "GRN " + grn.getGrnNumber() + " posted.";
     }
@@ -239,7 +274,7 @@ public class GoodsReceiptNoteServiceImpl implements GoodsReceiptNoteService {
         StringBuilder message = new StringBuilder();
         message.append("Phieu GRN ").append(grn.getGrnNumber()).append(" da ghi so. Don hang ").append(po.getPoNumber()).append(" hoan thanh.");
 
-        List<PurchaseRequest> linkedPRs = prRepository.findByPurchaseOrder_PoId(po.getPoId());
+        List<PurchaseRequest> linkedPRs = prDao.findByPurchaseOrderId(po.getPoId());
 
         // FIX: Use Set<Integer> (primitive IDs) instead of Set<SalesOrder> (entities).
         // Hibernate may return multiple proxy instances for the SAME SO entity
@@ -249,12 +284,15 @@ public class GoodsReceiptNoteServiceImpl implements GoodsReceiptNoteService {
         // Using Set<Integer> guarantees each SO is processed exactly once.
         Set<Integer> affectedSOIds = new HashSet<>();
         for (PurchaseRequest pr : linkedPRs) {
-            if (!"Completed".equals(pr.getStatus())) { pr.setStatus("Completed"); prRepository.save(pr); }
+            if (!"Completed".equals(pr.getStatus())) {
+                pr.setStatus("Completed");
+                prDao.save(pr);
+            }
             if (pr.getRelatedSalesOrder() != null) affectedSOIds.add(pr.getRelatedSalesOrder().getSoId());
         }
 
         for (Integer soId : affectedSOIds) {
-            List<PurchaseRequest> allSOPRs = prRepository.findByRelatedSalesOrder_SoIdAndStatusIn(soId, List.of("Pending", "Approved", "Converted", "Completed"));
+            List<PurchaseRequest> allSOPRs = prDao.findByRelatedSalesOrderIdAndStatusIn(soId, List.of("Pending", "Approved", "Converted", "Completed"));
             boolean allPRsCompleted = allSOPRs.stream().allMatch(p -> "Completed".equals(p.getStatus()));
             if (allPRsCompleted) {
                 try {
@@ -273,8 +311,11 @@ public class GoodsReceiptNoteServiceImpl implements GoodsReceiptNoteService {
     private String createBackOrderGRN(PurchaseOrder po, GoodsReceiptNote postedGrn) {
         String grnNumber = generateGRNNumber();
         GoodsReceiptNote newGrn = new GoodsReceiptNote();
-        newGrn.setGrnNumber(grnNumber); newGrn.setPurchaseOrder(po); newGrn.setWarehouse(po.getWarehouse());
-        newGrn.setGrStatus("Draft"); newGrn.setDetails(new ArrayList<>());
+        newGrn.setGrnNumber(grnNumber);
+        newGrn.setPurchaseOrder(po);
+        newGrn.setWarehouse(po.getWarehouse());
+        newGrn.setGrStatus("Draft");
+        newGrn.setDetails(new ArrayList<>());
 
         for (PurchaseOrderDetail poDetail : po.getDetails()) {
             int remainingQty = poDetail.getOrderedQty() - poDetail.getReceivedQty();
@@ -286,12 +327,20 @@ public class GoodsReceiptNoteServiceImpl implements GoodsReceiptNoteService {
             Bin allocatedBin = allocateBin(po.getWarehouse().getWarehouseId(), incomingWeight, product.getProductName());
 
             GoodsReceiptDetail newDetail = new GoodsReceiptDetail();
-            newDetail.setGoodsReceiptNote(newGrn); newDetail.setPurchaseOrderDetail(poDetail); newDetail.setProduct(product);
-            newDetail.setReceivedQty(0); newDetail.setExpectedQty(0); newDetail.setUom(poDetail.getUom());
-            newDetail.setBatchNumber(batchNumber); newDetail.setBin(allocatedBin);
+            newDetail.setGoodsReceiptNote(newGrn);
+            newDetail.setPurchaseOrderDetail(poDetail);
+            newDetail.setProduct(product);
+            newDetail.setReceivedQty(0);
+            newDetail.setExpectedQty(0);
+            newDetail.setUom(poDetail.getUom());
+            newDetail.setBatchNumber(batchNumber);
+            newDetail.setBin(allocatedBin);
             newGrn.getDetails().add(newDetail);
         }
-        grnRepository.save(newGrn);
+        grnDao.save(newGrn);
+        for (GoodsReceiptDetail detail : newGrn.getDetails()) {
+            grnDetailDao.save(detail);
+        }
         return grnNumber;
     }
 
@@ -304,12 +353,12 @@ public class GoodsReceiptNoteServiceImpl implements GoodsReceiptNoteService {
         newGrn.setGrStatus("Draft");
         newGrn.setDetails(new ArrayList<>());
 
-        // SỬA LỖI: Lặp qua các chi tiết của chính GRN vừa post, không lặp qua TO
+        // BUGFIX: Loop through GRN details just posted, not TO details
         for (GoodsReceiptDetail postedDetail : postedGrn.getDetails()) {
             int expected = postedDetail.getExpectedQty() != null ? postedDetail.getExpectedQty() : 0;
             int received = postedDetail.getReceivedQty() != null ? postedDetail.getReceivedQty() : 0;
 
-            // Chỉ tính phần thiếu của riêng phiếu GRN này (Ví dụ: Kỳ vọng 2, nhận 1 -> thiếu 1)
+            // Only track missing qty for this specific GRN
             int missingQty = expected - received;
 
             if (missingQty <= 0) continue;
@@ -326,7 +375,7 @@ public class GoodsReceiptNoteServiceImpl implements GoodsReceiptNoteService {
             newDetail.setTransferOrderDetail(toDetail);
             newDetail.setProduct(product);
             newDetail.setReceivedQty(0);
-            newDetail.setExpectedQty(missingQty); // Set kỳ vọng mới bằng đúng số thiếu
+            newDetail.setExpectedQty(missingQty); // Set new expected qty to the missing amount
             newDetail.setUom(postedDetail.getUom());
             newDetail.setBatchNumber(postedDetail.getBatchNumber());
             newDetail.setBin(allocatedBin);
@@ -334,13 +383,16 @@ public class GoodsReceiptNoteServiceImpl implements GoodsReceiptNoteService {
             newGrn.getDetails().add(newDetail);
         }
 
-        // Chỉ lưu nếu thực sự có sinh ra dòng chi tiết nào
+        // Only save if new detail lines were generated
         if (!newGrn.getDetails().isEmpty()) {
-            grnRepository.save(newGrn);
+            grnDao.save(newGrn);
+            for (GoodsReceiptDetail detail : newGrn.getDetails()) {
+                grnDetailDao.save(detail);
+            }
             return grnNumber;
         }
 
-        return null; // Không cần backorder
+        return null; // No backorder needed
     }
 
     private String findOriginalBatchNumber(GoodsReceiptNote grn, PurchaseOrderDetail poDetail) {
@@ -355,26 +407,26 @@ public class GoodsReceiptNoteServiceImpl implements GoodsReceiptNoteService {
 
     private BigDecimal getConversionFactor(Product product, String uom) {
         if (uom.equals(product.getBaseUoM())) return BigDecimal.ONE;
-        return uomConversionRepository.findByProduct_ProductId(product.getProductId()).stream()
+        return uomConversionDao.findByProductId(product.getProductId()).stream()
                 .filter(conv -> conv.getFromUoM().equals(uom)).findFirst().map(conv -> BigDecimal.valueOf(conv.getConversionFactor())).orElse(BigDecimal.ONE);
     }
 
     private Bin allocateBin(Integer warehouseId, BigDecimal incomingWeight, String productName) {
-        List<Bin> activeBins = binRepository.findByWarehouseWarehouseIdAndIsActive(warehouseId, true);
+        List<Bin> activeBins = binDao.findByWarehouseIdAndIsActive(warehouseId, true);
         for (Bin bin : activeBins) {
             BigDecimal currentWeight = BigDecimal.ZERO;
-            for (StockBatch batch : stockBatchRepository.findByBinBinId(bin.getBinId())) {
+            for (StockBatch batch : stockBatchDao.findByBinId(bin.getBinId())) {
                 currentWeight = currentWeight.add(batch.getProduct().getUnitWeight().multiply(BigDecimal.valueOf(batch.getQtyAvailable() + batch.getQtyInTransit())));
             }
             if (bin.getMaxWeight().subtract(currentWeight).compareTo(incomingWeight) >= 0) return bin;
         }
-        throw new IllegalArgumentException("Kho khong du suc chua cho mat hang '" + productName + "'.");
+        throw new IllegalArgumentException("Insufficient warehouse capacity for item '" + productName + "'.");
     }
 
     private String generateGRNNumber() {
         String dateStr = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         String prefix = "GRN-" + dateStr + "-";
-        String maxNumber = grnRepository.findMaxGrnNumber(prefix);
+        String maxNumber = grnDao.findMaxGrnNumber(prefix);
         return prefix + String.format("%03d", maxNumber != null ? Integer.parseInt(maxNumber.substring(prefix.length())) + 1 : 1);
     }
 
@@ -388,15 +440,18 @@ public class GoodsReceiptNoteServiceImpl implements GoodsReceiptNoteService {
 
     private GoodsReceiptNoteDTO mapToFullDTO(GoodsReceiptNote grn) {
         GoodsReceiptNoteDTO dto = mapToListDTO(grn);
-        if (grn.getDetails() != null) dto.setDetails(grn.getDetails().stream().map(this::mapDetailToDTO).collect(Collectors.toList()));
+        if (grn.getDetails() != null)
+            dto.setDetails(grn.getDetails().stream().map(this::mapDetailToDTO).collect(Collectors.toList()));
         return dto;
     }
 
     private GoodsReceiptDetailDTO mapDetailToDTO(GoodsReceiptDetail detail) {
         String displayName = detail.getProduct() != null ? detail.getProduct().getSku() + " - " + detail.getProduct().getProductName() : "";
         Integer orderedQty = null;
-        if (detail.getPurchaseOrderDetail() != null) orderedQty = detail.getPurchaseOrderDetail().getOrderedQty() - detail.getPurchaseOrderDetail().getReceivedQty();
-        else if (detail.getTransferOrderDetail() != null) orderedQty = detail.getExpectedQty() != null ? detail.getExpectedQty() : detail.getTransferOrderDetail().getIssuedQty() - detail.getTransferOrderDetail().getReceivedQty();
+        if (detail.getPurchaseOrderDetail() != null)
+            orderedQty = detail.getPurchaseOrderDetail().getOrderedQty() - detail.getPurchaseOrderDetail().getReceivedQty();
+        else if (detail.getTransferOrderDetail() != null)
+            orderedQty = detail.getExpectedQty() != null ? detail.getExpectedQty() : detail.getTransferOrderDetail().getIssuedQty() - detail.getTransferOrderDetail().getReceivedQty();
 
         return GoodsReceiptDetailDTO.builder()
                 .grDetailId(detail.getGrDetailId()).productDisplayName(displayName).uom(detail.getUom())

@@ -100,7 +100,7 @@
                             <div class="text-danger" th:if="${#fields.hasErrors('details')}" th:errors="*{details}"
                                 style="font-size: 0.9rem; font-weight: bold;"></div>
                             <button type="button" class="btn btn-primary btn-sm" onclick="addLine()"
-                                th:if="${soDTO.soStatus == null || soDTO.soStatus == 'Draft' || soDTO.soStatus == 'Rejected'}"
+                                th:if="${loggedInUserRole != 'Sales Manager' && (soDTO.soStatus == null || soDTO.soStatus == 'Draft' || soDTO.soStatus == 'Rejected')}"
                                 id="addLineBtn">+ Add Product Line</button>
                         </div>
                         <div class="card-body">
@@ -140,7 +140,7 @@
                                             <td>
                                                 <select th:name="'details[' + ${idx} + '].uom'"
                                                     class="form-control uom-select" th:id="'uom-' + ${idx}"
-                                                    th:disabled="${soDTO.soStatus != null && soDTO.soStatus != 'Draft' && soDTO.soStatus != 'Rejected'}">
+                                                    th:disabled="${loggedInUserRole == 'Sales Manager' || (soDTO.soStatus != null && soDTO.soStatus != 'Draft' && soDTO.soStatus != 'Rejected')}">
                                                     <option value="">-- Select UoM --</option>
                                                     <option th:if="${detail.uom != null}" th:value="${detail.uom}"
                                                         th:text="${detail.uom}" selected></option>
@@ -153,7 +153,7 @@
                                             <td>
                                                 <input type="number" th:name="'details[' + ${idx} + '].orderedQty'"
                                                     class="form-control" th:value="${detail.orderedQty}"
-                                                    th:readonly="${soDTO.soStatus != null && soDTO.soStatus != 'Draft' && soDTO.soStatus != 'Rejected'}">
+                                                    th:readonly="${loggedInUserRole == 'Sales Manager' || (soDTO.soStatus != null && soDTO.soStatus != 'Draft' && soDTO.soStatus != 'Rejected')}">
                                                 <div class="text-danger"
                                                     th:if="${#fields.hasErrors('details[' + idx + '].orderedQty')}"
                                                     th:errors="*{details[__${idx}__].orderedQty}"
@@ -162,7 +162,7 @@
                                             <td>
                                                 <button type="button" class="btn btn-danger btn-sm"
                                                     onclick="removeLine(this)"
-                                                    th:if="${soDTO.soStatus == null || soDTO.soStatus == 'Draft' || soDTO.soStatus == 'Rejected'}">✕</button>
+                                                    th:if="${loggedInUserRole != 'Sales Manager' && (soDTO.soStatus == null || soDTO.soStatus == 'Draft' || soDTO.soStatus == 'Rejected')}">✕</button>
                                             </td>
                                         </tr>
                                     </tbody>
@@ -173,7 +173,7 @@
 
                     <!-- Action Buttons -->
                     <div class="card"
-                        th:if="${soDTO.soStatus == null || soDTO.soStatus == 'Draft' || soDTO.soStatus == 'Rejected' || soDTO.soStatus == 'Pending Approval'}">
+                        th:if="${loggedInUserRole != 'Sales Manager' && (soDTO.soStatus == null || soDTO.soStatus == 'Draft' || soDTO.soStatus == 'Rejected' || soDTO.soStatus == 'Pending Approval')}">
                         <div class="card-body" style="display: flex; gap: 1rem; justify-content: flex-end;">
                             <a th:href="@{/sales/orders}" class="btn btn-outline">Cancel</a>
                             <button type="submit" name="action" value="draft" class="btn btn-outline"
@@ -189,7 +189,7 @@
                         </div>
                     </div>
                     <div class="card"
-                        th:if="${soDTO.soStatus != null && soDTO.soStatus != 'Draft' && soDTO.soStatus != 'Rejected' && soDTO.soStatus != 'Pending Approval'}">
+                        th:unless="${loggedInUserRole != 'Sales Manager' && (soDTO.soStatus == null || soDTO.soStatus == 'Draft' || soDTO.soStatus == 'Rejected' || soDTO.soStatus == 'Pending Approval')}">
                         <div class="card-body" style="display: flex; gap: 1rem; justify-content: flex-end;">
                             <a th:href="@{/sales/orders}" class="btn btn-outline">Back to List</a>
                         </div>

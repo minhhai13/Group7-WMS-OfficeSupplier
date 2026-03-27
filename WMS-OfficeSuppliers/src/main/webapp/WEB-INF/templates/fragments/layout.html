@@ -37,6 +37,9 @@
                 UoM Conversions</a></li>
         <li><a th:href="@{/warehouse/partners}" th:classappend="${activePage == 'warehouse-partners'} ? 'active'">🤝
                 Partners</a></li>
+        <li class="nav-section">Inventory</li>
+        <li><a th:href="@{/reports/current-stock}" th:classappend="${activePage == 'report-current-stock'} ? 'active'">📦
+                Stock Availability</a></li>
     </ul>
     <div class="sidebar-footer">
         <a th:href="@{/logout}">🚪 Logout</a>
@@ -57,6 +60,9 @@
         <li th:if="${loggedInUserRole == 'Purchasing Manager'}"><a th:href="@{/purchasing/approvals}"
                 th:classappend="${activePage == 'purchasing-approvals'} ? 'active'">✅
                 Approvals</a></li>
+        <li class="nav-section">Inventory</li>
+        <li><a th:href="@{/reports/current-stock}" th:classappend="${activePage == 'report-current-stock'} ? 'active'">📦
+                Stock Availability</a></li>
     </ul>
     <div class="sidebar-footer">
         <a th:href="@{/logout}">🚪 Logout</a>
@@ -75,6 +81,9 @@
         <li th:if="${loggedInUserRole == 'Sales Manager'}"><a th:href="@{/sales/approvals}"
                 th:classappend="${activePage == 'sales-approvals'} ? 'active'">✅
                 Approvals</a></li>
+        <li class="nav-section">Inventory</li>
+        <li><a th:href="@{/reports/current-stock}" th:classappend="${activePage == 'report-current-stock'} ? 'active'">📦
+                Stock Availability</a></li>
     </ul>
     <div class="sidebar-footer">
         <a th:href="@{/logout}">🚪 Logout</a>
@@ -94,6 +103,8 @@
                 Goods Issue</a></li>
         <li><a th:href="@{/transfer/internal}" th:classappend="${activePage == 'transfer-internal'} ? 'active'">🔄
             Internal Transfer</a></li>
+        <li><a th:href="@{/reports/current-stock}" th:classappend="${activePage == 'report-current-stock'} ? 'active'">📦
+            Stock Availability</a></li>
     </ul>
     <div class="sidebar-footer">
         <a th:href="@{/logout}">🚪 Logout</a>
@@ -113,6 +124,8 @@
             Outbound History</a></li>
         <li><a th:href="@{/reports/inventory-balance}" th:classappend="${activePage == 'report-inventory'} ? 'active'">📊
             Inventory Balance</a></li>
+        <li><a th:href="@{/reports/current-stock}" th:classappend="${activePage == 'report-current-stock' || activePage == 'report-low-stock'} ? 'active'">📦
+            Stock Availability</a></li>
 
         <li class="nav-section">Stock Transfer</li>
         <li>

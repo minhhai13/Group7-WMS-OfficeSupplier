@@ -30,6 +30,7 @@
                                 <option value="Approved" th:selected="${selectedStatus == 'Approved'}">Approved</option>
                                 <option value="In-Transit" th:selected="${selectedStatus == 'In-Transit'}">In-Transit</option>
                                 <option value="Completed" th:selected="${selectedStatus == 'Completed'}">Completed</option>
+                                <option value="Incomplete" th:selected="${selectedStatus == 'Incomplete'}">Incomplete</option>
                                 <option value="Rejected" th:selected="${selectedStatus == 'Rejected'}">Rejected</option>
                             </select>
                             <select name="destWarehouseId" class="form-control" style="max-width: 220px;">
@@ -67,6 +68,7 @@
                                             <span th:if="${to.status == 'Pending'}" class="badge badge-warning" th:text="${to.status}"></span>
                                             <span th:if="${to.status == 'Approved'}" class="badge badge-info" th:text="${to.status}"></span>
                                             <span th:if="${to.status == 'In-Transit'}" class="badge badge-warning" th:text="${to.status}"></span>
+                                            <span th:if="${to.status == 'Incomplete'}" class="badge badge-success" th:text="${to.status}"></span>
                                             <span th:if="${to.status == 'Completed'}" class="badge badge-success" th:text="${to.status}"></span>
                                             <span th:if="${to.status == 'Rejected'}" class="badge badge-danger" th:text="${to.status}"></span>
                                         </td>

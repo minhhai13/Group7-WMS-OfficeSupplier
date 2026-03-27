@@ -1,8 +1,9 @@
 package com.minhhai.wms.service.impl;
 
+import com.minhhai.wms.dao.ProductDao;
+import com.minhhai.wms.dao.ProductUoMConversionDao;
 import com.minhhai.wms.entity.Product;
 import com.minhhai.wms.entity.ProductUoMConversion;
-import com.minhhai.wms.repository.ProductUoMConversionRepository;
 import com.minhhai.wms.service.ProductUoMConversionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -15,29 +16,29 @@ import java.util.*;
 @Transactional
 public class ProductUoMConversionServiceImpl implements ProductUoMConversionService {
 
-    private final ProductUoMConversionRepository conversionRepository;
-    private final com.minhhai.wms.repository.ProductRepository productRepository;
+    private final ProductUoMConversionDao conversionDao;
+    private final ProductDao productDao;
 
     @Override
     @Transactional(readOnly = true)
     public List<ProductUoMConversion> findByProductId(Integer productId) {
-        return conversionRepository.findByProduct_ProductId(productId);
+        return conversionDao.findByProductId(productId);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Optional<ProductUoMConversion> findById(Integer id) {
-        return conversionRepository.findById(id);
+        return conversionDao.findById(id);
     }
 
     @Override
     public ProductUoMConversion save(ProductUoMConversion conversion) {
-        return conversionRepository.save(conversion);
+        return conversionDao.save(conversion);
     }
 
     @Override
     public ProductUoMConversion save(com.minhhai.wms.dto.ProductUoMConversionDTO dto) {
-        Product product = productRepository.findById(dto.getProductId())
+        Product product = productDao.findById(dto.getProductId())
                 .orElseThrow(() -> new IllegalArgumentException("Product not found: " + dto.getProductId()));
 
         String baseUoM = product.getBaseUoM();
@@ -47,25 +48,23 @@ public class ProductUoMConversionServiceImpl implements ProductUoMConversionServ
             throw new IllegalArgumentException("From UoM cannot be the same as the product's Base UoM (" + baseUoM + ").");
         }
         if (dto.getConversionId() == null) {
-            if (conversionRepository.existsByProductProductIdAndFromUoMAndToUoM(dto.getProductId(), dto.getFromUoM(), dto.getToUoM())) {
+            if (conversionDao.existsByProductIdAndFromUoMAndToUoM(dto.getProductId(), dto.getFromUoM(), dto.getToUoM())) {
                 throw new IllegalArgumentException("This conversion already exists for the product.");
             }
         } else {
-            if (conversionRepository.existsByProductProductIdAndFromUoMAndToUoMAndConversionIdNot(dto.getProductId(), dto.getFromUoM(), dto.getToUoM(), dto.getConversionId())) {
+            if (conversionDao.existsByProductIdAndFromUoMAndToUoMAndConversionIdNot(dto.getProductId(), dto.getFromUoM(), dto.getToUoM(), dto.getConversionId())) {
                 throw new IllegalArgumentException("This conversion already exists for the product.");
             }
         }
 
         ProductUoMConversion conversion;
         if (dto.getConversionId() != null) {
-            // Update
-            conversion = conversionRepository.findById(dto.getConversionId())
+            conversion = conversionDao.findById(dto.getConversionId())
                     .orElseThrow(() -> new IllegalArgumentException("Conversion not found: " + dto.getConversionId()));
             conversion.setFromUoM(fromUoM);
             conversion.setToUoM(baseUoM);
             conversion.setConversionFactor(dto.getConversionFactor());
         } else {
-            // Create
             conversion = ProductUoMConversion.builder()
                     .product(product)
                     .fromUoM(fromUoM)
@@ -74,17 +73,17 @@ public class ProductUoMConversionServiceImpl implements ProductUoMConversionServ
                     .build();
         }
 
-        return conversionRepository.save(conversion);
+        return conversionDao.save(conversion);
     }
 
     @Override
     public void delete(Integer conversionId) {
-        conversionRepository.deleteById(conversionId);
+        conversionDao.deleteById(conversionId);
     }
 
     @Override
     public List<Map<String, String>> getAvailableUoMs(Integer productId) {
-        Product product = productRepository.findById(productId)
+        Product product = productDao.findById(productId)
                 .orElseThrow(() -> new IllegalArgumentException("Product not found"));
 
         List<Map<String, String>> uoms = new ArrayList<>();
@@ -96,7 +95,7 @@ public class ProductUoMConversionServiceImpl implements ProductUoMConversionServ
         uoms.add(base);
 
         // 2. Thêm các đơn vị chuyển đổi
-        List<ProductUoMConversion> conversions = conversionRepository.findByProduct_ProductId(productId);
+        List<ProductUoMConversion> conversions = conversionDao.findByProductId(productId);
         for (ProductUoMConversion conv : conversions) {
             Map<String, String> m = new HashMap<>();
             m.put("uom", conv.getFromUoM());

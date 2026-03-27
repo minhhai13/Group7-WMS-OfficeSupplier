@@ -2,7 +2,7 @@ package com.minhhai.wms.controller.api;
 
 import com.minhhai.wms.entity.Bin;
 import com.minhhai.wms.entity.StockBatch;
-import com.minhhai.wms.repository.StockBatchRepository;
+import com.minhhai.wms.dao.StockBatchDao;
 import com.minhhai.wms.service.BinService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class TransferApiController {
 
-    private final StockBatchRepository stockBatchRepository;
+    private final StockBatchDao stockBatchDao;
     private final BinService binService;
 
     /**
@@ -28,7 +28,7 @@ public class TransferApiController {
     @Transactional(readOnly = true)
     @GetMapping("/bins/{binId}/stock-batches")
     public ResponseEntity<List<Map<String, Object>>> getStockBatchesByBin(@PathVariable Integer binId) {
-        List<StockBatch> batches = stockBatchRepository.findByBinBinIdEager(binId)
+        List<StockBatch> batches = stockBatchDao.findByBinId(binId)
                 .stream()
                 .filter(sb -> sb.getQtyAvailable() != null && sb.getQtyAvailable() > 0)
                 .collect(Collectors.toList());

@@ -49,7 +49,7 @@ public class LoginController {
                         HttpSession session,
                         RedirectAttributes redirectAttributes) {
 
-        // Kiểm tra lỗi validation (ví dụ: để trống trường)
+        // Check for validation errors (e.g., empty fields)
         if (bindingResult.hasErrors()) {
             return "login";
         }

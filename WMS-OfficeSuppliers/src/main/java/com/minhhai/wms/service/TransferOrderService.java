@@ -9,14 +9,13 @@ import java.util.Map;
 
 public interface TransferOrderService {
 
+    TransferOrderDTO getTOById(Integer id);
 
-    TransferOrderDTO getTRById(Integer id);
+    void saveDraftTO(@Valid TransferOrderDTO trDTO, User user);
 
-    void saveDraftTR(@Valid TransferOrderDTO trDTO, User user);
+    TransferOrderDTO submitTO(@Valid TransferOrderDTO trDTO, User user);
 
-    TransferOrderDTO submitTR(@Valid TransferOrderDTO trDTO, User user);
-
-    void deleteTR(Integer id, User user);
+    void deleteTO(Integer id, User user);
 
     //out going: mình là destination wh, gửi tr cho các wh khác
     //in coming: mình là source wh, duyệt tr từ các wh khác gửi
@@ -24,7 +23,7 @@ public interface TransferOrderService {
 
     List<TransferOrderDTO> getIncomingWHTransferOrders(Integer destWarehouseId, Integer warehouseId, String status);
 
-    void approveTR(Integer id, User user);
+    void approveTO(Integer id, User user);
 
-    void rejectTR(Integer id, User user, String trim);
+    void rejectTO(Integer id, User user, String trim);
 }

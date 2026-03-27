@@ -1,9 +1,9 @@
 package com.minhhai.wms.service.impl;
 
+import com.minhhai.wms.dao.UserDao;
+import com.minhhai.wms.dao.WarehouseDao;
 import com.minhhai.wms.entity.User;
 import com.minhhai.wms.entity.Warehouse;
-import com.minhhai.wms.repository.UserRepository;
-import com.minhhai.wms.repository.WarehouseRepository;
 import com.minhhai.wms.service.UserService;
 import com.minhhai.wms.util.PasswordUtil;
 import lombok.RequiredArgsConstructor;
@@ -18,51 +18,50 @@ import java.util.Optional;
 @Transactional
 public class UserServiceImpl implements UserService {
 
-    private final UserRepository userRepository;
-    private final WarehouseRepository warehouseRepository;
+    private final UserDao userDao;
+    private final WarehouseDao warehouseDao;
 
     @Override
     @Transactional(readOnly = true)
     public List<User> findAll() {
-        return userRepository.findAll();
+        return userDao.findAll();
     }
 
     @Override
     @Transactional(readOnly = true)
     public Optional<User> findById(Integer id) {
-        return userRepository.findById(id);
+        return userDao.findById(id);
     }
 
     @Override
     public User save(User user) {
-        return userRepository.save(user);
+        return userDao.save(user);
     }
 
     @Override
     public User save(com.minhhai.wms.dto.UserDTO userDTO) {
         // Uniqueness check
         if (userDTO.getUserId() == null) {
-            if (userRepository.existsByUsername(userDTO.getUsername())) {
+            if (userDao.existsByUsername(userDTO.getUsername())) {
                 throw new IllegalArgumentException("Username already exists.");
             }
         } else {
-            if (userRepository.existsByUsernameAndUserIdNot(userDTO.getUsername(), userDTO.getUserId())) {
+            if (userDao.existsByUsernameAndUserIdNot(userDTO.getUsername(), userDTO.getUserId())) {
                 throw new IllegalArgumentException("Username already exists.");
             }
         }
 
         Warehouse warehouse = null;
         if (userDTO.getWarehouseId() != null) {
-            warehouse = warehouseRepository.findById(userDTO.getWarehouseId()).orElse(null);
+            warehouse = warehouseDao.findById(userDTO.getWarehouseId()).orElse(null);
         }
 
         User user;
         if (userDTO.getUserId() != null) {
-            // Update
-            user = userRepository.findById(userDTO.getUserId())
+            user = userDao.findById(userDTO.getUserId())
                     .orElseThrow(() -> new IllegalArgumentException("User not found: " + userDTO.getUserId()));
             if (user.getIsActive() && "System Admin".equals(user.getRole()) && !"System Admin".equals(userDTO.getRole())) {
-                long activeAdminCount = userRepository.countByRoleAndIsActiveTrue("System Admin");
+                long activeAdminCount = userDao.countByRoleAndIsActiveTrue("System Admin");
 
                 if (activeAdminCount <= 1) {
                     throw new IllegalArgumentException("Can not change role of the last admin in the system!");
@@ -77,7 +76,6 @@ public class UserServiceImpl implements UserService {
                 user.setPasswordHash(PasswordUtil.hashPassword(userDTO.getPassword()));
             }
         } else {
-            // Create
             if (userDTO.getPassword() == null || userDTO.getPassword().isBlank()) {
                 throw new IllegalArgumentException("Password is required for new users.");
             }
@@ -91,28 +89,28 @@ public class UserServiceImpl implements UserService {
                     .build();
         }
 
-        return userRepository.save(user);
+        return userDao.save(user);
     }
 
     @Override
     public void toggleActive(Integer userId) {
-        User user = userRepository.findById(userId)
+        User user = userDao.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found: " + userId));
             if (user.getIsActive() && "System Admin".equals(user.getRole())) {
-                long activeAdminCount = userRepository.countByRoleAndIsActiveTrue("System Admin");
+                long activeAdminCount = userDao.countByRoleAndIsActiveTrue("System Admin");
 
                 if (activeAdminCount <= 1) {
                     throw new IllegalArgumentException("Can not deactive the last admin in the system!");
                 }
             }
         user.setIsActive(!user.getIsActive());
-        userRepository.save(user);
+        userDao.save(user);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Optional<User> authenticate(String username, String plainPassword) {
-        Optional<User> userOpt = userRepository.findByUsername(username);
+        Optional<User> userOpt = userDao.findByUsername(username);
         if (userOpt.isPresent()) {
             User user = userOpt.get();
             if (Boolean.TRUE.equals(user.getIsActive())
@@ -129,6 +127,6 @@ public class UserServiceImpl implements UserService {
         if (keyword == null || keyword.isBlank()) {
             return findAll();
         }
-        return userRepository.searchByKeyword(keyword.trim());
+        return userDao.searchByKeyword(keyword.trim());
     }
 }

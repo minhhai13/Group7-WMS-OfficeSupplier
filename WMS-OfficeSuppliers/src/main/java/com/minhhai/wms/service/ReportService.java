@@ -1,5 +1,6 @@
 package com.minhhai.wms.service;
 
+import com.minhhai.wms.dto.CurrentStockDTO;
 import com.minhhai.wms.dto.InboundReportDTO;
 import com.minhhai.wms.dto.InventoryBalanceDTO;
 import com.minhhai.wms.dto.OutboundReportDTO;
@@ -10,35 +11,18 @@ import java.util.List;
 
 public interface ReportService {
 
-    /**
-     * Returns paginated inbound history (Receipt / Physical movements only).
-     */
-    Page<InboundReportDTO> getInboundReport(
-            LocalDate startDate,
-            LocalDate endDate,
-            Integer warehouseId,
-            Integer productId,
-            int page,
-            int size);
+    Page<InboundReportDTO> getInboundReport(LocalDate startDate, LocalDate endDate,
+            Integer warehouseId, Integer productId, int page, int size);
 
-    /**
-     * Returns paginated outbound history (Issue / Physical movements only).
-     */
-    Page<OutboundReportDTO> getOutboundReport(
-            LocalDate startDate,
-            LocalDate endDate,
-            Integer warehouseId,
-            Integer productId,
-            int page,
-            int size);
+    Page<OutboundReportDTO> getOutboundReport(LocalDate startDate, LocalDate endDate,
+            Integer warehouseId, Integer productId, int page, int size);
 
-    /**
-     * Returns inventory balance per product+warehouse for a given period.
-     * Opening = Sum(Receipt-Issue) before startDate
-     * Closing = Opening + Inbound - Outbound
-     */
-    List<InventoryBalanceDTO> getInventoryReport(
-            LocalDate startDate,
-            LocalDate endDate,
-            Integer warehouseId);
+    List<InventoryBalanceDTO> getInventoryReport(LocalDate startDate, LocalDate endDate, Integer warehouseId);
+
+    /** Current real-time stock snapshot from StockBatches, grouped by product. */
+    List<CurrentStockDTO> getCurrentStock(Integer warehouseId, boolean lowStockOnly);
+
+    /** Count of products currently below MinStockLevel in the given warehouse. */
+    long countLowStockProducts(Integer warehouseId);
 }
+

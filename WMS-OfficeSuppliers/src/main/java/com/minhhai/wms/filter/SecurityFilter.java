@@ -49,7 +49,7 @@ public class SecurityFilter implements Filter {
                     relativePath.startsWith("/transfer/")){
 
                 // Chuyển hướng về một trang thông báo hoặc trang lỗi 403 kèm lý do
-                session.setAttribute("error", "Bạn cần được gán kho để sử dụng chức năng này.");
+                session.setAttribute("error", "You must be assigned to a warehouse to use this feature.");
                 httpResponse.sendRedirect(contextPath + "/403");
                 return;
             }
@@ -97,7 +97,9 @@ public class SecurityFilter implements Filter {
                 return;
             }
         } else if (relativePath.startsWith("/reports/")) {
-            if (!"Warehouse Manager".equals(role)) {
+            if (relativePath.startsWith("/reports/current-stock")) {
+                // Allow all roles (Storekeeper, Sales, Purchasing, Warehouse Manager)
+            } else if (!"Warehouse Manager".equals(role)) {
                 httpResponse.sendRedirect(contextPath + "/403");
                 return;
             }
