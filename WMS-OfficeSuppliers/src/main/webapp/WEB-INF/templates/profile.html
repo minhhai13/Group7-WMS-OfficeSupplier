@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <title>My Profile</title>
+    <link rel="stylesheet" th:href="@{/static/css/style.css}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="app-layout">
+        <!-- Depending on user role, show the right sidebar. We can use a script or th:replace based on session or just load the right fragment from controller. 
+        Wait, in GlobalModelAdvice we have loggedInUserRole, so we can render sidebar dynamically! -->
+        
+        <div th:if="${loggedInUserRole == 'System Admin'}">
+            <div th:replace="~{fragments/layout :: sidebar-admin}"></div>
+        </div>
+        <div th:if="${loggedInUserRole == 'Warehouse Admin'}">
+            <div th:replace="~{fragments/layout :: sidebar-warehouse}"></div>
+        </div>
+        <div th:if="${loggedInUserRole == 'Purchasing Manager' or loggedInUserRole == 'Purchasing Staff'}">
+            <div th:replace="~{fragments/layout :: sidebar-purchasing}"></div>
+        </div>
+        <div th:if="${loggedInUserRole == 'Sales Manager' or loggedInUserRole == 'Sales Staff'}">
+            <div th:replace="~{fragments/layout :: sidebar-sales}"></div>
+        </div>
+        <div th:if="${loggedInUserRole == 'Storekeeper'}">
+            <div th:replace="~{fragments/layout :: sidebar-storekeeper}"></div>
+        </div>
+        <div th:if="${loggedInUserRole == 'Warehouse Manager'}">
+            <div th:replace="~{fragments/layout :: sidebar-report}"></div>
+        </div>
+
+        <div class="main-content">
+            <div th:replace="~{fragments/layout :: topbar('My Profile')}"></div>
+            <div class="content-area">
+                <div th:replace="~{fragments/layout :: alerts}"></div>
+
+                <div class="card" style="max-width:600px;">
+                    <div class="card-header">
+                        <h2>My Profile</h2>
+                        <span class="badge" th:text="${role}">Role</span>
+                    </div>
+                    <div class="card-body">
+                        <form th:action="@{/profile/save}" method="post" th:object="${profile}">
+                            <input type="hidden" th:field="*{userId}">
+
+                            <div class="form-group">
+                                <label for="username">Username *</label>
+                                <input type="text" id="username" class="form-control" th:field="*{username}"
+                                    th:classappend="${#fields.hasErrors('username')} ? 'is-invalid'"
+                                    placeholder="Enter username">
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('username')}"
+                                    th:errors="*{username}">Username error</div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="fullName">Full Name *</label>
+                                <input type="text" id="fullName" class="form-control" th:field="*{fullName}"
+                                    th:classappend="${#fields.hasErrors('fullName')} ? 'is-invalid'"
+                                    placeholder="Enter full name">
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('fullName')}"
+                                    th:errors="*{fullName}">Full name error</div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="currentPassword">Current Password</label>
+                                <input type="password" id="currentPassword" name="currentPassword" class="form-control"
+                                    th:field="*{currentPassword}"
+                                    th:classappend="${#fields.hasErrors('currentPassword')} ? 'is-invalid'"
+                                    placeholder="Enter current password">
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('currentPassword')}"
+                                    th:errors="*{currentPassword}">Current password error</div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="password">New Password (leave blank to keep current)</label>
+                                <input type="password" id="password" name="password" class="form-control"
+                                    th:field="*{password}"
+                                    th:classappend="${#fields.hasErrors('password')} ? 'is-invalid'"
+                                    placeholder="Enter password">
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('password')}"
+                                    th:errors="*{password}">Password error</div>
+                            </div>
+
+                            <div class="form-actions" style="margin-top: 20px;">
+                                <button type="submit" class="btn btn-primary">Update Profile</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>
