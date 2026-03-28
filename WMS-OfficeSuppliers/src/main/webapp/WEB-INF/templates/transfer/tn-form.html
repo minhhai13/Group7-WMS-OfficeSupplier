@@ -147,6 +147,11 @@
 
     <script th:inline="javascript">
         const WAREHOUSE_ID = /*[[${tnDTO.warehouseId}]]*/ null;
+        
+        var contextPath = /*[[@{/}]]*/ '/';
+        if (contextPath.endsWith('/')) {
+            contextPath = contextPath.substring(0, contextPath.length - 1);
+        }
 
         // ======================================================
         // Step 1: From Bin changed → load product-batches
@@ -177,7 +182,7 @@
             if (!binId) return;
 
             try {
-                const res = await fetch(`/api/transfer/bins/${binId}/stock-batches`);
+                const res = await fetch(`${contextPath}/api/transfer/bins/${binId}/stock-batches`);
                 if (!res.ok) throw new Error('Network error');
                 const batches = await res.json();
 
@@ -236,7 +241,7 @@
 
             // Load valid To Bins (all active bins in warehouse, excluding from bin)
             try {
-                const res = await fetch(`/api/transfer/warehouses/${WAREHOUSE_ID}/bins?excludeBinId=${fromBinId}`);
+                const res = await fetch(`${contextPath}/api/transfer/warehouses/${WAREHOUSE_ID}/bins?excludeBinId=${fromBinId}`);
                 if (!res.ok) throw new Error();
                 const bins = await res.json();
 

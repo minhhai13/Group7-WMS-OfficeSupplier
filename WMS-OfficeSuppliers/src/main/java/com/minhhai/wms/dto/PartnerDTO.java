@@ -25,6 +25,7 @@ public class PartnerDTO {
     @Size(max = 100, message = "Contact person must be less than 100 characters")
     private String contactPerson;
 
+    @Pattern(regexp = "^(0|\\+84)[0-9]{8,9}$", message = "Phone number must be valid (10-11 digits, starts with 0 or +84)")
     @Size(max = 20, message = "Phone number must be less than 20 characters")
     private String phoneNumber;
     
